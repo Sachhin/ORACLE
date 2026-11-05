@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -26,8 +27,17 @@ class ResearchStore:
         db.execute("PRAGMA foreign_keys=ON")
         return db
 
+    @contextmanager
+    def _session(self):
+        db = self._connect()
+        try:
+            with db:
+                yield db
+        finally:
+            db.close()
+
     def _initialize(self) -> None:
-        with self._connect() as db:
+        with self._session() as db:
             db.executescript("""
                 CREATE TABLE IF NOT EXISTS runs (
                     run_id TEXT PRIMARY KEY, status TEXT NOT NULL,
