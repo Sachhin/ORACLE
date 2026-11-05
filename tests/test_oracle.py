@@ -182,6 +182,44 @@ class OracleTests(unittest.TestCase):
         self.assertEqual(result.records[0]["doi"], "10.1000/same")
         self.assertTrue(result.records[0]["abstract"])
 
+    def test_geo_dataset_records_are_persisted_as_dataset_evidence(self):
+        from oracle.literature import LiteratureClient, LiteratureSearchReport
+        run = ResearchRun("GEO dataset test")
+        report = LiteratureSearchReport(query="heat stress", providers=["geo"])
+        report.records = [{
+            "provider":"NCBI GEO","provider_id":"123","doi":"","pmid":"",
+            "title":"Heat stress in seedlings","authors":"","journal":"","year":"2025",
+            "url":"https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE12345",
+            "abstract":"Expression profiles from seedlings exposed to heat stress.",
+            "publication_type":"gene expression dataset","open_access":False,"license":"",
+            "citation_count":None,"dataset":True,"dataset_accession":"GSE12345",
+            "organism":"Arabidopsis thaliana","sample_count":18,"platform":"GPL198",
+            "dataset_type":"Expression profiling by array","pubmed_ids":[]
+        }]
+        client = LiteratureClient()
+        client.ingest(run, report)
+        self.assertEqual(run.sources[0].dataset_accession, "GSE12345")
+        self.assertEqual(run.sources[0].organism, "Arabidopsis thaliana")
+        self.assertEqual(run.evidence[0].kind, EvidenceKind.DATASET)
+        self.assertEqual(run.evidence[0].locator, "GEO dataset summary")
+        self.store.save_run(run)
+        loaded = self.store.load_run(run.run_id)
+        self.assertEqual(loaded.sources[0].dataset_accession, "GSE12345")
+        self.assertEqual(loaded.evidence[0].kind, EvidenceKind.DATASET)
+
+    def test_geo_search_uses_esearch_then_esummary(self):
+        from unittest.mock import patch
+        from oracle.literature import LiteratureClient
+        client = LiteratureClient()
+        search = {"esearchresult":{"idlist":["123"]}}
+        summary = {"result":{"123":{"accession":"GSE123","title":"Example dataset",
+            "summary":"Dataset summary.","taxon":"Arabidopsis thaliana",
+            "n_samples":"12","gpl":"GPL1","gdsType":"Expression profiling"}}}
+        with patch.object(client,"_get_json",side_effect=[search,summary]):
+            records = client._search_geo("plant stress",5)
+        self.assertEqual(records[0]["dataset_accession"],"GSE123")
+        self.assertEqual(records[0]["sample_count"],"12")
+
     def test_literature_query_and_limit_validation(self):
         from oracle.literature import LiteratureClient
         client = LiteratureClient()
