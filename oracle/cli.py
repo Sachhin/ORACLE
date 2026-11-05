@@ -4,7 +4,8 @@ from __future__ import annotations
 import argparse
 import json
 
-from .models import ResearchMode
+from .models import ResearchMode, ResearchRun
+from .literature import LiteratureClient
 from .orchestrator import OracleOrchestrator
 from .storage import ResearchStore
 
@@ -17,12 +18,37 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--resume", dest="resume_id", help="Resume an existing run by ID")
     parser.add_argument("--db", default="data/oracle.sqlite3")
     parser.add_argument("--json", action="store_true", help="Print machine-readable run output")
+    parser.add_argument("--literature", metavar="QUERY", help="Search scholarly APIs and ingest abstracts")
+    parser.add_argument("--limit", type=int, default=10, help="Maximum literature records (1-50)")
+    parser.add_argument("--provider", choices=["both", "europepmc", "crossref"], default="both")
+    parser.add_argument("--mailto", default="", help="Optional contact email for Crossref polite pool")
     return parser
 
 
 def main() -> None:
     args = build_parser().parse_args()
-    orchestrator = OracleOrchestrator(ResearchStore(args.db))
+    store = ResearchStore(args.db)
+    if args.literature is not None:
+        run = ResearchRun(question=args.literature)
+        providers = {"both": ("europepmc", "crossref"), "europepmc": ("europepmc",), "crossref": ("crossref",)}[args.provider]
+        client = LiteratureClient(mailto=args.mailto)
+        report = client.search(args.literature, limit=args.limit, providers=providers)
+        client.ingest(run, report)
+        store.save_run(run)
+        if args.json:
+            print(json.dumps({"run": run.to_dict(), "literature_report": report.__dict__}, indent=2, ensure_ascii=False))
+            return
+        print(f"ORACLE literature run: {run.run_id}")
+        print(f"Retrieved: {report.retrieved} | Sources: {report.ingested_sources} | Abstracts: {report.evidence_records} | Candidate statements: {report.candidate_statements}")
+        for item in report.records:
+            print(f"- {item['title']} ({item.get('year') or 'date unknown'}) — {item.get('provider')}")
+            print(f"  DOI: {item.get('doi') or 'not supplied'} | PMID: {item.get('pmid') or 'not supplied'}")
+            print(f"  {item.get('url') or 'No landing-page URL'}")
+        for warning in report.warnings:
+            print(f"WARNING: {warning}")
+        print("Extracted sentences are unreviewed candidates, not validated claims.")
+        return
+    orchestrator = OracleOrchestrator(store)
     if args.resume_id:
         run = orchestrator.resume(args.resume_id, additional_cycles=args.cycles)
     else:
