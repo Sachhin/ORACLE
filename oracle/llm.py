@@ -48,13 +48,14 @@ class GeminiClaimExtractor:
 
     def _generate_json(self, prompt: str) -> dict[str, Any]:
         url = ("https://generativelanguage.googleapis.com/v1beta/models/"
-               + quote(self.model, safe="") + ":generateContent?key=" + quote(self.api_key, safe=""))
+               + quote(self.model, safe="") + ":generateContent")
         body = {
             "contents": [{"role": "user", "parts": [{"text": prompt}]}],
             "generationConfig": {"temperature": 0.1, "responseMimeType": "application/json"},
         }
         request = Request(url, data=json.dumps(body).encode("utf-8"), method="POST",
-                          headers={"Content-Type": "application/json", "Accept": "application/json"})
+                          headers={"Content-Type": "application/json", "Accept": "application/json",
+                                   "x-goog-api-key": self.api_key})
         try:
             with urlopen(request, timeout=self.timeout) as response:
                 payload = json.loads(response.read(2_000_000).decode("utf-8"))
