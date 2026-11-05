@@ -20,7 +20,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--json", action="store_true", help="Print machine-readable run output")
     parser.add_argument("--literature", metavar="QUERY", help="Search scholarly APIs and ingest abstracts")
     parser.add_argument("--limit", type=int, default=10, help="Maximum literature records (1-50)")
-    parser.add_argument("--provider", choices=["both", "europepmc", "crossref"], default="both")
+    parser.add_argument("--provider", choices=["both", "all", "europepmc", "crossref", "geo"], default="both")
     parser.add_argument("--mailto", default="", help="Optional contact email for Crossref polite pool")
     return parser
 
@@ -30,7 +30,7 @@ def main() -> None:
     store = ResearchStore(args.db)
     if args.literature is not None:
         run = ResearchRun(question=args.literature)
-        providers = {"both": ("europepmc", "crossref"), "europepmc": ("europepmc",), "crossref": ("crossref",)}[args.provider]
+        providers = {"both": ("europepmc", "crossref"), "all": ("europepmc", "crossref", "geo"), "europepmc": ("europepmc",), "crossref": ("crossref",), "geo": ("geo",)}[args.provider]
         client = LiteratureClient(mailto=args.mailto)
         report = client.search(args.literature, limit=args.limit, providers=providers)
         client.ingest(run, report)
