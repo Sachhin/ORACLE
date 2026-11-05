@@ -226,6 +226,47 @@ class OracleTests(unittest.TestCase):
         with self.assertRaises(ValueError): client.search(" ")
         with self.assertRaises(ValueError): client.search("valid", limit=0)
 
+    def test_gemini_extraction_requires_verbatim_quote_and_persists_provenance(self):
+        from unittest.mock import patch
+        from oracle.llm import GeminiClaimExtractor
+        from oracle.models import SourceRecord
+        run = ResearchRun("How does cell fate change?")
+        source = SourceRecord(title="Example developmental study", source_id="src-example")
+        run.sources.append(source)
+        quote_text = "Cell signaling controls developmental outcomes in several contexts."
+        evidence = Evidence(quote_text + " The authors measured gene expression across multiple independent samples.",
+                            source.title, source_id=source.source_id, locator="Abstract")
+        run.evidence.append(evidence)
+        extractor = GeminiClaimExtractor(api_key="test-key")
+        response = {"claims": [
+            {"statement":"Cell signaling controls developmental outcomes in multiple contexts.",
+             "evidence_quote":quote_text},
+            {"statement":"A made-up mechanism explains all cell fate decisions in embryos.",
+             "evidence_quote":"This quotation does not occur in the paper."},
+        ]}
+        with patch.object(extractor, "_generate_json", return_value=response):
+            report = extractor.extract(run)
+        self.assertEqual(report.evidence_examined, 1)
+        self.assertEqual(report.candidates_created, 1)
+        self.assertEqual(report.candidates_rejected, 1)
+        claim = run.claims[0]
+        self.assertEqual(claim.status, "unreviewed_candidate")
+        self.assertEqual(claim.source_quote, quote_text)
+        self.assertEqual(claim.extraction_model, "gemini-2.5-flash")
+        self.assertEqual(run.evidence_claim_links[0].stance, EvidenceStance.CONTEXTUAL)
+        self.assertEqual(run.evidence_claim_links[0].strength, 0.0)
+        self.store.save_run(run)
+        loaded = self.store.load_run(run.run_id)
+        self.assertEqual(loaded.claims[0].source_quote, quote_text)
+        self.assertEqual(loaded.claims[0].extraction_model, "gemini-2.5-flash")
+
+    def test_gemini_extractor_requires_api_key(self):
+        from unittest.mock import patch
+        from oracle.llm import GeminiClaimExtractor
+        with patch.dict("os.environ", {}, clear=True):
+            with self.assertRaises(ValueError):
+                GeminiClaimExtractor(api_key="")
+
     def test_resume_interrupted_run_without_resetting_history(self):
         run = OracleOrchestrator(self.store).run("Resume this", max_cycles=1)
         run.status = RunStatus.PAUSED
