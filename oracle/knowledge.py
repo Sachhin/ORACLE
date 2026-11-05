@@ -158,7 +158,7 @@ class KnowledgeBase:
         estimate = None if not buckets or support + oppose == 0 else support / (support + oppose)
         rationale = (
             "No usable supporting/refuting evidence is linked." if not buckets else
-            "Reliability-weighted evidence-balance indicator; not a probability or calibrated confidence."
+            "Reliability-weighted evidence-balance indicator; not a calibrated probability or confidence."
         )
         rationale += " Evidence sharing a dependence_group is conservatively counted once per stance."
         if unresolved:
