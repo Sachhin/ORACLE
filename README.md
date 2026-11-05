@@ -31,8 +31,19 @@ ORACLE distinguishes source-backed evidence, inference, hypotheses, proposed exp
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) and [docs/ROADMAP.md](docs/ROADMAP.md).
 
+## Literature search (network opt-in)
+
+ORACLE can search Europe PMC and Crossref public REST APIs without API keys or third-party Python packages. Network access occurs only when --literature is supplied.
+
+    python -m oracle --literature "embryonic development cell fate signaling" --limit 10
+    python -m oracle --literature "plant nonsense-mediated mRNA decay" --provider europepmc --limit 15 --json
+    python -m oracle --literature "Arabidopsis heat stress" --provider geo --limit 10
+    python -m oracle --literature "embryo development" --provider all --limit 15
+
+Each work is stored with DOI/PMID when available, authors, journal, date, provider, landing URL, licence/open-access metadata, and abstract text. Abstracts are source evidence with the exact "Abstract" locator. Sentence splitting produces unreviewed statement candidates only: it does not prove a claim or decide whether a paper supports/refutes it. Initial evidence links are contextual with zero weight until reviewed.
+
+Full-text retrieval, raw GEO matrix downloads, other dataset repositories, semantic claim extraction, entailment/contradiction review, citation-network exploration, and LLM reasoning are not yet included. Publisher copyright may apply to abstract text.
+
 ## Scope of this milestone
 
-Included: domain models, SQLite persistence, agent contracts, deterministic baseline agents, research-cycle orchestration, decision policy, CLI, and offline tests.
-
-Not included yet: external literature search, real LLM providers, API keys, wet-lab integrations, or claims of autonomous scientific discovery.
+Included: offline research foundation, provenance-aware SQLite knowledge graph, public scholarly metadata/abstract search, deterministic candidate sentence extraction, and offline tests. Real LLM providers and autonomous scientific discovery are not claimed.

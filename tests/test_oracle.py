@@ -137,6 +137,95 @@ class OracleTests(unittest.TestCase):
         self.store.log_event("run-id", "cycle_done", {"cycle": 1}, event_key="cycle:1:done")
         self.assertEqual(len(self.store.list_events("run-id")), 1)
 
+    def test_literature_ingestion_preserves_provenance_and_marks_candidates(self):
+        from oracle.literature import LiteratureClient, LiteratureSearchReport
+        run = ResearchRun("Literature ingestion")
+        report = LiteratureSearchReport(query="test", providers=["europepmc"])
+        report.records = [{
+            "provider":"Europe PMC","provider_id":"123","doi":"10.1000/example","pmid":"12345",
+            "title":"A study of cell signaling","authors":"A Author; B Author","journal":"Example Journal",
+            "year":"2024","url":"https://doi.org/10.1000/example",
+            "abstract":"Cell signaling controls developmental outcomes in several contexts. The authors measured gene expression across multiple independent samples.",
+            "publication_type":"journal article","open_access":True,"license":"CC-BY","citation_count":5
+        }]
+        client = LiteratureClient()
+        client.ingest(run, report)
+        self.assertEqual(len(run.sources), 1)
+        self.assertEqual(run.sources[0].doi, "10.1000/example")
+        self.assertEqual(run.sources[0].pmid, "12345")
+        self.assertEqual(run.evidence[0].locator, "Abstract")
+        self.assertEqual(len(run.claims), 2)
+        self.assertTrue(all(c.status == "unreviewed_candidate" for c in run.claims))
+        self.assertTrue(all(x.stance == EvidenceStance.CONTEXTUAL and x.strength == 0
+                            for x in run.evidence_claim_links))
+        self.store.save_run(run)
+        loaded = self.store.load_run(run.run_id)
+        self.assertEqual(loaded.sources[0].provider, "Europe PMC")
+        self.assertEqual(loaded.evidence[0].source_id, loaded.sources[0].source_id)
+
+    def test_literature_search_deduplicates_doi_across_providers(self):
+        from unittest.mock import patch
+        from oracle.literature import LiteratureClient
+        client = LiteratureClient()
+        europe = {"resultList":{"result":[{
+            "doi":"10.1000/same","pmid":"111","title":"Shared paper",
+            "abstractText":"An abstract.","authorString":"A Author","pubYear":"2024"}]}}
+        crossref = {"message":{"items":[{
+            "DOI":"10.1000/same","title":["Shared paper"],
+            "abstract":"<jats:p>An abstract.</jats:p>","author":[],
+            "published":{"date-parts":[[2024]]}}]}}
+        def fake_get(url):
+            return europe if "europepmc" in url else crossref
+        with patch.object(client, "_get_json", side_effect=fake_get):
+            result = client.search("shared paper", limit=5)
+        self.assertEqual(result.retrieved, 1)
+        self.assertEqual(result.records[0]["doi"], "10.1000/same")
+        self.assertTrue(result.records[0]["abstract"])
+
+    def test_geo_dataset_records_are_persisted_as_dataset_evidence(self):
+        from oracle.literature import LiteratureClient, LiteratureSearchReport
+        run = ResearchRun("GEO dataset test")
+        report = LiteratureSearchReport(query="heat stress", providers=["geo"])
+        report.records = [{
+            "provider":"NCBI GEO","provider_id":"123","doi":"","pmid":"",
+            "title":"Heat stress in seedlings","authors":"","journal":"","year":"2025",
+            "url":"https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE12345",
+            "abstract":"Expression profiles from seedlings exposed to heat stress.",
+            "publication_type":"gene expression dataset","open_access":False,"license":"",
+            "citation_count":None,"dataset":True,"dataset_accession":"GSE12345",
+            "organism":"Arabidopsis thaliana","sample_count":18,"platform":"GPL198",
+            "dataset_type":"Expression profiling by array","pubmed_ids":[]
+        }]
+        client = LiteratureClient()
+        client.ingest(run, report)
+        self.assertEqual(run.sources[0].dataset_accession, "GSE12345")
+        self.assertEqual(run.sources[0].organism, "Arabidopsis thaliana")
+        self.assertEqual(run.evidence[0].kind, EvidenceKind.DATASET)
+        self.assertEqual(run.evidence[0].locator, "GEO dataset summary")
+        self.store.save_run(run)
+        loaded = self.store.load_run(run.run_id)
+        self.assertEqual(loaded.sources[0].dataset_accession, "GSE12345")
+        self.assertEqual(loaded.evidence[0].kind, EvidenceKind.DATASET)
+
+    def test_geo_search_uses_esearch_then_esummary(self):
+        from unittest.mock import patch
+        from oracle.literature import LiteratureClient
+        client = LiteratureClient()
+        search = {"esearchresult":{"idlist":["123"]}}
+        summary = {"result":{"123":{"accession":"GSE123","title":"Example dataset",
+            "summary":"Dataset summary.","taxon":"Arabidopsis thaliana",
+            "n_samples":"12","gpl":"GPL1","gdsType":"Expression profiling"}}}
+        with patch.object(client,"_get_json",side_effect=[search,summary]):
+            records = client._search_geo("plant stress",5)
+        self.assertEqual(records[0]["dataset_accession"],"GSE123")
+        self.assertEqual(records[0]["sample_count"],"12")
+
+    def test_literature_query_and_limit_validation(self):
+        from oracle.literature import LiteratureClient
+        client = LiteratureClient()
+        with self.assertRaises(ValueError): client.search(" ")
+        with self.assertRaises(ValueError): client.search("valid", limit=0)
+
     def test_resume_interrupted_run_without_resetting_history(self):
         run = OracleOrchestrator(self.store).run("Resume this", max_cycles=1)
         run.status = RunStatus.PAUSED
