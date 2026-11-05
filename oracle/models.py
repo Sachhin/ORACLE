@@ -71,6 +71,14 @@ class SourceRecord:
     reliability_score: float = 0.5
     reliability_rationale: str = "Unassessed; neutral provisional default."
     source_id: str = field(default_factory=lambda: new_id("src"))
+    doi: str = ""
+    pmid: str = ""
+    authors: str = ""
+    journal: str = ""
+    abstract: str = ""
+    provider: str = ""
+    open_access: bool = False
+    license: str = ""
 
 
 @dataclass
