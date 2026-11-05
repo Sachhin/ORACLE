@@ -7,7 +7,7 @@ from oracle.decision import choose_next_action
 from oracle.knowledge import KnowledgeBase
 from oracle.models import (
     Evidence, EvidenceKind, EvidenceStance, ExperimentStatus, Hypothesis,
-    ResearchMode, RunStatus,
+    ResearchMode, ResearchRun, RunStatus,
 )
 from oracle.orchestrator import OracleOrchestrator
 from oracle.storage import ResearchStore
@@ -78,7 +78,7 @@ class OracleTests(unittest.TestCase):
         self.assertEqual(b.status, "unassessed")
 
     def test_competing_hypotheses_share_a_group(self):
-        run = OracleOrchestrator(self.store).run("Test", max_cycles=1)
+        run = ResearchRun("Test")
         kb = KnowledgeBase()
         first = Hypothesis("Model A", "Reason A")
         second = Hypothesis("Model B", "Reason B")
