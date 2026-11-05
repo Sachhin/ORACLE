@@ -111,6 +111,9 @@ class Claim:
     contradicts_claim_ids: list[str] = field(default_factory=list)
     created_at: str = field(default_factory=utc_now)
     revision: int = 1
+    source_quote: str = ""
+    extraction_model: str = ""
+    extraction_method: str = ""
 
 
 @dataclass
