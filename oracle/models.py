@@ -1,4 +1,4 @@
-"""Typed domain models for research, evidence, hypotheses, and experiments."""
+"""Typed domain models for ORACLE's scientific knowledge graph and runs."""
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
@@ -27,6 +27,12 @@ class EvidenceKind(str, Enum):
     OBSERVATION = "observation"
     DATASET = "dataset"
     INFERENCE = "inference"
+
+
+class EvidenceStance(str, Enum):
+    SUPPORTS = "supports"
+    REFUTES = "refutes"
+    CONTEXTUAL = "contextual"
 
 
 class HypothesisStatus(str, Enum):
@@ -67,6 +73,26 @@ class Evidence:
 
 
 @dataclass
+class Claim:
+    statement: str
+    claim_type: str = "scientific"
+    status: str = "unassessed"
+    claim_id: str = field(default_factory=lambda: new_id("cl"))
+    contradicts_claim_ids: list[str] = field(default_factory=list)
+    created_at: str = field(default_factory=utc_now)
+
+
+@dataclass
+class EvidenceClaimLink:
+    claim_id: str
+    evidence_id: str
+    stance: EvidenceStance
+    strength: float = 1.0
+    rationale: str = ""
+    link_id: str = field(default_factory=lambda: new_id("ln"))
+
+
+@dataclass
 class Hypothesis:
     statement: str
     rationale: str
@@ -76,6 +102,29 @@ class Hypothesis:
     supporting_evidence_ids: list[str] = field(default_factory=list)
     opposing_evidence_ids: list[str] = field(default_factory=list)
     hypothesis_id: str = field(default_factory=lambda: new_id("hyp"))
+    group_id: str = ""
+    created_at: str = field(default_factory=utc_now)
+
+
+@dataclass
+class HypothesisGroup:
+    question: str
+    group_id: str = field(default_factory=lambda: new_id("hg"))
+    hypothesis_ids: list[str] = field(default_factory=list)
+    status: str = "open"
+
+
+@dataclass
+class UncertaintyAssessment:
+    subject_id: str
+    subject_type: str
+    evidence_count: int
+    supporting_weight: float
+    opposing_weight: float
+    unresolved_contradictions: int
+    confidence_estimate: float | None
+    rationale: str
+    assessment_id: str = field(default_factory=lambda: new_id("unc"))
     created_at: str = field(default_factory=utc_now)
 
 
@@ -110,7 +159,11 @@ class ResearchRun:
     current_cycle: int = 0
     tasks: list[ResearchTask] = field(default_factory=list)
     evidence: list[Evidence] = field(default_factory=list)
+    claims: list[Claim] = field(default_factory=list)
+    evidence_claim_links: list[EvidenceClaimLink] = field(default_factory=list)
     hypotheses: list[Hypothesis] = field(default_factory=list)
+    hypothesis_groups: list[HypothesisGroup] = field(default_factory=list)
+    uncertainty_assessments: list[UncertaintyAssessment] = field(default_factory=list)
     experiments: list[Experiment] = field(default_factory=list)
     findings: list[str] = field(default_factory=list)
     decisions: list[str] = field(default_factory=list)
