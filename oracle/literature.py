@@ -96,6 +96,37 @@ class LiteratureClient:
         data=self._get_json("https://api.crossref.org/works?"+urlencode(params))
         return [self._crossref_record(x) for x in data.get("message",{}).get("items",[])]
 
+    def _search_geo(self, query: str, limit: int):
+        base = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/"
+        search = self._get_json(base+"esearch.fcgi?"+urlencode({
+            "db":"gds","term":query,"retmax":limit,"retmode":"json"}))
+        ids = search.get("esearchresult",{}).get("idlist",[])
+        if not ids:
+            return []
+        summary = self._get_json(base+"esummary.fcgi?"+urlencode({
+            "db":"gds","id":",".join(ids),"retmode":"json"}))
+        result = summary.get("result",{})
+        records = []
+        for uid in ids:
+            item = result.get(str(uid),{})
+            accession = item.get("accession") or ""
+            if not accession:
+                continue
+            records.append({
+                "provider":"NCBI GEO","provider_id":str(uid),"doi":"","pmid":"",
+                "title":item.get("title") or accession,"authors":"","journal":"",
+                "year":str(item.get("pdat") or ""),
+                "url":"https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc="+accession,
+                "abstract":self._clean(item.get("summary") or ""),
+                "publication_type":"gene expression dataset","open_access":False,"license":"",
+                "citation_count":None,"dataset":True,"dataset_accession":accession,
+                "organism":item.get("taxon") or "","sample_count":item.get("n_samples"),
+                "platform":item.get("gpl") or "",
+                "dataset_type":item.get("gdsType") or item.get("entryType") or "",
+                "pubmed_ids":item.get("pubmedids") or [],
+            })
+        return records
+
     def search(self, query: str, limit: int=10, providers=("europepmc","crossref")) -> LiteratureSearchReport:
         query=query.strip()
         if not query: raise ValueError("Literature query cannot be empty.")
