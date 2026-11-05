@@ -79,6 +79,11 @@ class SourceRecord:
     provider: str = ""
     open_access: bool = False
     license: str = ""
+    dataset_accession: str = ""
+    organism: str = ""
+    sample_count: str = ""
+    platform: str = ""
+    dataset_summary: str = ""
 
 
 @dataclass
