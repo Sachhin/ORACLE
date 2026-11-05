@@ -1,7 +1,9 @@
 # ORACLE Literature Intelligence Engine
 
 ## Providers
-The opt-in client queries Europe PMC Articles REST API (core results) and Crossref REST API (/works). Both are public APIs and need no API key. Crossref's polite pool can be requested with --mailto. Calls have timeouts and bounded result limits. If one provider fails, results from the other are retained; if all fail, an explicit error is raised.
+The opt-in client queries Europe PMC Articles REST API (core results), Crossref REST API (/works), and NCBI GEO DataSets through E-utilities (ESearch followed by ESummary). All are public APIs and need no API key. Crossref's polite pool can be requested with --mailto. Calls have timeouts and bounded result limits. If one provider fails, results from the other are retained; if all fail, an explicit error is raised.
+
+Use --provider both for paper databases, --provider geo for GEO experimental datasets, or --provider all for all three providers. GEO records retain accession (for example GSE...), organism, sample count, platform, dataset type, NCBI landing page, and summary. GEO summaries are stored as EvidenceKind.DATASET with locator='GEO dataset summary'. This is metadata discovery only: raw expression matrices, supplementary files, and sample-level data are not downloaded.
 
 ## Exact provenance
 Records preserve provider, DOI, PMID, authors, journal, publication date, landing URL, publication type, open-access flag, license metadata, and abstract text. Abstracts are stored as evidence with locator="Abstract" and a stable source ID based on DOI/PMID. Reliability begins at neutral, explicitly unassessed 0.5.
