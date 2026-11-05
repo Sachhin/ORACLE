@@ -40,8 +40,6 @@ class ResearchStore:
                     payload TEXT NOT NULL, created_at TEXT NOT NULL,
                     event_key TEXT
                 );
-                CREATE UNIQUE INDEX IF NOT EXISTS idx_events_idempotency
-                    ON events(run_id,event_key) WHERE event_key IS NOT NULL;
                 CREATE TABLE IF NOT EXISTS sources (
                     source_id TEXT PRIMARY KEY, run_id TEXT NOT NULL, payload TEXT NOT NULL
                 );
@@ -71,7 +69,7 @@ class ResearchStore:
             columns = {row["name"] for row in db.execute("PRAGMA table_info(events)")}
             if "event_key" not in columns:
                 db.execute("ALTER TABLE events ADD COLUMN event_key TEXT")
-                db.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_events_idempotency ON events(run_id,event_key) WHERE event_key IS NOT NULL")
+            db.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_events_idempotency ON events(run_id,event_key) WHERE event_key IS NOT NULL")
 
     def _sync_graph(self, db: sqlite3.Connection, run: ResearchRun) -> None:
         rows = [
