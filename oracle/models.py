@@ -61,6 +61,19 @@ class RunStatus(str, Enum):
 
 
 @dataclass
+class SourceRecord:
+    title: str
+    url: str = ""
+    publisher: str = ""
+    source_type: str = "unknown"
+    published_at: str = ""
+    accessed_at: str = field(default_factory=utc_now)
+    reliability_score: float = 0.5
+    reliability_rationale: str = "Unassessed; neutral provisional default."
+    source_id: str = field(default_factory=lambda: new_id("src"))
+
+
+@dataclass
 class Evidence:
     claim: str
     source: str
@@ -70,6 +83,10 @@ class Evidence:
     confidence: str = "unknown"
     evidence_id: str = field(default_factory=lambda: new_id("ev"))
     created_at: str = field(default_factory=utc_now)
+    source_id: str = ""
+    locator: str = ""
+    reliability: float = 0.5
+    dependence_group: str = ""
 
 
 @dataclass
@@ -80,6 +97,17 @@ class Claim:
     claim_id: str = field(default_factory=lambda: new_id("cl"))
     contradicts_claim_ids: list[str] = field(default_factory=list)
     created_at: str = field(default_factory=utc_now)
+    revision: int = 1
+
+
+@dataclass
+class ClaimRevision:
+    claim_id: str
+    revision: int
+    statement: str
+    change_reason: str
+    created_at: str = field(default_factory=utc_now)
+    revision_id: str = field(default_factory=lambda: new_id("rev"))
 
 
 @dataclass
@@ -90,6 +118,18 @@ class EvidenceClaimLink:
     strength: float = 1.0
     rationale: str = ""
     link_id: str = field(default_factory=lambda: new_id("ln"))
+
+
+@dataclass
+class ContradictionCandidate:
+    claim_a_id: str
+    claim_b_id: str
+    detection_method: str
+    rationale: str
+    status: str = "pending_review"
+    reviewer_note: str = ""
+    candidate_id: str = field(default_factory=lambda: new_id("cx"))
+    created_at: str = field(default_factory=utc_now)
 
 
 @dataclass
@@ -126,6 +166,7 @@ class UncertaintyAssessment:
     rationale: str
     assessment_id: str = field(default_factory=lambda: new_id("unc"))
     created_at: str = field(default_factory=utc_now)
+    independent_evidence_groups: int = 0
 
 
 @dataclass
@@ -158,9 +199,12 @@ class ResearchRun:
     status: RunStatus = RunStatus.CREATED
     current_cycle: int = 0
     tasks: list[ResearchTask] = field(default_factory=list)
+    sources: list[SourceRecord] = field(default_factory=list)
     evidence: list[Evidence] = field(default_factory=list)
     claims: list[Claim] = field(default_factory=list)
+    claim_revisions: list[ClaimRevision] = field(default_factory=list)
     evidence_claim_links: list[EvidenceClaimLink] = field(default_factory=list)
+    contradiction_candidates: list[ContradictionCandidate] = field(default_factory=list)
     hypotheses: list[Hypothesis] = field(default_factory=list)
     hypothesis_groups: list[HypothesisGroup] = field(default_factory=list)
     uncertainty_assessments: list[UncertaintyAssessment] = field(default_factory=list)

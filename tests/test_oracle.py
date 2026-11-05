@@ -87,6 +87,56 @@ class OracleTests(unittest.TestCase):
         self.assertEqual(group.group_id, same.group_id)
         self.assertEqual(len(group.hypothesis_ids), 2)
 
+    def test_provenance_revisions_and_source_reliability_persist(self):
+        from oracle.models import SourceRecord
+        run = ResearchRun("Provenance test")
+        kb = KnowledgeBase()
+        source = kb.add_source(run, SourceRecord(
+            title="Example paper", url="https://example.org/paper",
+            reliability_score=0.8, reliability_rationale="Peer-reviewed primary study."
+        ))
+        evidence = Evidence("Observation", source.title, source_id=source.source_id,
+                            reliability=0.8, dependence_group="same-study")
+        run.evidence.append(evidence)
+        claim = kb.add_claim(run, "Observation A is associated with outcome B.")
+        kb.link_evidence(run, claim.claim_id, evidence.evidence_id, EvidenceStance.SUPPORTS)
+        kb.revise_claim(run, claim.claim_id, "Observation A may be associated with outcome B.",
+                        "New evidence narrowed the wording.")
+        self.store.save_run(run)
+        loaded = self.store.load_run(run.run_id)
+        self.assertEqual(loaded.claims[0].revision, 2)
+        self.assertEqual(len(loaded.claim_revisions), 1)
+        self.assertEqual(loaded.sources[0].source_id, source.source_id)
+        self.assertEqual(len(loaded.evidence_claim_links), 1)
+
+    def test_correlated_evidence_is_not_double_counted(self):
+        run = ResearchRun("Dependence test")
+        kb = KnowledgeBase()
+        claim = kb.add_claim(run, "X causes Y.")
+        for label in ("republished result", "same underlying cohort"):
+            evidence = Evidence(label, "One cohort", reliability=0.9, dependence_group="cohort-1")
+            run.evidence.append(evidence)
+            kb.link_evidence(run, claim.claim_id, evidence.evidence_id, EvidenceStance.SUPPORTS)
+        assessment = kb.assess_claim(run, claim.claim_id)
+        self.assertEqual(assessment.supporting_weight, 0.9)
+        self.assertEqual(assessment.independent_evidence_groups, 1)
+
+    def test_contradiction_candidates_require_review(self):
+        run = ResearchRun("Contradiction review")
+        kb = KnowledgeBase()
+        first = kb.add_claim(run, "Gene X is required.")
+        kb.add_claim(run, "Gene X is not required.")
+        candidate = run.contradiction_candidates[0]
+        self.assertEqual(candidate.status, "pending_review")
+        kb.review_contradiction(run, candidate.candidate_id, "needs_context", "Different tissues.")
+        assessment = kb.assess_claim(run, first.claim_id)
+        self.assertEqual(assessment.unresolved_contradictions, 1)
+
+    def test_event_keys_are_idempotent(self):
+        self.store.log_event("run-id", "cycle_done", {"cycle": 1}, event_key="cycle:1:done")
+        self.store.log_event("run-id", "cycle_done", {"cycle": 1}, event_key="cycle:1:done")
+        self.assertEqual(len(self.store.list_events("run-id")), 1)
+
     def test_resume_interrupted_run_without_resetting_history(self):
         run = OracleOrchestrator(self.store).run("Resume this", max_cycles=1)
         run.status = RunStatus.PAUSED
