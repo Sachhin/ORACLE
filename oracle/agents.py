@@ -74,7 +74,14 @@ class HypothesisAgent:
             predictions=["A multi-factor model should explain observations that a single-factor model cannot."],
             confidence="very low",
         )
-        return AgentResult(self.name, "Created a provisional hypothesis for later testing.", [hypothesis])
+        alternative = Hypothesis(
+            statement=f"A dominant single mechanism may explain most of: '{context.question}'.",
+            rationale="A simpler competing model is retained so the first hypothesis is not treated as the default truth.",
+            predictions=["A single-mechanism model should explain the key observations without requiring additional interacting factors."],
+            confidence="very low",
+        )
+        return AgentResult(self.name, "Created competing provisional hypotheses for later testing.",
+                           [hypothesis, alternative])
 
 
 class SkepticAgent:
