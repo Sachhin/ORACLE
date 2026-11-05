@@ -37,10 +37,12 @@ ORACLE can search Europe PMC and Crossref public REST APIs without API keys or t
 
     python -m oracle --literature "embryonic development cell fate signaling" --limit 10
     python -m oracle --literature "plant nonsense-mediated mRNA decay" --provider europepmc --limit 15 --json
+    python -m oracle --literature "Arabidopsis heat stress" --provider geo --limit 10
+    python -m oracle --literature "embryo development" --provider all --limit 15
 
 Each work is stored with DOI/PMID when available, authors, journal, date, provider, landing URL, licence/open-access metadata, and abstract text. Abstracts are source evidence with the exact "Abstract" locator. Sentence splitting produces unreviewed statement candidates only: it does not prove a claim or decide whether a paper supports/refutes it. Initial evidence links are contextual with zero weight until reviewed.
 
-Full-text retrieval, dataset-specific APIs, semantic claim extraction, entailment/contradiction review, citation-network exploration, and LLM reasoning are not yet included. Publisher copyright may apply to abstract text.
+Full-text retrieval, raw GEO matrix downloads, other dataset repositories, semantic claim extraction, entailment/contradiction review, citation-network exploration, and LLM reasoning are not yet included. Publisher copyright may apply to abstract text.
 
 ## Scope of this milestone
 
