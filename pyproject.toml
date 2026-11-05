@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "oracle-scientist"
+version = "2.0.0"
+description = "Offline-first autonomous scientific research and discovery framework"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.scripts]
+oracle = "oracle.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["oracle*"]
