@@ -188,12 +188,13 @@ class LiteratureClient:
             abstract=item.get("abstract","").strip()
             if not abstract:
                 report.warnings.append("No abstract supplied: "+title); continue
-            evidence=next((e for e in run.evidence if e.source_id==source.source_id and e.locator=="Abstract"),None)
+            target_locator = "GEO dataset summary" if item.get("dataset") else "Abstract"
+            evidence=next((e for e in run.evidence if e.source_id==source.source_id and e.locator==target_locator),None)
             if evidence is None:
                 evidence=Evidence(claim=abstract[:12000],source=title,kind=(EvidenceKind.DATASET if item.get("dataset") else EvidenceKind.SOURCE),
                     method=("GEO dataset summary retrieved from NCBI E-utilities" if item.get("dataset") else "Abstract retrieved from "+item.get("provider","scholarly metadata API")),
                     limitations="Abstract only; full text and methods may not have been accessed.",
-                    confidence="unassessed",source_id=source.source_id,locator=("GEO dataset summary" if item.get("dataset") else "Abstract"),reliability=0.5,
+                    confidence="unassessed",source_id=source.source_id,locator=target_locator,reliability=0.5,
                     dependence_group=("doi:"+doi if doi else "pmid:"+pmid if pmid else ""))
                 run.evidence.append(evidence); report.evidence_records+=1
             for sentence in self.candidate_sentences(abstract):
