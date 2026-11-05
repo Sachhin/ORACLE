@@ -1,4 +1,4 @@
-"""SQLite persistence for runs, evidence, hypotheses, experiments, and events."""
+"""SQLite persistence for research runs, snapshots, and append-only events."""
 from __future__ import annotations
 
 import json
@@ -6,7 +6,11 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
-from .models import ResearchRun, utc_now
+from .models import (
+    Claim, Evidence, EvidenceClaimLink, EvidenceKind, EvidenceStance, Experiment,
+    ExperimentStatus, Hypothesis, HypothesisGroup, HypothesisStatus, ResearchMode,
+    ResearchRun, ResearchTask, RunStatus, UncertaintyAssessment, utc_now,
+)
 
 
 class ResearchStore:
@@ -52,6 +56,36 @@ class ResearchStore:
             row = db.execute("SELECT payload FROM runs WHERE run_id=?", (run_id,)).fetchone()
         return json.loads(row["payload"]) if row else None
 
+    def load_run(self, run_id: str) -> ResearchRun | None:
+        data = self.load_payload(run_id)
+        if data is None:
+            return None
+        def enum_value(enum_type, value):
+            return enum_type(value) if value is not None else None
+        run = ResearchRun(
+            question=data["question"], mode=ResearchMode(data.get("mode", "both")),
+            max_cycles=data.get("max_cycles", 3), run_id=data["run_id"],
+            status=RunStatus(data.get("status", "created")),
+            current_cycle=data.get("current_cycle", 0),
+            tasks=[ResearchTask(**x) for x in data.get("tasks", [])],
+            evidence=[Evidence(**{**x, "kind": enum_value(EvidenceKind, x.get("kind", "source"))})
+                      for x in data.get("evidence", [])],
+            claims=[Claim(**x) for x in data.get("claims", [])],
+            evidence_claim_links=[EvidenceClaimLink(**{**x, "stance": EvidenceStance(x["stance"])})
+                                  for x in data.get("evidence_claim_links", [])],
+            hypotheses=[Hypothesis(**{**x, "status": enum_value(HypothesisStatus, x.get("status", "proposed"))})
+                        for x in data.get("hypotheses", [])],
+            hypothesis_groups=[HypothesisGroup(**x) for x in data.get("hypothesis_groups", [])],
+            uncertainty_assessments=[UncertaintyAssessment(**x)
+                                     for x in data.get("uncertainty_assessments", [])],
+            experiments=[Experiment(**{**x, "status": enum_value(ExperimentStatus, x.get("status", "proposed"))})
+                         for x in data.get("experiments", [])],
+            findings=data.get("findings", []), decisions=data.get("decisions", []),
+            created_at=data.get("created_at", utc_now()),
+            updated_at=data.get("updated_at", utc_now()),
+        )
+        return run
+
     def log_event(self, run_id: str, event_type: str, payload: dict[str, Any]) -> None:
         with self._connect() as db:
             db.execute(
@@ -67,3 +101,10 @@ class ResearchStore:
             ).fetchall()
         return [{"event_type": r["event_type"], "payload": json.loads(r["payload"]),
                  "created_at": r["created_at"]} for r in rows]
+
+    def list_resumable_runs(self) -> list[dict[str, Any]]:
+        with self._connect() as db:
+            rows = db.execute(
+                "SELECT run_id,question,status,updated_at FROM runs WHERE status IN ('running','paused','failed') ORDER BY updated_at DESC"
+            ).fetchall()
+        return [dict(row) for row in rows]
