@@ -27,7 +27,7 @@ class LiteratureSearchReport:
     records: list[dict[str, Any]] = field(default_factory=list)
 
 class LiteratureClient:
-    PROVIDERS = ("europepmc", "crossref")
+    PROVIDERS = ("europepmc", "crossref", "geo")
     def __init__(self, timeout: float = 20.0, mailto: str = ""):
         if timeout <= 0:
             raise ValueError("timeout must be positive")
@@ -102,12 +102,12 @@ class LiteratureClient:
         if not 1 <= limit <= 50: raise ValueError("limit must be between 1 and 50.")
         selected=tuple(dict.fromkeys(providers))
         if not selected or any(p not in self.PROVIDERS for p in selected):
-            raise ValueError("providers must be europepmc and/or crossref.")
+            raise ValueError("providers must be europepmc, crossref, and/or geo.")
         report=LiteratureSearchReport(query, list(selected))
         jobs={}
         with ThreadPoolExecutor(max_workers=len(selected)) as pool:
             for provider in selected:
-                fn=self._search_europepmc if provider=="europepmc" else self._search_crossref
+                fn={"europepmc":self._search_europepmc,"crossref":self._search_crossref,"geo":self._search_geo}[provider]
                 jobs[pool.submit(fn,query,limit)]=provider
             for future in as_completed(jobs):
                 try: report.records.extend(future.result())
@@ -149,17 +149,20 @@ class LiteratureClient:
                 reliability_rationale="Unassessed metadata; peer review and study quality not independently evaluated.",
                 source_id=sid,doi=doi,pmid=pmid,authors=item.get("authors",""),journal=item.get("journal",""),
                 abstract=item.get("abstract",""),provider=item.get("provider",""),
-                open_access=bool(item.get("open_access")),license=item.get("license",""))
+                open_access=bool(item.get("open_access")),license=item.get("license",""),
+                dataset_accession=item.get("dataset_accession",""),organism=item.get("organism",""),
+                sample_count=str(item.get("sample_count") or ""),platform=str(item.get("platform") or ""),
+                dataset_summary=item.get("abstract",""))
             source=kb.add_source(run,source); report.ingested_sources+=1
             abstract=item.get("abstract","").strip()
             if not abstract:
                 report.warnings.append("No abstract supplied: "+title); continue
             evidence=next((e for e in run.evidence if e.source_id==source.source_id and e.locator=="Abstract"),None)
             if evidence is None:
-                evidence=Evidence(claim=abstract[:12000],source=title,kind=EvidenceKind.SOURCE,
-                    method="Abstract retrieved from "+item.get("provider","scholarly metadata API"),
+                evidence=Evidence(claim=abstract[:12000],source=title,kind=(EvidenceKind.DATASET if item.get("dataset") else EvidenceKind.SOURCE),
+                    method=("GEO dataset summary retrieved from NCBI E-utilities" if item.get("dataset") else "Abstract retrieved from "+item.get("provider","scholarly metadata API")),
                     limitations="Abstract only; full text and methods may not have been accessed.",
-                    confidence="unassessed",source_id=source.source_id,locator="Abstract",reliability=0.5,
+                    confidence="unassessed",source_id=source.source_id,locator=("GEO dataset summary" if item.get("dataset") else "Abstract"),reliability=0.5,
                     dependence_group=("doi:"+doi if doi else "pmid:"+pmid if pmid else ""))
                 run.evidence.append(evidence); report.evidence_records+=1
             for sentence in self.candidate_sentences(abstract):
