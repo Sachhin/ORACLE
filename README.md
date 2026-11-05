@@ -6,7 +6,7 @@ ORACLE combines Deep Research and Autonomous Discovery under a balanced operatin
 
 ## Current build status
 
-This is a clean, API-free foundation. It uses deterministic local agents so the complete research lifecycle can be exercised without network access or model-provider credentials. These agents are scaffolding, not claims of genuine AI-level scientific reasoning.
+The offline research foundation remains usable without credentials. Optional network literature retrieval uses public scholarly APIs; optional Gemini extraction uses a real model only when explicitly enabled. Deterministic local agents remain scaffolding, not claims of autonomous AI-level scientific reasoning.
 
 ## Quick start
 
@@ -42,7 +42,17 @@ ORACLE can search Europe PMC and Crossref public REST APIs without API keys or t
 
 Each work is stored with DOI/PMID when available, authors, journal, date, provider, landing URL, licence/open-access metadata, and abstract text. Abstracts are source evidence with the exact "Abstract" locator. Sentence splitting produces unreviewed statement candidates only: it does not prove a claim or decide whether a paper supports/refutes it. Initial evidence links are contextual with zero weight until reviewed.
 
-Full-text retrieval, raw GEO matrix downloads, other dataset repositories, semantic claim extraction, entailment/contradiction review, citation-network exploration, and LLM reasoning are not yet included. Publisher copyright may apply to abstract text.
+Optional Gemini claim extraction is available with --extract-claims. It creates source-quoted, unreviewed candidates only; it does not determine truth, entailment, contradiction, or whether a paper supports a hypothesis. Full-text retrieval, raw GEO matrix downloads, other dataset repositories, semantic evidence review, citation-network exploration, and autonomous LLM reasoning are not yet included. Publisher copyright may apply to abstract text.
+
+### Optional Gemini claim extraction
+
+Set GEMINI_API_KEY in your shell (do not put the key in source files or commit it), then run:
+
+    export GEMINI_API_KEY="YOUR_GEMINI_API_KEY"
+    python -m oracle --literature "embryonic development cell fate signaling" --provider both --limit 10 --extract-claims
+    python -m oracle --literature "Arabidopsis heat stress" --provider geo --limit 10 --extract-claims --gemini-model gemini-2.5-flash --json
+
+Gemini output is accepted only when its evidence_quote is an exact substring of the retrieved abstract or GEO summary. Each candidate stores that quote, model name, source/evidence link, and an unreviewed status. Its evidence link remains CONTEXTUAL with zero weight. The feature is opt-in; normal offline runs never call Gemini.
 
 ## Scope of this milestone
 
