@@ -6,6 +6,7 @@ import json
 
 from .models import ResearchMode, ResearchRun
 from .literature import LiteratureClient
+from .llm import GeminiClaimExtractor
 from .orchestrator import OracleOrchestrator
 from .storage import ResearchStore
 
@@ -22,21 +23,26 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--limit", type=int, default=10, help="Maximum literature records (1-50)")
     parser.add_argument("--provider", choices=["both", "all", "europepmc", "crossref", "geo"], default="both")
     parser.add_argument("--mailto", default="", help="Optional contact email for Crossref polite pool")
+    parser.add_argument("--extract-claims", action="store_true", help="Extract quote-grounded candidates with Gemini")
+    parser.add_argument("--gemini-model", default="gemini-2.5-flash", help="Gemini model for claim extraction")
     return parser
 
 
 def main() -> None:
     args = build_parser().parse_args()
     store = ResearchStore(args.db)
+    if args.extract_claims and args.literature is None:
+        raise SystemExit("--extract-claims requires --literature.")
     if args.literature is not None:
         run = ResearchRun(question=args.literature)
         providers = {"both": ("europepmc", "crossref"), "all": ("europepmc", "crossref", "geo"), "europepmc": ("europepmc",), "crossref": ("crossref",), "geo": ("geo",)}[args.provider]
         client = LiteratureClient(mailto=args.mailto)
         report = client.search(args.literature, limit=args.limit, providers=providers)
         client.ingest(run, report)
+        extraction_report = GeminiClaimExtractor(model=args.gemini_model).extract(run) if args.extract_claims else None
         store.save_run(run)
         if args.json:
-            print(json.dumps({"run": run.to_dict(), "literature_report": report.__dict__}, indent=2, ensure_ascii=False))
+            print(json.dumps({"run": run.to_dict(), "literature_report": report.__dict__, "claim_extraction_report": (extraction_report.__dict__ if extraction_report else None)}, indent=2, ensure_ascii=False))
             return
         print(f"ORACLE literature run: {run.run_id}")
         print(f"Retrieved: {report.retrieved} | Sources: {report.ingested_sources} | Abstracts: {report.evidence_records} | Candidate statements: {report.candidate_statements}")
@@ -47,6 +53,9 @@ def main() -> None:
         for warning in report.warnings:
             print(f"WARNING: {warning}")
         print("Extracted sentences are unreviewed candidates, not validated claims.")
+        if extraction_report:
+            print(f"Gemini: {extraction_report.candidates_created} quote-validated candidates; {extraction_report.candidates_rejected} rejected.")
+            print("Gemini candidates remain contextual, zero-weight, and unreviewed.")
         return
     orchestrator = OracleOrchestrator(store)
     if args.resume_id:
