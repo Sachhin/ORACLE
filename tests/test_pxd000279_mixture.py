@@ -64,8 +64,8 @@ class PXD000279MixtureBenchmarkTests(unittest.TestCase):
                 writer.writerow(["sp|P3|HUMAN OS=Homo sapiens", "", "+", "",
                                  *([""] * 84), 100, 100, 100, 100, 100, 100])
             report = benchmark_pxd000279(path)
-            self.assertEqual(report["sample_columns"]["Ecoli10"], columns[:3])
-            self.assertEqual(report["sample_columns"]["Ecoli30"], columns[3:])
+            self.assertEqual(report["sample_columns"]["Ecoli30"], columns[:3])
+            self.assertEqual(report["sample_columns"]["Ecoli10"], columns[3:])
             self.assertIn("published DEqMS", report["sample_group_assignment_method"])
             self.assertEqual(report["skipped_rows"]["decoy_or_contaminant_or_site_only"], 1)
             self.assertAlmostEqual(
