@@ -21,9 +21,11 @@ class FakeProvider:
     def __init__(self, response):
         self.response = response
         self.calls = 0
+        self.prompts = []
 
     def generate_json(self, prompt):
         self.calls += 1
+        self.prompts.append(prompt)
         return self.response
 
 
@@ -132,6 +134,27 @@ class GeminiReviewAgentTests(unittest.TestCase):
             reloaded = store.load_run(run.run_id)
             self.assertEqual(reloaded.cross_domain_connections[0].status, "accepted")
             self.assertEqual(reviewed.reviewer_note, "Reviewed both source contexts.")
+
+    def test_novelty_context_excludes_model_inferences_and_prior_findings(self):
+        source = Evidence("A source-backed developmental observation.",
+                          "Paper", EvidenceKind.SOURCE, source_id="src-paper")
+        inference = Evidence("A speculative mechanism invented by the model.",
+                             "ORACLE inference", EvidenceKind.INFERENCE)
+        provider = FakeProvider({
+            "status": "insufficient_coverage",
+            "rationale": "The source packet is too narrow.",
+            "source_ids": ["src-paper"],
+            "search_gaps": [],
+        })
+        context = AgentContext(
+            "Question", 1, "both", evidence=[source, inference],
+            findings=["An earlier model guessed a mechanism."],
+        )
+        GeminiNoveltyAssessorAgent(provider).run(context)
+        prompt = provider.prompts[0]
+        self.assertIn("A source-backed developmental observation.", prompt)
+        self.assertNotIn("A speculative mechanism invented by the model.", prompt)
+        self.assertNotIn("An earlier model guessed a mechanism.", prompt)
 
     def test_novelty_rejects_fabricated_source_ids(self):
         evidence = Evidence("Paper finding", "Paper", EvidenceKind.SOURCE, source_id="src-real")
