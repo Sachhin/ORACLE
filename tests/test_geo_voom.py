@@ -41,7 +41,7 @@ class GEOVoomTests(unittest.TestCase):
 
     def test_mocked_r_execution_returns_versioned_results_and_hash(self):
         def fake_run(command, **kwargs):
-            output = Path(command[6])
+            output = Path(command[5])
             output.write_text(
                 "feature\tlogFC\tAveExpr\tt\tP.Value\tadj.P.Val\tB\n"
                 "g1\t1.5\t4.2\t3.1\t0.01\t0.02\t-1.0\n"
