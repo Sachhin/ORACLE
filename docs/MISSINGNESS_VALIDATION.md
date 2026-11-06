@@ -43,15 +43,24 @@ python -m oracle.missingness_validation \
 
 PEPerMINT (Bioinformatics, 2024; DOI 10.1093/bioinformatics/btae389)
 explicitly distinguishes synthetic masked-value proxies from genuine
-DDA-missing/DIA-observed measurements. Its B2 dataset is PXD047528, an HIV
-blood/plasma dataset with 15 biological samples, 2,535 peptides, 435 proteins,
-and 41.8% peptide-level missingness in the published benchmark table. The
-ProteomeXchange record describes a study comparing plasma proteomes from
-patients with HIV or herpes-virus infections, and a secondary analysis of
-HIV-associated neurocognitive disorder (HAND) versus cognitively normal people
-with HIV. The primary candidate outcome is HIV versus herpes-virus infection;
-HAND status is a separate within-HIV analysis. The sample-to-group mapping must
-be taken from the original study's metadata—not inferred from filenames.
+DDA-missing/DIA-observed measurements. Its B2 benchmark table reports
+PXD047528 with 15 samples, 2,535 peptides, 435 proteins, and 41.8%
+peptide-level missingness. **There is a material sample-count discrepancy
+that must be resolved before analysis:** the original Ahmed et al. clinical
+paper reports 13 plasma samples (8 HIV and 5 herpes-virus), whereas the
+PEPerMINT benchmark reports 15 samples and its public loader enumerates
+15 sample aliases. These counts must not be silently reconciled or assumed
+equivalent. The original paper's HAND analysis is a within-HIV comparison of
+5 HAND cases (3 MND, 2 HAD) against 3 cognitively normal PWH; it is not a
+15-sample-wide independent label. Freeze a sample-level mapping only after
+matching each assay's raw/processed file identifiers to the clinical cohort
+table and documenting any extra samples or exclusions.
+
+The original paper states that DDA runs were used to build a spectral library
+and DIA runs were used for identification and quantification. This supports
+the biological rationale for orthogonal DDA/DIA evaluation, but it does not by
+itself establish that the deposited processed files are paired on identical
+sample IDs or that each DDA-missing peptide has a DIA measurement.
 
 Sources:
 - PEPerMINT benchmark paper:
@@ -60,12 +69,15 @@ Sources:
   https://proteomecentral.proteomexchange.org/cgi/GetDataset?ID=PXD047528-1&test=no
 - Original HIV plasma proteomics paper DOI: 10.1007/S13365-022-01077-0
 
-Before running, inspect the PRIDE file manifest and confirm that it contains
+Before running, inspect the complete PRIDE file manifest and confirm that it contains
 processed, sample-paired DDA and DIA abundance tables (not just raw mass
-spectrometry files). Verify that all 15 biological sample identifiers pair
-one-to-one across assays, identify peptide/protein keys and normalization
-scale, and obtain the original clinical labels with documented inclusion and
-exclusion rules. Preserve the original DDA missingness mask; do not convert
+spectrometry files). The currently indexed PRIDE/OmicsDI view exposes 32 files,
+with the first visible entries being raw DDA files; that partial view is not
+proof that the processed matrices are present. Verify the complete manifest,
+downloaded file hashes, one-to-one assay pairing, peptide/protein keys,
+normalization scale, and the 13-versus-15 sample discrepancy. Obtain clinical
+labels from the original study's cohort table and document inclusion/exclusion
+rules. Do not use filenames as phenotype labels. Preserve the original DDA missingness mask; do not convert
 zero abundance to missing or treat unobserved peptides as measured zeros.
 The PEPerMINT article also describes a HeLa/E. coli mixture dataset
 (PXD000279) with known organism spike-in ratios, which may support a separate
