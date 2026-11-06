@@ -119,6 +119,7 @@ class GEOVoomAnalyzer:
             x["feature"]))
         return {"method":"edgeR TMM + limma-voom + empirical Bayes",
             "contrast":{"group_a":group_a,"group_b":group_b,"direction":f"{group_b} vs {group_a}"},
-            "sample_groups":groups,"sample_count":len(samples),"features_input":len(features),"features_returned":len(results),\n            "features_with_adjusted_p_value":sum(x["p_value_adjusted_bh"] is not None for x in results),
+            "sample_groups":groups,"sample_count":len(samples),"features_input":len(features),"features_returned":len(results),
+            "features_with_adjusted_p_value":sum(x["p_value_adjusted_bh"] is not None for x in results),
             "matrix_sha256":digest,"software":{"r":versions[0],"edgeR":versions[1],"limma":versions[2]},
             "results":results,"limitations":"Requires raw integer counts, biological replicates and explicit two-group labels. No covariates or group inference. Review sample QC, filtering and design assumptions. Results are associations, not causal discoveries."}
