@@ -197,30 +197,48 @@ def evaluate_orthogonal_missingness(
     if observed_changed:
         raise ValueError(f"Imputed matrix modified {len(observed_changed)} originally observed cells")
 
-    labels, groups = _read_labels(labels_path, samples, outcome_column)
-    dia_aligned = {
-        feature: {sample: (None if dia[feature][sample] is None
-                           else float(dia[feature][sample]) + feature_offsets[feature])
-                  for sample in samples}
-        for feature in features
+    if (bool(labels_path) != bool(outcome_column)):
+        raise ValueError("labels_path and outcome_column must either both be supplied or both be omitted")
+    groups = None
+    outcome_report = {
+        "status": "PENDING_INDEPENDENT_BIOLOGICAL_LABELS",
+        "reason": "Real missing-cell reconstruction was scored without assigning unverified sample phenotypes.",
     }
-    imp_effects = _outcome_effects(imputed, samples, labels, groups)
-    dia_effects = _outcome_effects(dia_aligned, samples, labels, groups)
-    shared = sorted(set(imp_effects) & set(dia_effects))
-    effect_x = [dia_effects[f] for f in shared]
-    effect_y = [imp_effects[f] for f in shared]
-    effect_corr = _pearson(effect_x, effect_y)
-    sign_agreement = (sum((a == 0 and b == 0) or (a*b > 0)
-                          for a, b in zip(effect_x, effect_y)) / len(shared)
-                      if shared else None)
-    k = min(top_k, len(shared))
-    dia_top = set(sorted(shared, key=lambda f: abs(dia_effects[f]), reverse=True)[:k])
-    imp_top = set(sorted(shared, key=lambda f: abs(imp_effects[f]), reverse=True)[:k])
-    top_overlap = len(dia_top & imp_top) / k if k else None
+    if labels_path:
+        labels, groups = _read_labels(labels_path, samples, outcome_column)
+        dia_aligned = {
+            feature: {sample: (None if dia[feature][sample] is None
+                               else float(dia[feature][sample]) + feature_offsets[feature])
+                      for sample in samples}
+            for feature in features
+        }
+        imp_effects = _outcome_effects(imputed, samples, labels, groups)
+        dia_effects = _outcome_effects(dia_aligned, samples, labels, groups)
+        shared = sorted(set(imp_effects) & set(dia_effects))
+        effect_x = [dia_effects[f] for f in shared]
+        effect_y = [imp_effects[f] for f in shared]
+        effect_corr = _pearson(effect_x, effect_y)
+        sign_agreement = (sum((a == 0 and b == 0) or (a*b > 0)
+                              for a, b in zip(effect_x, effect_y)) / len(shared)
+                          if shared else None)
+        k = min(top_k, len(shared))
+        dia_top = set(sorted(shared, key=lambda f: abs(dia_effects[f]), reverse=True)[:k])
+        imp_top = set(sorted(shared, key=lambda f: abs(imp_effects[f]), reverse=True)[:k])
+        top_overlap = len(dia_top & imp_top) / k if k else None
+        outcome_report = {
+            "status": "SCORED",
+            "features_with_estimable_two_group_effects": len(shared),
+            "effect_size_pearson_r": effect_corr,
+            "effect_direction_agreement": sign_agreement,
+            "top_absolute_effect_overlap_at_k": top_overlap,
+            "k": k,
+            "reference_effects": "orthogonal DIA assay, aligned using observed paired cells",
+            "candidate_effects": "ORACLE-imputed DDA matrix",
+        }
     delta = [a-b for a, b in zip(estimates, truth)]
     return {
         "benchmark_type": "paired_orthogonal_assay_real_missingness",
-        "status": "SCORED",
+        "status": "SCORED" if labels_path else "RECONSTRUCTION_ONLY_LABELS_PENDING",
         "sample_count": len(samples),
         "feature_count": len(features),
         "outcome_column": outcome_column,
@@ -237,20 +255,12 @@ def evaluate_orthogonal_missingness(
             "pearson_r": _pearson(truth, estimates),
             "mean_signed_error": statistics.mean(delta),
         },
-        "biological_outcome_concordance": {
-            "features_with_estimable_two_group_effects": len(shared),
-            "effect_size_pearson_r": effect_corr,
-            "effect_direction_agreement": sign_agreement,
-            "top_absolute_effect_overlap_at_k": top_overlap,
-            "k": k,
-            "reference_effects": "orthogonal DIA assay, aligned using observed paired cells",
-            "candidate_effects": "ORACLE-imputed DDA matrix",
-        },
+        "biological_outcome_concordance": outcome_report,
         "provenance": {
             "observed_assay_sha256": _sha256(observed_path),
             "orthogonal_reference_sha256": _sha256(orthogonal_path),
             "imputed_matrix_sha256": _sha256(imputed_path),
-            "outcome_labels_sha256": _sha256(labels_path),
+            "outcome_labels_sha256": _sha256(labels_path) if labels_path else None,
         },
         "limitations": (
             "Scores only real DDA-missing cells for which the paired DIA assay has a measurement. "
