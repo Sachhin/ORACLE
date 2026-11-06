@@ -85,6 +85,8 @@ class SourceRecord:
     sample_count: str = ""
     platform: str = ""
     dataset_summary: str = ""
+    quality_reviewed_at: str = ""
+    quality_reviewer_note: str = ""
 
 
 @dataclass
