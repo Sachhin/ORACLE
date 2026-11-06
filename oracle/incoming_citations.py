@@ -73,7 +73,7 @@ class OpenAlexIncomingCitationClient:
             source.doi.strip().casefold().removeprefix("https://doi.org/").removeprefix("http://doi.org/")
             for source in run.sources if source.doi.strip()
         }
-        frontier = [item for item in run.sources if item.doi][:self.max_sources]
+        frontier = [item for item in run.sources if item.doi and item.source_type != 'external_citation'][:self.max_sources]
         examined_ids: set[str] = set()
         initial_count = len(run.sources)
         from .models import SourceRecord
