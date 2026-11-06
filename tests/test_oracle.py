@@ -1042,5 +1042,6 @@ class OracleTests(unittest.TestCase):
         self.assertIn("no_numeric_values", summaries[1]["qc_flags"])
         self.assertIn("high_missingness", summaries[1]["qc_flags"])
         self.assertEqual(len(summaries), 2)
-\nif __name__ == "__main__":
+
+if __name__ == "__main__":
     unittest.main()
