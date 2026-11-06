@@ -47,6 +47,28 @@ class PXD000279MixtureBenchmarkTests(unittest.TestCase):
             self.assertEqual(report["skipped_rows"]["ambiguous_species"], 1)
             self.assertEqual(len(report["input_sha256"]), 64)
 
+
+    def test_uses_published_column_89_to_94_design_when_headers_are_run_ids(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "proteinGroups.txt"
+            metadata = ["Fasta headers", "Reverse", "Potential contaminant",
+                        "Only identified by site"] + [f"metadata_{i}" for i in range(84)]
+            columns = [f"LFQ intensity run_{i}" for i in range(1, 7)]
+            with path.open("w", newline="", encoding="utf-8") as handle:
+                writer = csv.writer(handle, delimiter="\\t")
+                writer.writerow([*metadata, *columns])
+                writer.writerow(["sp|P1|HUMAN OS=Homo sapiens", "", "", "",
+                                 *([""] * 84), 100, 100, 100, 100, 100, 100])
+                writer.writerow(["sp|P2|ECOLI OS=Escherichia coli", "", "", "",
+                                 *([""] * 84), 100, 100, 100, 300, 300, 300])
+            report = benchmark_pxd000279(path)
+            self.assertEqual(report["sample_columns"]["Ecoli10"], columns[:3])
+            self.assertEqual(report["sample_columns"]["Ecoli30"], columns[3:])
+            self.assertIn("published DEqMS", report["sample_group_assignment_method"])
+            self.assertAlmostEqual(
+                report["species_results"]["ecoli"]["observed_only"]["median_log2_fold_change"],
+                1.5849625007, places=6)
+
     def test_rejects_unrecognized_sample_design(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "proteinGroups.txt"
