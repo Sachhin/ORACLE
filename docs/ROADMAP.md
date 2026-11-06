@@ -37,6 +37,7 @@ Status reflects code currently present on the main branch; checked items are imp
 - [ ] Legal open-access full-text retrieval with licence checks
 - [ ] GEO supplementary/raw data discovery and safe dataset ingestion
 - [ ] Citation-network exploration and source-level quality assessment
+- [x] Explicit experiment lifecycle recording for proposed, simulated, performed, and evaluated states with execution provenance
 - [ ] Domain-specific experiment protocols and reproducible analysis adapters
 
 ## Milestone 5 — Evaluation and scientific validation
