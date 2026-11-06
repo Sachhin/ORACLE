@@ -26,6 +26,9 @@ class OracleOrchestrator:
                  compare_literature_papers: bool = False,
                  review_literature_evidence: bool = False,
                  full_text_enabled: bool = False,
+                 geo_files_enabled: bool = False,
+                 geo_download_enabled: bool = False,
+                 geo_max_file_bytes: int = 50_000_000,
                  gemini_model: str = "gemini-2.5-flash") -> None:
         if not 1 <= max_no_progress_cycles <= 10:
             raise ValueError("max_no_progress_cycles must be between 1 and 10.")
@@ -43,6 +46,9 @@ class OracleOrchestrator:
         self.compare_literature_papers = compare_literature_papers
         self.review_literature_evidence = review_literature_evidence
         self.full_text_enabled = full_text_enabled
+        self.geo_files_enabled = geo_files_enabled or geo_download_enabled
+        self.geo_download_enabled = geo_download_enabled
+        self.geo_max_file_bytes = geo_max_file_bytes
         self.gemini_model = gemini_model
         # Every agent implements run(context) -> AgentResult. Deterministic
         # agents remain the default; an optional suite can replace selected agents.
@@ -190,7 +196,8 @@ class OracleOrchestrator:
 
     def _prepare_literature(self, run: ResearchRun) -> None:
         """Optionally retrieve source-backed literature before the reasoning cycle."""
-        if not self.literature_enabled and not self.extract_literature_claims and not self.full_text_enabled:
+        if (not self.literature_enabled and not self.extract_literature_claims
+                and not self.full_text_enabled and not self.geo_files_enabled):
             return
         if self.literature_enabled and not run.sources:
             from .literature import LiteratureClient
@@ -216,6 +223,18 @@ class OracleOrchestrator:
             from .fulltext import OpenAccessFullTextClient
             full_text = OpenAccessFullTextClient().ingest(run)
             self._event(run, "open_access_full_text_ingested", full_text.__dict__)
+        if self.geo_files_enabled:
+            from .geo_data import GEOSupplementaryClient
+            geo_client = GEOSupplementaryClient()
+            discovery = geo_client.discover(run)
+            download_report = (
+                geo_client.download(run, max_file_bytes=self.geo_max_file_bytes)
+                if self.geo_download_enabled else None
+            )
+            self._event(run, "geo_supplementary_files_discovered", {
+                "discovery": discovery.__dict__,
+                "download": download_report.__dict__ if download_report else None,
+            })
         if self.extract_literature_claims:
             from .llm import GeminiClaimExtractor
             extractor = GeminiClaimExtractor(model=self.gemini_model)
