@@ -942,18 +942,12 @@ class OracleTests(unittest.TestCase):
         )
         run.sources.append(source)
         matrix = (
-            "!Series_title = \"A test series\"
-"
-            "!series_matrix_table_begin
-"
-            "ID_REF	GSM_A	GSM_B
-"
-            "probe_1	1.0	2.0
-"
-            "probe_2	3.0	NA
-"
-            "!series_matrix_table_end
-"
+            "!Series_title = \\"A test series\\"\\n"
+            "!series_matrix_table_begin\\n"
+            "ID_REF\\tGSM_A\\tGSM_B\\n"
+            "probe_1\\t1.0\\t2.0\\n"
+            "probe_2\\t3.0\\tNA\\n"
+            "!series_matrix_table_end\\n"
         ).encode()
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "GSE123456_series_matrix.txt.gz"
@@ -1000,9 +994,7 @@ class OracleTests(unittest.TestCase):
         run.sources.append(source)
         with tempfile.TemporaryDirectory() as directory:
             matrix = Path(directory) / "matrix.tsv"
-            matrix.write_text("ID_REF	GSM1
-g1	1.0
-", encoding="utf-8")
+            matrix.write_text("ID_REF\\tGSM1\\ng1\\t1.0\\n", encoding="utf-8")
             run.dataset_files.append(DatasetFileRecord(
                 accession="GSE1", source_id=source.source_id, filename="matrix.tsv",
                 url="https://ftp.ncbi.nlm.nih.gov/file", status="downloaded",
@@ -1024,9 +1016,7 @@ g1	1.0
         from oracle.geo_analysis import GEOExpressionAnalyzer
         with self.assertRaises(ValueError):
             GEOExpressionAnalyzer(max_cells=1)._parse(
-                "ID_REF	GSM1	GSM2
-g1	1	2
-"
+                "ID_REF\\tGSM1\\tGSM2\\ng1\\t1\\t2\\n"
             )
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "large.tsv"
@@ -1036,17 +1026,11 @@ g1	1	2
             with self.assertRaises(ValueError):
                 analyzer._read_text(path)
 
-
     def test_geo_sample_qc_flags_constant_and_empty_columns_without_removing_them(self):
         from oracle.geo_analysis import GEOExpressionAnalyzer
         analyzer = GEOExpressionAnalyzer()
         summaries, rows, numeric, missing, mean, minimum, maximum = analyzer._parse(
-            "ID_REF	GSM_CONSTANT	GSM_EMPTY
-"
-            "g1	5	NA
-"
-            "g2	5	NA
-"
+            "ID_REF\\tGSM_CONSTANT\\tGSM_EMPTY\\ng1\\t5\\tNA\\ng2\\t5\\tNA\\n"
         )
         self.assertEqual(rows, 2)
         self.assertEqual(numeric, 2)
@@ -1056,26 +1040,17 @@ g1	1	2
         self.assertIn("high_missingness", summaries[1]["qc_flags"])
         self.assertEqual(len(summaries), 2)
 
-
     def test_geo_matrix_parser_preserves_sample_characteristics_without_group_inference(self):
         from oracle.geo_analysis import GEOExpressionAnalyzer
         text = (
-            '!Sample_geo_accession = "GSM1" "GSM2"
-'
-            '!Sample_title = "Control sample" "Treatment sample"
-'
-            '!Sample_characteristics_ch1 = "treatment: control" "treatment: treated"
-'
-            '!Sample_characteristics_ch1 = "genotype: WT" "genotype: mutant"
-'
-            '!series_matrix_table_begin
-'
-            'ID_REF	GSM1	GSM2
-'
-            'gene_a	1.0	2.0
-'
-            '!series_matrix_table_end
-'
+            '!Sample_geo_accession = "GSM1" "GSM2"\\n'
+            '!Sample_title = "Control sample" "Treatment sample"\\n'
+            '!Sample_characteristics_ch1 = "treatment: control" "treatment: treated"\\n'
+            '!Sample_characteristics_ch1 = "genotype: WT" "genotype: mutant"\\n'
+            '!series_matrix_table_begin\\n'
+            'ID_REF\\tGSM1\\tGSM2\\n'
+            'gene_a\\t1.0\\t2.0\\n'
+            '!series_matrix_table_end\\n'
         )
         summaries, rows, numeric, missing, mean, minimum, maximum = GEOExpressionAnalyzer()._parse(text)
         self.assertEqual(rows, 1)
@@ -1088,17 +1063,13 @@ g1	1	2
             "treatment": "treated", "genotype": "mutant",
         })
 
-
     def test_geo_welch_contrast_uses_explicit_groups_and_bh_correction(self):
         from oracle.geo_statistics import GEOContrastAnalyzer
         matrix = Path(self.tmp.name) / "matrix.tsv"
         matrix.write_text(
-            "ID_REF\	C1\	C2\	C3\	T1\	T2\	T3\
-"
-            "gene_up\	1.0\	1.1\	0.9\	2.0\	2.1\	1.9\
-"
-            "gene_same\	1.0\	1.1\	0.9\	1.0\	1.1\	0.9\
-",
+            "ID_REF\\tC1\\tC2\\tC3\\tT1\\tT2\\tT3\\n"
+            "gene_up\\t1.0\\t1.1\\t0.9\\t2.0\\t2.1\\t1.9\\n"
+            "gene_same\\t1.0\\t1.1\\t0.9\\t1.0\\t1.1\\t0.9\\n",
             encoding="utf-8",
         )
         groups = {
@@ -1121,9 +1092,7 @@ g1	1	2
         from oracle.geo_statistics import GEOContrastAnalyzer
         matrix = Path(self.tmp.name) / "matrix.tsv"
         matrix.write_text(
-            "ID_REF\	C1\	C2\	T1\	T2\
-gene\	10\	11\	20\	21\
-",
+            "ID_REF\\tC1\\tC2\\tT1\\tT2\\ngene\\t10\\t11\\t20\\t21\\n",
             encoding="utf-8",
         )
         groups = {"C1": "control", "C2": "control", "T1": "treated", "T2": "treated"}
