@@ -445,7 +445,13 @@ class GeminiNoveltyAssessorAgent(_GeminiAgent):
                 "Novelty unassessed: no source-backed literature evidence is available.",
                 warnings=["Novelty status: unassessed; retrieve and review literature before making novelty claims."])
         allowed_ids = {item.source_id for item in source_evidence}
-        data = self._call(context,
+        # Do not let model-generated inferences or prior agent findings influence
+        # literature-only prior-art triage.
+        source_context = AgentContext(
+            context.question, context.cycle, context.mode,
+            evidence=source_evidence,
+        )
+        data = self._call(source_context,
             "Perform cautious prior-art triage using ONLY the supplied source-backed literature "
             "records. Do not use general memory as evidence, invent citations, or claim exhaustive "
             "coverage. Select status: potentially_novel_gap, possibly_previously_reported, or "
@@ -481,7 +487,14 @@ class GeminiCrossDomainConnectionAgent(_GeminiAgent):
             return AgentResult(self.name,
                 "Cross-domain connections deferred: at least two source-backed records are required.",
                 warnings=["No cross-domain connection was proposed without multiple independent source records."])
-        data = self._call(context,
+        # Restrict the model's context to the source-backed records used to
+        # validate its citation IDs; inferred text is not a source for connections.
+        source_context = AgentContext(
+            context.question, context.cycle, context.mode,
+            evidence=[item for item in context.evidence
+                      if item.kind != EvidenceKind.INFERENCE and item.source_id],
+        )
+        data = self._call(source_context,
             "Find up to 4 potentially useful connections between distinct scientific domains in "
             "the supplied source-backed evidence. Treat the connection as a hypothesis, not a "
             "discovery. Each proposal must cite at least two distinct supplied source IDs, name "
