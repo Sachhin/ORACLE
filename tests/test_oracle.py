@@ -1225,5 +1225,100 @@ class OracleTests(unittest.TestCase):
         self.assertEqual(indexed[0]["analysis_id"], record.analysis_id)
         self.assertEqual(self.store.list_events(run.run_id), [])
 
+
+    def test_deseq2_significant_results_become_reviewable_candidates_not_claims(self):
+        import contextlib
+        import io
+        import sys
+        from unittest.mock import patch
+        from oracle.cli import main
+        run = ResearchRun(question="Does treatment alter gene expression?")
+        self.store.save_run(run)
+        analysis_result = {
+            "method": "DESeq2 negative-binomial GLM; Wald test; independent filtering; Benjamini-Hochberg FDR",
+            "contrast": {"group_a": "control", "group_b": "treated", "direction": "treated vs control"},
+            "sample_groups": {"control": ["C1", "C2"], "treated": ["T1", "T2"]},
+            "sample_count": 4, "features_input": 2, "features_returned": 2,
+            "features_with_adjusted_p_value": 2, "matrix_sha256": "b" * 64,
+            "software": {"r": "4.4.0", "deseq2": "1.42.0"},
+            "limitations": "Simple two-group association only.",
+            "results": [
+                {"feature": "geneA", "log2_fold_change": 1.5, "p_value": 0.001,
+                 "p_value_adjusted_bh": 0.01},
+                {"feature": "geneB", "log2_fold_change": 0.1, "p_value": 0.5,
+                 "p_value_adjusted_bh": 0.7},
+            ],
+        }
+        argv = [
+            "oracle", "--db", str(self.store.path), "--geo-deseq2", "counts.tsv",
+            "--geo-group", "C1=control", "--geo-group", "C2=control",
+            "--geo-group", "T1=treated", "--geo-group", "T2=treated",
+            "--geo-group-a", "control", "--geo-group-b", "treated",
+            "--geo-run-id", run.run_id, "--geo-accession", "GSE12345", "--json",
+        ]
+        with patch.object(sys, "argv", argv), \
+             patch("oracle.geo_deseq2.GEOCountAnalyzer.analyze", return_value=analysis_result), \
+             contextlib.redirect_stdout(io.StringIO()):
+            main()
+        saved = self.store.load_run(run.run_id)
+        analysis = saved.differential_expression_analyses[0]
+        self.assertEqual([x["feature"] for x in analysis.candidate_findings], ["geneA"])
+        self.assertEqual(analysis.candidate_findings[0]["status"], "pending_review")
+        self.assertEqual(saved.claims, [])
+        self.assertEqual(saved.evidence, [])
+        analysis_id = analysis.analysis_id
+
+        review_argv = [
+            "oracle", "--db", str(self.store.path), "--review-deseq2", run.run_id,
+            "--deseq2-analysis-id", analysis_id, "--deseq2-feature", "geneA",
+            "--deseq2-review-status", "accepted",
+            "--deseq2-review-note", "Checked the count design, contrast, and source dataset.",
+        ]
+        with patch.object(sys, "argv", review_argv), contextlib.redirect_stdout(io.StringIO()):
+            main()
+        reviewed = self.store.load_run(run.run_id)
+        candidate = reviewed.differential_expression_analyses[0].candidate_findings[0]
+        self.assertEqual(candidate["status"], "accepted")
+        self.assertIn("source dataset", candidate["reviewer_note"])
+        self.assertEqual(reviewed.claims, [])
+        self.assertEqual(reviewed.evidence, [])
+        self.assertEqual(
+            self.store.list_events(run.run_id)[-1]["event_type"],
+            "deseq2_candidate_reviewed",
+        )
+
+    def test_deseq2_candidate_review_requires_note_and_prevents_overwrite(self):
+        import contextlib
+        import io
+        import sys
+        from unittest.mock import patch
+        from oracle.cli import main
+        from oracle.models import DifferentialExpressionAnalysisRecord
+        run = ResearchRun(question="Review candidate safely")
+        record = DifferentialExpressionAnalysisRecord(
+            dataset_accession="GSE1", source_file="counts.tsv", matrix_sha256="c" * 64,
+            method="DESeq2", contrast={"direction": "treated vs control"},
+            sample_groups={"control": ["C1", "C2"], "treated": ["T1", "T2"]},
+            sample_count=4, features_input=1, software={"r": "4.4", "deseq2": "1.42"},
+            results=[], limitations="Simple design",
+            candidate_findings=[{"feature": "geneX", "log2_fold_change": 1.0,
+                                 "p_value": 0.01, "p_value_adjusted_bh": 0.02,
+                                 "status": "pending_review", "reviewer_note": "", "reviewed_at": ""}],
+        )
+        run.differential_expression_analyses.append(record)
+        self.store.save_run(run)
+        bad_argv = ["oracle", "--db", str(self.store.path), "--review-deseq2", run.run_id,
+                    "--deseq2-analysis-id", record.analysis_id, "--deseq2-feature", "geneX",
+                    "--deseq2-review-status", "accepted"]
+        with patch.object(sys, "argv", bad_argv):
+            with self.assertRaisesRegex(SystemExit, "deseq2-review-note"):
+                main()
+        good_argv = bad_argv + ["--deseq2-review-note", "Human review note."]
+        with patch.object(sys, "argv", good_argv), contextlib.redirect_stdout(io.StringIO()):
+            main()
+        with patch.object(sys, "argv", good_argv):
+            with self.assertRaisesRegex(SystemExit, "already reviewed"):
+                main()
+
 if __name__ == "__main__":
     unittest.main()
