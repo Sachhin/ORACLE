@@ -607,5 +607,23 @@ class OracleTests(unittest.TestCase):
                 run, experiment.experiment_id, "", "Operator", "Results",
             )
 
+
+    def test_review_decisions_require_a_human_note(self):
+        from oracle.models import SourceRecord
+        run = ResearchRun("Human review note")
+        source = SourceRecord(title="Paper", source_id="paper-note")
+        run.sources.append(source)
+        evidence = Evidence("A quoted source statement.", source.title, source_id=source.source_id)
+        run.evidence.append(evidence)
+        claim = KnowledgeBase().add_claim(run, "A candidate scientific statement.")
+        candidate = KnowledgeBase().add_evidence_review_candidate(
+            run, claim.claim_id, evidence.evidence_id, EvidenceStance.CONTEXTUAL,
+            "Model rationale.", "A quoted source statement.", "test-model",
+        )
+        with self.assertRaises(ValueError):
+            KnowledgeBase().review_evidence_candidate(
+                run, candidate.candidate_id, "rejected", "",
+            )
+
 if __name__ == "__main__":
     unittest.main()
