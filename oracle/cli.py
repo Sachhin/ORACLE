@@ -225,6 +225,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--count-output", default="data/geo/merged_counts.tsv", help="Output matrix path for --merge-geo-counts")
     parser.add_argument("--compare-tmm-edger", default="", help="Compare ORACLE TMM factors with edgeR on the same raw-count matrix")
     parser.add_argument("--imputation-benchmark", default="", help="Run a reproducible MCAR/MAR/MNAR row-median imputation stress test on a complete matrix")
+    parser.add_argument("--imputation-de-bias", default="", help="Evaluate downstream Welch/BH differential-expression sensitivity to row-median imputation")
+    parser.add_argument("--imputation-group-a", default="", help="Reference group for --imputation-de-bias")
+    parser.add_argument("--imputation-group-b", default="", help="Comparison group for --imputation-de-bias")
     parser.add_argument("--imputation-mechanism", choices=["MCAR", "MAR", "MNAR"], default="MCAR")
     parser.add_argument("--imputation-missing-fraction", type=float, default=0.1)
     parser.add_argument("--imputation-replicates", type=int, default=20)
@@ -275,6 +278,30 @@ def main() -> None:
             )
         except (OSError, ValueError, RuntimeError) as exc:
             raise SystemExit(f"Imputation benchmark failed: {exc}") from exc
+        print(json.dumps(report, indent=2, ensure_ascii=False))
+        return
+    if args.imputation_de_bias:
+        from .geo_reference import evaluate_imputation_downstream_bias
+        labels = {}
+        for item in args.geo_group:
+            if "=" not in item:
+                raise SystemExit("--geo-group must use SAMPLE=GROUP.")
+            sample, group = item.split("=", 1)
+            if not sample or not group or sample in labels:
+                raise SystemExit("--geo-group requires unique non-empty SAMPLE=GROUP entries.")
+            labels[sample] = group
+        if not args.imputation_group_a or not args.imputation_group_b:
+            raise SystemExit("--imputation-de-bias requires --imputation-group-a and --imputation-group-b.")
+        try:
+            report = evaluate_imputation_downstream_bias(
+                args.imputation_de_bias, labels, group_a=args.imputation_group_a,
+                group_b=args.imputation_group_b, mechanism=args.imputation_mechanism,
+                missing_fraction=args.imputation_missing_fraction,
+                replicates=args.imputation_replicates, seed=args.imputation_seed,
+                fdr_threshold=args.benchmark_fdr,
+            )
+        except (OSError, ValueError, RuntimeError) as exc:
+            raise SystemExit(f"Downstream imputation bias evaluation failed: {exc}") from exc
         print(json.dumps(report, indent=2, ensure_ascii=False))
         return
     if args.normalize_geo_matrix:
