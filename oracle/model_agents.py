@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import time
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote
 from urllib.request import Request, urlopen
@@ -24,7 +25,8 @@ class GeminiJSONProvider:
     """Small standard-library Gemini JSON client; credentials are never persisted."""
 
     def __init__(self, api_key: str | None = None,
-                 model: str = "gemini-2.5-flash", timeout: float = 45.0):
+                 model: str = "gemini-2.5-flash", timeout: float = 45.0,
+                 max_retries: int = 2):
         self.api_key = (api_key or os.environ.get("GEMINI_API_KEY", "")).strip()
         self.model = model.strip()
         self.timeout = float(timeout)
@@ -34,6 +36,9 @@ class GeminiJSONProvider:
             raise ValueError("Invalid Gemini model name.")
         if self.timeout <= 0:
             raise ValueError("timeout must be positive.")
+        if not 0 <= max_retries <= 3:
+            raise ValueError("max_retries must be between 0 and 3.")
+        self.max_retries = max_retries
 
     def generate_json(self, prompt: str) -> dict:
         url = ("https://generativelanguage.googleapis.com/v1beta/models/"
@@ -51,14 +56,38 @@ class GeminiJSONProvider:
             headers={"Content-Type": "application/json", "Accept": "application/json",
                      "x-goog-api-key": self.api_key},
         )
-        try:
-            with urlopen(request, timeout=self.timeout) as response:
-                payload = json.loads(response.read(2_000_000).decode("utf-8"))
-        except HTTPError as exc:
-            detail = exc.read(2000).decode("utf-8", "replace")
-            raise GeminiAgentError(f"Gemini HTTP {exc.code}: {detail[:1000]}") from exc
-        except (URLError, TimeoutError, json.JSONDecodeError, UnicodeDecodeError) as exc:
-            raise GeminiAgentError(f"Gemini request failed: {exc}") from exc
+        payload = None
+        for attempt in range(self.max_retries + 1):
+            try:
+                with urlopen(request, timeout=self.timeout) as response:
+                    payload = json.loads(response.read(2_000_000).decode("utf-8"))
+                break
+            except HTTPError as exc:
+                detail = exc.read(2000).decode("utf-8", "replace")
+                quota_exhausted = any(
+                    marker in detail.casefold()
+                    for marker in ("quota", "resource_exhausted", "daily limit", "billing")
+                )
+                retryable = exc.code in {429, 500, 502, 503, 504}
+                if retryable and not quota_exhausted and attempt < self.max_retries:
+                    retry_after = exc.headers.get("Retry-After") if exc.headers else None
+                    try:
+                        delay = min(5.0, max(0.0, float(retry_after))) if retry_after else min(4.0, 2.0 ** attempt)
+                    except ValueError:
+                        delay = min(4.0, 2.0 ** attempt)
+                    time.sleep(delay)
+                    continue
+                suffix = " (quota appears exhausted; retries stopped)" if quota_exhausted else ""
+                raise GeminiAgentError(f"Gemini HTTP {exc.code}{suffix}: {detail[:1000]}") from exc
+            except (URLError, TimeoutError) as exc:
+                if attempt < self.max_retries:
+                    time.sleep(min(4.0, 2.0 ** attempt))
+                    continue
+                raise GeminiAgentError(f"Gemini request failed after retries: {exc}") from exc
+            except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+                raise GeminiAgentError(f"Gemini returned malformed response JSON: {exc}") from exc
+        if payload is None:
+            raise GeminiAgentError("Gemini request ended without a response payload.")
         try:
             text = "".join(part.get("text", "") for part in
                            payload["candidates"][0]["content"]["parts"])
