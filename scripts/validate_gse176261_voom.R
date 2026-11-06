@@ -39,6 +39,9 @@ if (is.null(rownames(counts)) || is.null(colnames(counts)) ||
   stop("Count matrix must have unique feature and sample identifiers.")
 }
 
+# GEO's Series Matrix contains long metadata lines; raise vroom's connection
+# buffer before GEOquery reads it (default 128 KiB is too small).
+Sys.setenv(VROOM_CONNECTION_SIZE = "50000000")
 gse <- GEOquery::getGEO("GSE176261", GSEMatrix = TRUE, getGPL = FALSE)
 if (length(gse) != 1L) stop("Expected exactly one GSE176261 ExpressionSet.")
 pd <- Biobase::pData(gse[[1]])
