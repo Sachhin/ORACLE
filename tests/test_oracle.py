@@ -942,12 +942,12 @@ class OracleTests(unittest.TestCase):
         )
         run.sources.append(source)
         matrix = (
-            "!Series_title = \"A test series\"\\n"
-            "!series_matrix_table_begin\\n"
-            "ID_REF\\tGSM_A\\tGSM_B\\n"
-            "probe_1\\t1.0\\t2.0\\n"
-            "probe_2\\t3.0\\tNA\\n"
-            "!series_matrix_table_end\\n"
+            "!Series_title = \"A test series\"\n"
+            "!series_matrix_table_begin\n"
+            "ID_REF\tGSM_A\tGSM_B\n"
+            "probe_1\t1.0\t2.0\n"
+            "probe_2\t3.0\tNA\n"
+            "!series_matrix_table_end\n"
         ).encode()
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "GSE123456_series_matrix.txt.gz"
@@ -989,7 +989,7 @@ class OracleTests(unittest.TestCase):
         run.sources.append(source)
         with tempfile.TemporaryDirectory() as directory:
             matrix = Path(directory) / "matrix.tsv"
-            matrix.write_text("ID_REF\\tGSM1\\ng1\\t1.0\\n", encoding="utf-8")
+            matrix.write_text("ID_REF\tGSM1\ng1\t1.0\n", encoding="utf-8")
             run.dataset_files.append(DatasetFileRecord(
                 accession="GSE1", source_id=source.source_id, filename="matrix.tsv",
                 url="https://ftp.ncbi.nlm.nih.gov/file", status="downloaded",
@@ -1011,11 +1011,11 @@ class OracleTests(unittest.TestCase):
         from oracle.geo_analysis import GEOExpressionAnalyzer
         with self.assertRaises(ValueError):
             GEOExpressionAnalyzer(max_cells=1)._parse(
-                "ID_REF\\tGSM1\\tGSM2\\ng1\\t1\\t2\\n"
+                "ID_REF\tGSM1\tGSM2\ng1\t1\t2\n"
             )
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "large.tsv"
-            path.write_text("ID_REF\\tGSM1\\ng1\\t123456789\\n", encoding="utf-8")
+            path.write_text("ID_REF\tGSM1\ng1\t123456789\n", encoding="utf-8")
             analyzer = GEOExpressionAnalyzer(max_uncompressed_bytes=1024)
             self.assertTrue(analyzer._supported("large.tsv"))
             with self.assertRaises(ValueError):
