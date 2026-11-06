@@ -19,7 +19,7 @@ Status reflects code currently present on the main branch; checked items are imp
 - [x] Optional source ingestion into the full autonomous research cycle
 - [x] Quote-validated Gemini claim extraction and cross-paper comparison candidates
 - [x] Quote-grounded support/refute/contextual evidence-review suggestions with a human acceptance gate
-- [x] Measured progress, duplicate suppression, critical integrity checks, and safe no-progress stopping
+- [x] Measured progress, duplicate suppression, critical integrity checks, bounded replanning, and safe no-progress stopping
 - [x] Persisted no-progress state and explicit resume of safely stopped runs
 
 ## Milestone 3 — Discovery quality
