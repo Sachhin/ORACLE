@@ -1,0 +1,51 @@
+name: PXD000279 known-mixture missingness benchmark
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/pxd000279-known-mixture.yml"
+      - "scripts/benchmark_pxd000279_mixture.py"
+      - "tests/test_pxd000279_mixture.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  controlled-mixture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run offline benchmark unit tests
+        run: python -m unittest tests.test_pxd000279_mixture -v
+      - name: Download published MaxQuant benchmark output
+        run: |
+          set -euo pipefail
+          mkdir -p data/pxd000279
+          curl --fail --location --retry 4 --retry-all-errors --connect-timeout 20 \
+            --max-time 900 \
+            https://ftp.ebi.ac.uk/pride-archive/2014/09/PXD000279/proteomebenchmark.zip \
+            -o data/pxd000279/proteomebenchmark.zip
+          unzip -q data/pxd000279/proteomebenchmark.zip -d data/pxd000279/extracted
+          protein_groups="$(find data/pxd000279/extracted -type f -name proteinGroups.txt -print -quit)"
+          test -n "$protein_groups"
+          echo "PROTEIN_GROUPS=$protein_groups" >> "$GITHUB_ENV"
+      - name: Evaluate known mixture ratios under deposited missingness
+        run: |
+          python scripts/benchmark_pxd000279_mixture.py \
+            --input "$PROTEIN_GROUPS" \
+            --output data/pxd000279/known-mixture-report.json
+      - name: Upload frozen source output and benchmark report
+        uses: actions/upload-artifact@v4
+        with:
+          name: oracle-pxd000279-known-mixture-missingness
+          path: |
+            data/pxd000279/known-mixture-report.json
+            data/pxd000279/proteomebenchmark.zip
+          if-no-files-found: error
+          retention-days: 90
