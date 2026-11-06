@@ -491,7 +491,14 @@ class OracleOrchestrator:
                 )
                 final_action = decision.action
                 if decision.action == "replan":
-                    revised = self.planner.run(context)
+                    # Replanning must see the completed cycle's latest evidence,
+                    # hypotheses, findings, and task outcomes—not the stale pre-cycle
+                    # snapshot that was used to start the agents.
+                    replan_context = AgentContext(
+                        run.question, cycle, run.mode.value,
+                        run.evidence, run.hypotheses, run.findings, run.tasks,
+                    )
+                    revised = self.planner.run(replan_context)
                     self.task_manager.validate_plan(revised.items)
                     known_tasks = {
                         (self._normalise(task.name), self._normalise(task.description))
