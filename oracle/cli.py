@@ -57,6 +57,12 @@ def build_parser() -> argparse.ArgumentParser:
                         help="Repeat the normalization in the same runtime and compare output SHA-256")
     parser.add_argument("--normalization-prior-count", type=float, default=0.5,
                         help="Positive log2-CPM prior count (default 0.5)")
+    parser.add_argument("--geo-affymetrix-rma", action="append", default=[], metavar="CEL_PATH",
+                        help="Add one CEL file to an explicit Affymetrix RMA run; repeat per sample")
+    parser.add_argument("--affy-backend", choices=["affy", "oligo"], default="",
+                        help="Required explicit Bioconductor package family for CEL inputs")
+    parser.add_argument("--affy-output", default="", help="Required output TSV path for --geo-affymetrix-rma")
+    parser.add_argument("--affy-timeout", type=int, default=1800, help="Maximum Affymetrix RMA runtime in seconds")
     parser.add_argument("--geo-voom", metavar="MATRIX_PATH",
                         help="Run optional edgeR TMM + limma-voom analysis on raw integer counts")
     parser.add_argument("--voom-timeout", type=int, default=900, help="Maximum limma-voom runtime in seconds")
@@ -334,6 +340,19 @@ def main() -> None:
             print(f"Missed tested positives: {report['missed_count']} | Unmatched hits: {report['unmatched_hit_count']} "
                   f"| Untested positives: {report['untested_truth_count']}")
             print("Interpretation: " + report["interpretation"])
+        return
+    if args.geo_affymetrix_rma:
+        if not args.affy_backend or not args.affy_output:
+            raise SystemExit("--geo-affymetrix-rma requires --affy-backend and --affy-output.")
+        from .geo_affymetrix import AffymetrixRMAAnalyzer
+        try:
+            report = AffymetrixRMAAnalyzer().analyze(
+                args.geo_affymetrix_rma, args.affy_output, backend=args.affy_backend,
+                rscript=args.rscript, timeout_seconds=args.affy_timeout,
+            )
+        except (OSError, ValueError, RuntimeError) as exc:
+            raise SystemExit(f"Affymetrix RMA failed: {exc}") from exc
+        print(json.dumps(report, indent=2, ensure_ascii=False))
         return
     if args.geo_voom:
         if not args.geo_group_a or not args.geo_group_b or not args.geo_group:
