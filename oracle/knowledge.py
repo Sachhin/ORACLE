@@ -4,8 +4,9 @@ from __future__ import annotations
 import re
 
 from .models import (
-    Claim, ClaimRevision, ContradictionCandidate, EvidenceClaimLink, EvidenceStance,
-    Hypothesis, HypothesisGroup, ResearchRun, SourceRecord, UncertaintyAssessment,
+    Claim, ClaimRevision, ContradictionCandidate, EvidenceClaimLink, EvidenceReviewCandidate,
+    EvidenceKind, EvidenceStance, Hypothesis, HypothesisGroup, ResearchRun, SourceRecord,
+    UncertaintyAssessment,
 )
 
 
@@ -82,6 +83,56 @@ class KnowledgeBase:
         link = EvidenceClaimLink(claim_id, evidence_id, stance, strength, rationale)
         run.evidence_claim_links.append(link)
         return link
+
+    def add_evidence_review_candidate(
+        self, run: ResearchRun, claim_id: str, evidence_id: str,
+        proposed_stance: EvidenceStance, rationale: str, source_quote: str, model: str,
+    ) -> EvidenceReviewCandidate:
+        """Store a quote-grounded model suggestion without changing evidence weight."""
+        claim = next((item for item in run.claims if item.claim_id == claim_id), None)
+        evidence = next((item for item in run.evidence if item.evidence_id == evidence_id), None)
+        if claim is None or evidence is None:
+            raise ValueError("Evidence review must reference an existing claim and evidence record.")
+        if evidence.kind == EvidenceKind.INFERENCE or not evidence.source_id:
+            raise ValueError("Only source-backed evidence can receive a scientific evidence review.")
+        if not source_quote or source_quote not in evidence.claim:
+            raise ValueError("Review quote must be an exact substring of the evidence text.")
+        if not rationale.strip() or not model.strip():
+            raise ValueError("Review rationale and model name are required.")
+        existing = next((item for item in run.evidence_review_candidates
+                         if item.claim_id == claim_id and item.evidence_id == evidence_id), None)
+        if existing:
+            return existing
+        candidate = EvidenceReviewCandidate(
+            claim_id=claim_id, evidence_id=evidence_id,
+            proposed_stance=proposed_stance, rationale=rationale.strip(),
+            source_quote=source_quote, model=model,
+        )
+        run.evidence_review_candidates.append(candidate)
+        return candidate
+
+    def review_evidence_candidate(
+        self, run: ResearchRun, candidate_id: str, status: str,
+        reviewer_note: str, strength: float = 1.0,
+    ) -> EvidenceReviewCandidate:
+        """Apply a model suggestion only after an explicit human acceptance."""
+        if status not in {"accepted", "rejected", "needs_context"}:
+            raise ValueError("Status must be accepted, rejected, or needs_context.")
+        candidate = next((item for item in run.evidence_review_candidates
+                          if item.candidate_id == candidate_id), None)
+        if candidate is None:
+            raise ValueError(f"Unknown evidence review candidate: {candidate_id}")
+        if candidate.status != "pending_review":
+            raise ValueError("Evidence review candidate has already been reviewed.")
+        if status == "accepted":
+            self.link_evidence(
+                run, candidate.claim_id, candidate.evidence_id,
+                candidate.proposed_stance, strength,
+                "Human accepted a quote-grounded model review: " + reviewer_note.strip(),
+            )
+        candidate.status = status
+        candidate.reviewer_note = reviewer_note.strip()
+        return candidate
 
     def add_hypothesis(self, run: ResearchRun, hypothesis: Hypothesis,
                        group_id: str | None = None) -> HypothesisGroup:
