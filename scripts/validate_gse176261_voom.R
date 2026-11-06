@@ -221,7 +221,8 @@ report <- list(
                   GEOquery = as.character(packageVersion("GEOquery")),
                   edgeR = as.character(packageVersion("edgeR")),
                   limma = as.character(packageVersion("limma"))),
-  all_samples_count = ncol(all_counts),\n  all_samples_count = ncol(all_counts),\n  sample_count = ncol(counts),
+  all_samples_count = ncol(all_counts),
+  sample_count = ncol(counts),
   sample_metadata_columns = names(selected),
   metadata_lib_size_supplied = "lib.size" %in% names(selected),
   metadata_norm_factors_supplied = "norm.factors" %in% names(selected),
@@ -230,7 +231,8 @@ report <- list(
   phenotype_counts = as.list(table(sample_data$phenotype)),
   gender_counts = as.list(table(sample_data$gender)),
   input_sha256 = list(
-    all_samples_counts = digest::digest(file = all_counts_path, algo = "sha256"),\n    validation_all_samples_counts = digest::digest(file = all_counts_path, algo = "sha256"),\n    validation_counts = digest::digest(file = counts_path, algo = "sha256"),
+    all_samples_counts = digest::digest(file = all_counts_path, algo = "sha256"),
+    validation_counts = digest::digest(file = counts_path, algo = "sha256"),
     reference_expression = digest::digest(file = reference_e_path, algo = "sha256"),
     reference_weights = digest::digest(file = reference_w_path, algo = "sha256")
   ),
