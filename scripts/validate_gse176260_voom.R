@@ -65,20 +65,26 @@ keep <- vapply(metadata, function(x) {
 if (!any(keep)) stop("No discovery_analysis_sample=Yes samples found in GEO metadata.")
 selected <- pd[keep, , drop = FALSE]
 selected_meta <- metadata[keep]
-sample_ids <- as.character(selected$geo_accession)
+# Submitter count matrices use the sample title aliases (for example, short
+# sample codes) as column names, while GEO assigns GSM accessions separately.
+# Match exact title aliases and retain the accession mapping in the report.
+sample_ids <- as.character(selected$title)
+if (anyNA(sample_ids) || any(!nzchar(sample_ids)) || anyDuplicated(sample_ids)) {
+  stop("GEO discovery sample titles must be unique non-empty sample aliases.")
+}
 if (!setequal(sample_ids, colnames(counts)) || length(sample_ids) != ncol(counts)) {
   counts_only <- setdiff(colnames(counts), sample_ids)
   metadata_only <- setdiff(sample_ids, colnames(counts))
   discovery_values <- vapply(metadata, get_field, character(1), key = "discovery_analysis_sample")
   stop(paste0(
-    "GEO discovery sample IDs do not exactly match the published count matrix. ",
+    "GEO discovery sample title aliases do not exactly match the published count matrix. ",
     "count_columns=", ncol(counts), "; discovery_metadata_samples=", length(sample_ids),
     "; counts_only_first20=", paste(head(counts_only, 20), collapse = ","),
     "; metadata_only_first20=", paste(head(metadata_only, 20), collapse = ","),
     "; discovery_metadata_values=", paste(names(table(discovery_values)), as.integer(table(discovery_values)), collapse = ";")
   ))
 }
-selected <- selected[match(colnames(counts), selected$geo_accession), , drop = FALSE]
+selected <- selected[match(colnames(counts), selected$title), , drop = FALSE]
 selected_meta <- selected_meta[match(colnames(counts), sample_ids)]
 phenotype <- vapply(selected_meta, get_field, character(1), key = "phenotype")
 gender <- vapply(selected_meta, get_field, character(1), key = "gender")
@@ -134,6 +140,7 @@ report <- list(
                   limma = as.character(packageVersion("limma"))),
   sample_count = ncol(counts),
   feature_count = nrow(counts),
+  sample_accession_mapping = as.list(setNames(as.character(selected$geo_accession), colnames(counts))),
   phenotype_counts = as.list(table(sample_data$phenotype)),
   gender_counts = as.list(table(sample_data$gender)),
   input_sha256 = list(
