@@ -25,6 +25,7 @@ jobs:
 
       - name: Download official GEO Series archive
         run: |
+          set -euo pipefail
           mkdir -p data/geo
           python -m oracle --download-geo-series-archive GSE111062 --dataset-max-mb 10 --json | tee data/geo/GSE111062_download.json
 

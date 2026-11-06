@@ -44,10 +44,11 @@ class GEOSeriesArchiveTests(unittest.TestCase):
     def test_download_official_raw_archive_with_checksum(self):
         payload = b"small tar fixture"
         with tempfile.TemporaryDirectory() as directory:
-            with patch("oracle.geo_data.urlopen", return_value=_Response(payload)):
+            with patch("oracle.geo_data.urlopen", return_value=_Response(payload)) as mocked:
                 report = _ArchiveClient().download_series_raw_archive(
                     "GSE111062", output_dir=directory
                 )
+            self.assertIn("tool=geoquery", mocked.call_args.args[0].full_url)
             self.assertEqual(report["filename"], "GSE111062_RAW.tar")
             self.assertEqual(report["sha256"], hashlib.sha256(payload).hexdigest())
             self.assertEqual(Path(report["local_path"]).read_bytes(), payload)
