@@ -72,15 +72,20 @@ class OpenAccessFullTextClient:
         body = root.find(".//body")
         if body is None:
             raise RuntimeError("Full-text XML did not contain an article body.")
-        # References are not part of the article's reported findings and can dominate length.
+        # Recursively exclude reference lists rather than merely skipping their container node.
         chunks = []
-        for child in body.iter():
-            if child.tag.split("}")[-1] == "ref-list":
-                continue
-            if child.text and child.text.strip():
-                chunks.append(child.text.strip())
-            if child.tail and child.tail.strip():
-                chunks.append(child.tail.strip())
+
+        def visit(node):
+            if node.tag.split("}")[-1] == "ref-list":
+                return
+            if node.text and node.text.strip():
+                chunks.append(node.text.strip())
+            for child in node:
+                visit(child)
+                if child.tail and child.tail.strip():
+                    chunks.append(child.tail.strip())
+
+        visit(body)
         return " ".join(" ".join(chunks).split())
 
     def ingest(self, run: ResearchRun) -> FullTextReport:
