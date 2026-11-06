@@ -28,7 +28,7 @@ QUESTION → PLAN → RESEARCH → DISCOVER → HYPOTHESIZE → CHALLENGE → EX
 - Every evidence item has a source/provenance description and evidence type.
 - A claim without supporting evidence is marked as inference or hypothesis.
 - Hypotheses are never silently promoted to facts.
-- Proposed, simulated, and performed experiments are distinct statuses.
+- Proposed, simulated, performed, and evaluated experiments retain a separate execution-kind field and provenance; evaluation does not erase whether the record was simulated or performed.
 - Conflicting evidence is retained, not overwritten.
 - Confidence is an explicit qualitative assessment, not fabricated precision.
 - Novelty assessments are provisional; no unsupported priority claim.
