@@ -46,7 +46,8 @@ Status reflects code currently present on the main branch. Checked items are imp
 - [x] Explicit-design Welch contrasts with BH-FDR for user-declared continuous log2 GEO matrices; raw counts rejected
 - [x] Bounded first-degree reference discovery from DOI-backed Crossref works
 - [x] Bounded incoming citation discovery for DOI-backed works via OpenAlex, with persisted source-linked citation records
-- [ ] Citation graph ranking, traversal, and broader citation-network exploration
+- [x] DOI-resolved directed citation graph ranking with degree counts and bounded PageRank
+- [ ] Multi-hop citation traversal and broader citation-network exploration
 - [x] Explicit experiment lifecycle recording for proposed, simulated, performed, and evaluated states with execution provenance
 - [x] Domain-specific proposed protocol templates for plant, molecular, cell, and computational biology
 - [ ] Reproducible domain-specific analysis adapters and independent rerun verification
