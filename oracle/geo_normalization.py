@@ -158,6 +158,8 @@ def normalize_geo_matrix(
             imputation_values[features[index]] = median
             matrix[index] = [median if value is None else value for value in row]
     totals = [sum(row[column] for row in matrix) for column in range(len(samples))]
+    effective_totals = list(totals)
+    tmm_factors = [1.0] * len(samples)
     if method in {"cpm", "log2-cpm", "tmm-cpm", "tmm-log2-cpm"}:
         for row_index, row in enumerate(matrix):
             for column, value in enumerate(row):
