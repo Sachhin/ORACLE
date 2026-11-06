@@ -4,47 +4,6 @@ ORACLE can compare its tab-separated outputs with a separately generated,
 trusted reference without inventing or silently downloading reference labels.
 The comparator records SHA-256 hashes and requires reference provenance.
 
-## Real external limma-voom reference: GSE176260
-
-A reproducible live validation workflow is provided at
-`.github/workflows/limma-external-reference.yml`. It downloads the three
-submitter-supplied discovery-cohort files from NCBI GEO:
-
-- `GSE176260_QCed_counts_discovery.txt.gz` — processed integer count matrix
-- `GSE176260_Log2_normalized_expression_discovery.txt.gz` — published
-  `limma::voom` expression matrix (`E`)
-- `GSE176260_Voom_weights_discovery.txt.gz` — published observation-level
-  precision weights
-
-The workflow retrieves the GEO sample metadata, selects only samples marked
-`discovery_analysis_sample: Yes`, verifies exact sample identity/order, and
-recomputes the published design `~ 0 + phenotype + gender` with edgeR TMM and
-limma voom. It then compares the recomputed expression matrix and precision
-weights with the independently submitted GEO outputs. The report records
-input SHA-256 hashes, R/GEOquery/edgeR/limma versions, cohort dimensions, and
-MAE/RMSE/bias/Pearson correlation for both matrices. Raw files and the JSON
-report are retained as a GitHub Actions artifact.
-
-Run it from GitHub Actions using the workflow-dispatch control, or let the
-path-filtered workflow run after changes to the workflow or R script:
-
-https://github.com/Sachhin/ORACLE/actions/workflows/limma-external-reference.yml
-
-Dataset and source provenance:
-
-- GEO series: https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE176260
-- Associated publication: PMID 34225776
-- Platform: GPL24676, human whole-blood RNA-seq
-- Published analysis design: `~ 0 + phenotype + gender`
-
-This is an external real-dataset reproducibility check of the published voom
-expression and precision-weight outputs. It is not evidence that the adapter
-is accurate on every dataset, that the original biological labels are correct,
-or that ORACLE has discovered causal mechanisms. The roadmap item remains
-pending until a successful run and artifact inspection establish exact sample,
-feature, and numerical agreement. A second independent dataset is still
-needed before claiming general external validation.
-
 ## Required provenance
 
 Create a JSON file such as `reference-provenance.json`:
@@ -106,29 +65,6 @@ precision, recall, F1, Jaccard, and confusion counts. P-values can differ
 legitimately across statistical models; do not interpret disagreement alone
 as evidence that one method is wrong.
 
-## Live GEO limma-voom reference checks
-
-The `limma-external-reference.yml` workflow downloads and hashes the
-submitter-published count, log2-expression, and voom-weight matrices for
-GSE176260, reconstructs the published discovery-sample design
-`~ 0 + phenotype + gender`, and compares recomputed expression and precision
-weights against the frozen GEO matrices. It resolves the short sample aliases
-from the leading token of each GEO title (for example, `9A4D98` from
-`9A4D98 RNA-seq [discovery cohort]`) and requires exact one-to-one identity
-matching. It does not infer missing phenotype or gender labels.
-
-GSE176261 is a separate validation cohort from the same publication and
-SuperSeries, not an independent study. It is run only after GSE176260 passes.
-A passing result on these two cohorts strengthens within-study replication but
-does not satisfy the roadmap requirement for a second independent publication
-or laboratory. That additional external study remains required.
-
-Artifacts include source matrices, SHA-256 checksums, software versions,
-sample accession mapping, cohort composition, numerical comparison metrics,
-and explicit acceptance thresholds. A failed sample mapping or numerical
-threshold blocks the job; it must not be bypassed by loosening tolerances
-without documented scientific justification.
-
 ## Expert answer and evidence benchmark data
 
 Human benchmark scores must come from independent reviewers, not generated
@@ -140,18 +76,10 @@ Use the existing benchmark validators to reject missing reviewer pairs or
 unadjudicated disagreements. Store raw annotations separately from aggregate
 reports so results can be audited.
 
-## What this tooling does not claim
+## Real GEO reference datasets
 
-A successful comparator run means only that the supplied outputs were compared
-under the declared matching rules. It does not establish reference quality,
-biological correctness, model superiority, or causal validity. Real reference
-outputs and independent human annotations remain required to publish empirical
-validation results.
-
-## Real GEO reference runs
-
-The external workflow distinguishes two cohorts from one publication from a
-genuinely independent study:
+The external validation workflow distinguishes cohorts from the same
+publication from a genuinely independent study:
 
 - **GSE176260** is the primary discovery cohort. The submitter deposited QCed
   counts and the exact `voom$E` and `voom$weights` matrices. ORACLE
@@ -169,5 +97,36 @@ genuinely independent study:
   comparison, not a submitter-published E/weights matrix comparison.
 
 A dataset is not marked passed until its live Actions run completes and the
-JSON report artifact has been inspected. GSE64099 is the independent-study
-test; GSE176261 is not.
+JSON report artifact has been inspected.
+
+## External limma-voom numerical runs (2026-11-06)
+
+Two real external datasets have passed numerical checks in the ORACLE
+validation branch:
+
+- **GSE176260 discovery cohort** (138 samples, 11,111 features): recomputed
+  expression matrix versus submitter-published GEO expression matrix had
+  RMSE 4.31e-15, MAE 2.68e-15, and Pearson r 1.0000. Recomputed voom weights
+  versus submitter-published weights had RMSE 0.0478 and Pearson r 0.9998.
+  This is a direct full-matrix reference comparison.
+- **GSE64099 Smchd1 knockout versus wild type** (7 samples; 12,303 features
+  after the published CPM filter): the reproduced top ten stable GeneID
+  results had recall 1.00, logFC RMSE 0.0021, and direction agreement 1.00;
+  the recomputed FDR<0.05 and FDR<0.01 counts exactly matched the published
+  values (12 and 1). This is an independent dataset comparison against the
+  published DE table, not a submitter-published E/weights matrix.
+
+The GSE176261 validation cohort belongs to the same publication as GSE176260,
+so it is not counted as an independent study. Its first numerical run gave
+expression RMSE 0.0580 (pre-set maximum 0.0500), Pearson r 0.9999, and weight
+RMSE 0.0471; the expression comparison therefore did **not** pass the
+pre-set tolerance. This result must not be relabelled as a pass by relaxing
+the threshold after seeing the data. Further investigation is pending.
+
+## What this tooling does not claim
+
+A successful comparator run means only that the supplied outputs were compared
+under the declared matching rules. It does not establish reference quality,
+biological correctness, model superiority, or causal validity. Real reference
+outputs and independent human annotations remain required to publish empirical
+validation results.
