@@ -50,6 +50,8 @@ get_characteristic <- function(pd, key) {
       }
     }
   }
+  prefix <- paste0("^\\\\s*", key, "\\\\s*:\\\\s*")
+  result <- sub(prefix, "", result, ignore.case = TRUE)
   result
 }
 
