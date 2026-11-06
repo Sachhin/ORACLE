@@ -44,11 +44,13 @@ python -m oracle.scifact_benchmark \
   --split dev > data/scifact/oracle_scifact_report.json
 ```
 
-A manually dispatched GitHub Actions workflow performs these steps and uploads
-the predictions, provenance sidecar, and score report. It requires a repository
-Actions secret named `GEMINI_API_KEY`; no key is stored in the repository.
-The default workflow evaluates the full selected labelled split. API quota or
-network failure stops the run rather than substituting fabricated predictions.
+A GitHub Actions workflow performs these steps and uploads the predictions,
+provenance sidecar, and score report. On merge, it runs a 20-claim dev pilot
+to verify that the repository secret is available and the model contract works.
+A manual dispatch can evaluate the full selected labelled split by leaving
+`max_claims=0`. Both modes require a repository Actions secret named
+`GEMINI_API_KEY`; no key is stored in the repository. API quota or network
+failure stops the run rather than substituting fabricated predictions.
 
 ## Interpretation
 
