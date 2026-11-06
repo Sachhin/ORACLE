@@ -23,9 +23,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        release: ["3.13", "3.22"]
+        include:
+          - release: "3.13"
+            image: mcr.microsoft.com/bioconductor/bioconductor_docker:RELEASE_3_13
+          - release: "3.22"
+            image: bioconductor/bioconductor:3.22
     container:
-      image: bioconductor/bioconductor_docker:RELEASE_${{ matrix.release }}
+      image: ${{ matrix.image }}
       options: --user root
     timeout-minutes: 60
     steps:
