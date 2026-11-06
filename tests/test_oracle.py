@@ -974,7 +974,7 @@ class OracleTests(unittest.TestCase):
             evidence = next(item for item in run.evidence if item.evidence_id == analysis.evidence_id)
             self.assertEqual(evidence.kind, EvidenceKind.DATASET)
             self.assertEqual(evidence.source_id, source.source_id)
-            self.assertIn("No normalization", evidence.limitations)
+            self.assertIn("no normalization", evidence.limitations)
             self.store.save_run(run)
             loaded = self.store.load_run(run.run_id)
             self.assertEqual(loaded.dataset_analyses[0].sha256, checksum)
