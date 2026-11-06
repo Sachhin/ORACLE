@@ -62,6 +62,7 @@ Status reflects code currently present on the main branch. Checked items are imp
 ## Milestone 5 — Evaluation and scientific validation
 - [x] Cross-domain golden-question integrity benchmark for the deterministic baseline
 - [x] Human answer-quality rubric, score validation, source-ID checks, persistence, and per-run aggregation workflow
+- [x] Evidence benchmark reviewer-agreement (Cohen's kappa), source/quote coverage, and conditional validity reporting
 - [ ] Curated expert-scored scientific answer benchmark set with multiple reviewers and adjudicated labels (rubric, starter questions, and adjudication protocol exist; real labels remain pending)
 - [ ] Empirical evidence attribution, entailment, contradiction, and hallucination benchmark results (human-label evaluator and empty adjudication template implemented; expert-labelled corpus and model predictions remain pending)
 - [x] Reproducibility and regression suite across Python 3.10–3.14 CI matrix
