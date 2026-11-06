@@ -81,6 +81,10 @@ def build_parser() -> argparse.ArgumentParser:
                                  help="Explain the knowledge gaps recorded for a saved run")
     portfolio_group.add_argument("--related-to", metavar="QUESTION",
                                  help="Find prior runs with lexically related research questions")
+    portfolio_group.add_argument("--cross-run-candidates", metavar="RUN_ID",
+                                 help="Find source-backed claim pairs across runs for human review")
+    portfolio_group.add_argument("--show-cross-run-links", nargs="?", const="",
+                                 help="Show persisted cross-run claim links; optionally filter by run ID")
     portfolio_group.add_argument("--show-deseq2", metavar="RUN_ID",
                                  help="Show persisted DESeq2 analyses and provisional candidate findings")
     portfolio_group.add_argument("--show-reviews", metavar="RUN_ID",
@@ -93,6 +97,16 @@ def build_parser() -> argparse.ArgumentParser:
                                  help="Show source provenance and human quality assessments")
     portfolio_group.add_argument("--show-connections", metavar="RUN_ID",
                                  help="Show source-linked cross-domain connection proposals")
+    parser.add_argument("--link-cross-run-claims", metavar="RUN_A_ID",
+                        help="Create a pending link between source-backed claims from two runs")
+    parser.add_argument("--other-run-id", default="", help="Second run for cross-run claim linking")
+    parser.add_argument("--claim-a-id", default="", help="Claim ID in the first run")
+    parser.add_argument("--claim-b-id", default="", help="Claim ID in the second run")
+    parser.add_argument("--cross-run-relation", choices=["same_topic", "supports", "contradicts", "contextualizes"], default="same_topic")
+    parser.add_argument("--cross-run-rationale", default="", help="Rationale for the proposed cross-run link")
+    parser.add_argument("--review-cross-run-link", metavar="LINK_ID", help="Human-review a persisted cross-run claim link")
+    parser.add_argument("--cross-run-status", choices=["accepted", "rejected", "needs_context"])
+    parser.add_argument("--cross-run-note", default="", help="Human review rationale for a cross-run link")
     parser.add_argument("--review-connection", metavar="RUN_ID",
                         help="Record a human review decision for a cross-domain connection")
     parser.add_argument("--connection-id", default="", help="Cross-domain connection ID")
@@ -432,6 +446,31 @@ def main() -> None:
             print(f"Candidate {candidate['feature']} marked {candidate['status']}.")
             print("This review does not automatically create or promote a scientific claim.")
         return
+    if args.link_cross_run_claims:
+        if not (args.other_run_id and args.claim_a_id and args.claim_b_id and args.cross_run_rationale.strip()):
+            raise SystemExit("--link-cross-run-claims requires --other-run-id, --claim-a-id, --claim-b-id, and --cross-run-rationale.")
+        link = store.create_cross_run_claim_link(
+            args.link_cross_run_claims, args.claim_a_id, args.other_run_id,
+            args.claim_b_id, args.cross_run_relation, args.cross_run_rationale,
+        )
+        for run_id in (link.run_a_id, link.run_b_id):
+            store.log_event(run_id, "cross_run_claim_link_created", link.__dict__,
+                            event_key=f"cross-run-link:{link.link_id}")
+        print(json.dumps(link.__dict__, indent=2, ensure_ascii=False) if args.json
+              else f"Created pending cross-run link {link.link_id}; no relationship was accepted.")
+        return
+    if args.review_cross_run_link:
+        if not args.cross_run_status or not args.cross_run_note.strip():
+            raise SystemExit("--review-cross-run-link requires --cross-run-status and --cross-run-note.")
+        link = store.review_cross_run_claim_link(
+            args.review_cross_run_link, args.cross_run_status, args.cross_run_note,
+        )
+        for run_id in (link.run_a_id, link.run_b_id):
+            store.log_event(run_id, "cross_run_claim_link_reviewed", link.__dict__,
+                            event_key=f"cross-run-review:{link.link_id}")
+        print(json.dumps(link.__dict__, indent=2, ensure_ascii=False) if args.json
+              else f"Cross-run link {link.link_id}: {link.status} (human-reviewed).")
+        return
     if args.review_connection:
         if not args.connection_id or not args.connection_status or not args.connection_note.strip():
             raise SystemExit("--review-connection requires --connection-id, --connection-status, and --connection-note.")
@@ -579,7 +618,8 @@ def main() -> None:
             print(experiment.limitations)
         return
     if (args.portfolio or args.assess_gaps or args.related_to is not None or args.show_reviews
-            or args.show_tasks or args.show_hypotheses or args.show_sources or args.show_connections):
+            or args.show_tasks or args.show_hypotheses or args.show_sources or args.show_connections
+            or args.cross_run_candidates or args.show_cross_run_links is not None):
         from dataclasses import asdict
         from .portfolio import ResearchPortfolio
         portfolio = ResearchPortfolio(store)
@@ -593,6 +633,35 @@ def main() -> None:
                     print(f"- {item['run_id']} | {item['status']} | gap score {item['knowledge_gap_score']}/100")
                     print(f"  {item['question']}")
                     print(f"  Sources: {item['sources']} | Evidence: {item['evidence']} | Claims: {item['claims']} | Hypotheses: {item['hypotheses']}")
+            return
+        if args.cross_run_candidates:
+            items = portfolio.cross_run_claim_candidates(args.cross_run_candidates, limit=args.limit)
+            if args.json:
+                print(json.dumps(items, indent=2, ensure_ascii=False))
+            else:
+                if not items:
+                    print("No source-backed cross-run claim candidates met the lexical threshold.")
+                for item in items:
+                    print(f"- similarity {item['lexical_similarity']:.3f} | {item['run_a_id']} ↔ {item['run_b_id']}")
+                    print(f"  A [{item['claim_a_id']}]: {item['claim_a']}")
+                    print(f"  B [{item['claim_b_id']}]: {item['claim_b']}")
+                    print(f"  Evidence: {', '.join(item['evidence_a_ids'])} ↔ {', '.join(item['evidence_b_ids'])}")
+                    print("  Candidate only; inspect before persisting with --link-cross-run-claims.")
+            return
+        if args.show_cross_run_links is not None:
+            items = store.list_cross_run_claim_links(args.show_cross_run_links or None)
+            if args.json:
+                print(json.dumps(items, indent=2, ensure_ascii=False))
+            else:
+                if not items:
+                    print("No cross-run claim links are stored.")
+                for item in items:
+                    print(f"- {item['link_id']} | {item['status']} | {item['relation']}")
+                    print(f"  {item['run_a_id']}:{item['claim_a_id']} ↔ {item['run_b_id']}:{item['claim_b_id']}")
+                    print(f"  Evidence: {', '.join(item['evidence_a_ids'])} ↔ {', '.join(item['evidence_b_ids'])}")
+                    print(f"  Rationale: {item['rationale']}")
+                    if item['reviewer_note']:
+                        print(f"  Human review: {item['reviewer_note']}")
             return
         if args.show_connections:
             run = store.load_run(args.show_connections)
