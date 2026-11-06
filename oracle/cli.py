@@ -27,9 +27,9 @@ def build_parser() -> argparse.ArgumentParser:
                         help="Retrieve licence-eligible Europe PMC open-access full text for PMCID records")
     parser.add_argument("--citation-network", action="store_true",
                         help="Retrieve reference metadata for DOI-backed sources from Crossref")
-    parser.add_argument("--citation-depth", type=int, default=1,
+    parser.add_argument("--reference-depth", type=int, default=1,
                         help="Crossref outgoing-reference expansion depth (1-5; default 1)")
-    parser.add_argument("--citation-nodes", type=int, default=100,
+    parser.add_argument("--reference-nodes", type=int, default=100,
                         help="Maximum metadata-only external reference nodes to add (1-250)")
     parser.add_argument("--incoming-citations", action="store_true",
                         help="Find works that cite DOI-backed sources using the OpenAlex API")
@@ -1035,8 +1035,8 @@ def main() -> None:
         if args.citation_network:
             from .citation_network import CrossrefCitationClient
             citation_report = CrossrefCitationClient(
-                mailto=args.mailto, max_depth=args.citation_depth,
-                max_nodes=args.citation_nodes).discover(run)
+                mailto=args.mailto, max_depth=args.reference_depth,
+                max_nodes=args.reference_nodes).discover(run)
         incoming_citation_report = None
         if args.incoming_citations:
             from .incoming_citations import OpenAlexIncomingCitationClient
