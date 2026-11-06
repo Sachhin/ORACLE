@@ -52,6 +52,8 @@ def build_parser() -> argparse.ArgumentParser:
                         help="Explicit sample-to-group assignment; repeat once per matrix sample")
     parser.add_argument("--geo-group-a", default="", help="Reference group in the GEO contrast")
     parser.add_argument("--geo-group-b", default="", help="Comparison group in the GEO contrast")
+    parser.add_argument("--geo-covariates", default="",
+                        help="JSON file mapping categorical covariates to sample labels for DESeq2, e.g. {batch:{GSM1:batch1}}")
     parser.add_argument("--geo-scale", choices=["log2_continuous"], default="",
                         help="Required declaration of measurement scale; raw counts are not supported")
     parser.add_argument("--dataset-max-mb", type=int, default=50,
@@ -266,11 +268,21 @@ def main() -> None:
             if not separator or not sample.strip() or not group.strip() or sample.strip() in labels:
                 raise SystemExit(f"Invalid or duplicate --geo-group assignment: {assignment!r}")
             labels[sample.strip()] = group.strip()
+        covariates = {}
+        if args.geo_covariates:
+            try:
+                with open(args.geo_covariates, "r", encoding="utf-8") as handle:
+                    covariates = json.load(handle)
+            except (OSError, json.JSONDecodeError) as exc:
+                raise SystemExit(f"Cannot read --geo-covariates JSON: {exc}") from exc
+            if not isinstance(covariates, dict):
+                raise SystemExit("--geo-covariates must contain a JSON object.")
         from .geo_deseq2 import GEOCountAnalyzer
         try:
             result = GEOCountAnalyzer().analyze(
                 args.geo_deseq2, labels, args.geo_group_a, args.geo_group_b,
                 rscript=args.rscript, timeout_seconds=args.deseq2_timeout,
+                covariates=covariates,
             )
         except (OSError, ValueError, RuntimeError) as exc:
             raise SystemExit(f"DESeq2 analysis failed: {exc}") from exc
