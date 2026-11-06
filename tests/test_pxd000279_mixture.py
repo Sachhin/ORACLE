@@ -55,7 +55,7 @@ class PXD000279MixtureBenchmarkTests(unittest.TestCase):
                         "Only identified by site"] + [f"metadata_{i}" for i in range(84)]
             columns = [f"LFQ intensity run_{i}" for i in range(1, 7)]
             with path.open("w", newline="", encoding="utf-8") as handle:
-                writer = csv.writer(handle, delimiter="\\t")
+                writer = csv.writer(handle, delimiter="\t")
                 writer.writerow([*metadata, *columns])
                 writer.writerow(["sp|P1|HUMAN OS=Homo sapiens", "", "", "",
                                  *([""] * 84), 100, 100, 100, 100, 100, 100])
