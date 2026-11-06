@@ -85,12 +85,16 @@ two-class label file using `--labels` and `--outcome-column`.
 
 The original clinical paper describes 13 plasma samples (8 HIV and 5 herpes)
 and a within-HIV HAND comparison of 5 HAND cases versus 3 cognitively normal
-participants. The PEPerMINT benchmark table and loader use 15 sample columns.
-No sample-to-patient mapping is published in the processed table itself, so
-ORACLE must not assign HIV/herpes/HAND labels by column order or filename.
-Also, the original study used DDA to build the spectral library and DIA for
-identification/quantification; DIA is an orthogonal reference for this
-imputation benchmark, not error-free absolute truth.
+participants. The PEPerMINT loader explicitly uses the same 15 sample aliases for both DDA
+and DIA matrices and attaches DIA peptide abundances as the DDA dataset's
+`abundance_gt`; therefore the processed files are paired at the shared-alias
+level. ORACLE verified 8,859 DDA-missing cells with corresponding DIA values.
+However, the aliases `1_Slot1` through `15_Slot1` are not mapped to clinical
+participant IDs in the loader or processed tables. The original paper reports
+13 clinical participants, so ORACLE must not assign HIV/herpes/HAND labels by
+column order or filename. The original study used DDA to build the spectral
+library and DIA for identification/quantification; DIA is an orthogonal
+reference for this imputation benchmark, not error-free absolute truth.
 
 ## Empirical PXD047528 run (2026-11-06)
 
