@@ -26,12 +26,16 @@ The offline research foundation remains usable without credentials. Optional net
 
 ## Quick start
 
-Requires Python 3.10+ and no third-party dependencies. CI verifies Python 3.10–3.14, including the Python 3.14 runtime used in some Termux setups.
+Requires Python 3.10+; the core offline runtime uses only the Python standard library. Install the package and run its installed CLI:
 
 ```bash
-python -m oracle "How does a fertilized egg develop into a whole organism?"
+python -m pip install .
+oracle --help
+oracle "How does a fertilized egg develop into a whole organism?"
 python -m unittest discover -s tests -v
 ```
+
+For Termux, run these commands inside a Python virtual environment. The automated matrix verifies Python 3.10–3.14, and the package-install smoke test invokes the installed `oracle` command from outside the source directory so it cannot accidentally import the checkout instead of the installed package.
 
 ### Optional Gemini research agents
 
