@@ -31,7 +31,14 @@ jobs:
           python - <<'PY'
           from pathlib import Path
           from remotezip import RemoteZip
+          import requests
           url = "https://zenodo.org/records/11216899/files/data.zip?download=1"
+          probe = requests.get(url, headers={"Range": "bytes=0-0"}, stream=True, timeout=30)
+          try:
+              if probe.status_code != 206 or not probe.headers.get("Content-Range", "").startswith("bytes 0-0/"):
+                  raise SystemExit("Zenodo did not honor HTTP Range; refusing to download the full multi-GB archive")
+          finally:
+              probe.close()
           out = Path("data/pxd047528/source")
           wanted = [
               "datasets/blood_hiv_dda_dia/dda/peptides.tsv",
