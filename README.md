@@ -26,7 +26,7 @@ The normal run remains deterministic and offline. To explicitly opt in to Gemini
 
 The Gemini agent suite uses the same `run(context) -> result` contract as the deterministic agents. Model-generated research statements are stored only as INFERENCE, never as source evidence. Hypotheses remain provisional and experiment designs remain PROPOSED. The Gemini auditor emits review warnings only and cannot alter evidence stance or claim status. Cross-domain proposals cite at least two existing source IDs, remain pending human review, and can be accepted/rejected/deferred through the CLI. The Gemini novelty assessor runs only when source-backed literature evidence is present, validates cited source IDs, and reports provisional prior-art triage rather than a novelty guarantee. These provider-backed review agents and cross-domain proposal gates have unit-level contract tests; live scientific quality has not yet been independently validated. The default provider is still `deterministic`; no model provider is called unless explicitly selected. `--agent-provider gemini` uses Gemini only. Opt-in `--agent-provider auto` enables ordered Gemini → Groq → OpenRouter fallback when credentials are configured. Set `GROQ_API_KEY` with `ORACLE_GROQ_MODEL`, and/or `OPENROUTER_API_KEY` with `ORACLE_OPENROUTER_MODEL`; provider keys are read only from environment variables and are never stored. Routing advances only for quota/rate-limit, network/timeout, and transient server failures; authentication/configuration errors stop rather than silently switching accounts. The active model is recorded on generated inference metadata. This is ordered failover, not automatic quality/cost optimization. Transient Gemini HTTP/network failures receive a small bounded retry; explicit quota-exhaustion responses stop immediately. Other provider errors fail and checkpoint the run rather than silently pretending that deterministic output came from Gemini.
 
-Citation graph ranking and bounded multi-hop traversal are available for DOI-resolved links between papers already present in one saved run:
+Citation graph ranking and bounded multi-hop traversal are available for DOI-resolved links between papers already present in one saved run. Separately, OpenAlex incoming-citation discovery can expand outward from initial DOI-backed literature records and add bounded metadata-only external paper nodes:
 ```bash
 python -m oracle --rank-citation-graph RUN_ID
 python -m oracle --traverse-citation-graph RUN_ID --citation-start-source SOURCE_ID --citation-direction both --citation-depth 3
@@ -91,10 +91,13 @@ ORACLE can search Europe PMC and Crossref public REST APIs without API keys or t
     python -m oracle --literature "plant nonsense-mediated mRNA decay" --provider europepmc --limit 15 --json
     python -m oracle --literature "Arabidopsis heat stress" --provider geo --limit 10
     python -m oracle --literature "embryo development" --provider all --limit 15 --citation-network --incoming-citations
+    python -m oracle --literature "embryo development" --provider all --limit 15 --incoming-citations --incoming-citation-depth 3 --incoming-citation-nodes 100
     python -m oracle "Arabidopsis heat stress" --research-literature --provider geo --discover-geo-files
     python -m oracle "Arabidopsis heat stress" --research-literature --provider geo --download-geo-files --dataset-max-mb 50
     python -m oracle "Arabidopsis heat stress" --research-literature --provider geo --analyze-geo-files --dataset-max-mb 50
     python -m oracle "How does a fertilized egg develop?" --research-literature --full-text --agent-provider gemini --cycles 3
+
+For OpenAlex expansion, depth is capped at five and newly added external nodes at 250. Added nodes contain bibliographic metadata only (no abstracts-as-evidence, claims, or quality scores); they are tagged `external_citation`. The discovery is incoming-only and bounded by the per-source result cap. Citation links are navigation metadata, not scientific support.
 
 For batch-aware RNA-seq analysis, pass a JSON file mapping each categorical covariate to every matrix sample, for example:
 ```json
