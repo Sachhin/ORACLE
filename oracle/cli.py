@@ -59,8 +59,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--mailto", default="", help="Optional contact email for Crossref polite pool")
     parser.add_argument("--extract-claims", action="store_true", help="Extract quote-grounded candidates with Gemini")
     parser.add_argument("--gemini-model", default="gemini-2.5-flash", help="Gemini model for optional claim extraction, comparison, or research agents")
-    parser.add_argument("--agent-provider", choices=["deterministic", "gemini"], default="deterministic",
-                        help="Research-agent backend; deterministic remains the safe default")
+    parser.add_argument("--agent-provider", choices=["deterministic", "gemini", "auto"], default="deterministic",
+                        help="Research-agent backend; auto enables configured provider failover")
     parser.add_argument("--compare-papers", action="store_true", help="Compare extracted claims across distinct papers")
     parser.add_argument("--review-evidence", action="store_true",
                         help="Ask Gemini for quote-grounded support/refute/contextual suggestions; requires human review")
@@ -873,9 +873,12 @@ def main() -> None:
             print(f"Citation network: {citation_report.links_created} first-degree references discovered.")
         return
     agent_suite = None
-    if args.agent_provider == "gemini":
+    if args.agent_provider in {"gemini", "auto"}:
         from .model_agents import GeminiAgentSuite
-        agent_suite = GeminiAgentSuite(model=args.gemini_model)
+        agent_suite = GeminiAgentSuite(
+            model=args.gemini_model,
+            routing="fallback" if args.agent_provider == "auto" else "single",
+        )
     providers = {"both": ("europepmc", "crossref"), "all": ("europepmc", "crossref", "geo"), "europepmc": ("europepmc",), "crossref": ("crossref",), "geo": ("geo",)}[args.provider]
     orchestrator = OracleOrchestrator(
         store, agent_suite=agent_suite,
