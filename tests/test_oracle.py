@@ -554,5 +554,58 @@ class OracleTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             ResearchPortfolio(self.store).assess("missing-run")
 
+
+    def test_experiment_lifecycle_keeps_simulation_distinct_from_real_execution(self):
+        from oracle.experiment_manager import ExperimentManager
+        from oracle.models import Experiment, ExperimentStatus
+
+        run = ResearchRun("Test experimental lifecycle")
+        simulated = Experiment("Test simulation", ["Run a toy model"], ["Output A"])
+        performed = Experiment("Test physical experiment", ["Collect samples"], ["Outcome B"])
+        run.experiments.extend([simulated, performed])
+        manager = ExperimentManager()
+
+        manager.record_simulation(
+            run, simulated.experiment_id, "Python toy simulator v1",
+            "Synthetic output: A=0.7", "No biological measurements; simplified assumptions.",
+        )
+        self.assertEqual(simulated.status, ExperimentStatus.SIMULATED)
+        self.assertEqual(simulated.execution_kind, "simulated")
+        self.assertIn("not a real-world experiment", simulated.limitations)
+        with self.assertRaises(ValueError):
+            manager.record_performed(
+                run, simulated.experiment_id, "wet lab", "Researcher", "Some result",
+            )
+
+        manager.record_performed(
+            run, performed.experiment_id, "qPCR with three biological replicates",
+            "Lab operator", "Recorded Ct values in lab notebook.",
+        )
+        self.assertEqual(performed.status, ExperimentStatus.PERFORMED)
+        self.assertEqual(performed.execution_kind, "performed")
+        self.assertTrue(performed.executed_at)
+
+        manager.mark_evaluated(run, simulated.experiment_id, "Simulation checked against expected toy behavior.")
+        manager.mark_evaluated(run, performed.experiment_id, "Observed results compared with preregistered predictions.")
+        self.assertEqual(simulated.status, ExperimentStatus.EVALUATED)
+        self.assertEqual(simulated.execution_kind, "simulated")
+        self.assertEqual(performed.status, ExperimentStatus.EVALUATED)
+        self.assertEqual(performed.execution_kind, "performed")
+        self.store.save_run(run)
+        loaded = self.store.load_run(run.run_id)
+        self.assertEqual(loaded.experiments[0].execution_kind, "simulated")
+        self.assertEqual(loaded.experiments[1].execution_kind, "performed")
+
+    def test_experiment_lifecycle_requires_provenance(self):
+        from oracle.experiment_manager import ExperimentManager
+        from oracle.models import Experiment
+        run = ResearchRun("Provenance test")
+        experiment = Experiment("Real experiment", ["Protocol"], ["Prediction"])
+        run.experiments.append(experiment)
+        with self.assertRaises(ValueError):
+            ExperimentManager().record_performed(
+                run, experiment.experiment_id, "", "Operator", "Results",
+            )
+
 if __name__ == "__main__":
     unittest.main()
