@@ -36,4 +36,4 @@ def choose_next_action(
         return Decision("continue", "New research information was recorded and cycle budget remains.")
     if consecutive_no_progress + 1 >= max_no_progress:
         return Decision("stop", "Repeated cycles produced no new research information; stopping safely.")
-    return Decision("continue", "No new information this cycle; one bounded retry remains before safe stop.")
+    return Decision("replan", "No new information this cycle; request one bounded revised plan before the next attempt.")
