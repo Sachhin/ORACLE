@@ -159,9 +159,8 @@ jobs:
           Rscript - <<'RS'
           suppressPackageStartupMessages(library(GEOquery))
           suppressPackageStartupMessages(library(Biobase))
-          x <- getGEO(filename="data/gse12837/GSE12837_series_matrix.txt.gz", GSEMatrix=TRUE, getGPL=FALSE)
-          if (!is.list(x) || length(x) != 1L) stop("Expected one GPL96 ExpressionSet for GSE12837")
-          eset <- x[[1]]
+          eset <- getGEO(filename="data/gse12837/GSE12837_series_matrix.txt.gz", GSEMatrix=TRUE, getGPL=FALSE)
+          if (!inherits(eset, "ExpressionSet")) stop(paste("Expected one local GPL96 ExpressionSet; got", paste(class(eset), collapse=", ")))
           if (!identical(annotation(eset), "hgu133a")) stop(paste("Unexpected annotation:", annotation(eset)))
           expr <- exprs(eset)
           if (ncol(expr) != 24L || nrow(expr) < 22000L) stop("Unexpected GSE12837 reference dimensions")
