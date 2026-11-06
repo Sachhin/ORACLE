@@ -12,7 +12,7 @@ from .models import (
     EvidenceReviewCandidate, DatasetFileRecord, DatasetAnalysisRecord, DifferentialExpressionAnalysisRecord, CitationLink,
     EvidenceKind, EvidenceStance, Experiment, ExperimentStatus, Hypothesis,
     HypothesisGroup, HypothesisStatus, ResearchMode, ResearchRun, ResearchTask,
-    RunStatus, SourceRecord, UncertaintyAssessment, utc_now,
+    RunStatus, SourceRecord, UncertaintyAssessment, new_id, utc_now,
 )
 
 
@@ -84,6 +84,10 @@ class ResearchStore:
                     link_id TEXT PRIMARY KEY, run_a_id TEXT NOT NULL, claim_a_id TEXT NOT NULL,
                     run_b_id TEXT NOT NULL, claim_b_id TEXT NOT NULL, relation TEXT NOT NULL,
                     status TEXT NOT NULL, payload TEXT NOT NULL, created_at TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS answer_quality_reviews (
+                    review_id TEXT PRIMARY KEY, run_id TEXT NOT NULL,
+                    reviewer TEXT NOT NULL, payload TEXT NOT NULL, created_at TEXT NOT NULL
                 );
             """)
             # Upgrade databases created before event idempotency was introduced.
@@ -296,6 +300,48 @@ class ResearchStore:
             db.execute("UPDATE cross_run_claim_links SET status=?,payload=? WHERE link_id=?",
                        (item.status, json.dumps(item.__dict__, ensure_ascii=False), link_id))
         return item
+
+
+    def record_answer_quality_review(
+        self, run_id: str, answer_text: str, reviewer: str,
+        scores: dict[str, int], reviewer_note: str,
+        source_ids: list[str] | None = None,
+    ) -> dict[str, Any]:
+        """Store one human-scored answer review with source-ID validation."""
+        from .answer_benchmark import validate_answer_review
+        run = self.load_run(run_id)
+        if run is None:
+            raise ValueError(f"Research run not found: {run_id}")
+        if not answer_text.strip() or len(answer_text) > 20000:
+            raise ValueError("Answer text must contain 1-20000 characters.")
+        if not reviewer.strip() or not reviewer_note.strip():
+            raise ValueError("Reviewer identity and rationale are required.")
+        normalized_scores = validate_answer_review(scores)
+        selected_sources = list(dict.fromkeys(source_ids or []))
+        known_sources = {item.source_id for item in run.sources}
+        if any(not isinstance(value, str) or value not in known_sources for value in selected_sources):
+            raise ValueError("Answer review references a source ID absent from this run.")
+        review = {
+            "review_id": new_id("ar"), "run_id": run_id,
+            "reviewer": reviewer.strip(), "answer_text": answer_text,
+            "scores": normalized_scores, "reviewer_note": reviewer_note.strip(),
+            "source_ids": selected_sources, "created_at": utc_now(),
+        }
+        with self._connect() as db:
+            db.execute(
+                "INSERT INTO answer_quality_reviews(review_id,run_id,reviewer,payload,created_at) VALUES(?,?,?,?,?)",
+                (review["review_id"], run_id, review["reviewer"],
+                 json.dumps(review, ensure_ascii=False), review["created_at"]),
+            )
+        return review
+
+    def list_answer_quality_reviews(self, run_id: str) -> list[dict[str, Any]]:
+        with self._connect() as db:
+            rows = db.execute(
+                "SELECT payload FROM answer_quality_reviews WHERE run_id=? ORDER BY created_at",
+                (run_id,),
+            ).fetchall()
+        return [json.loads(row["payload"]) for row in rows]
 
     def list_differential_expression_analyses(self, run_id: str) -> list[dict[str, Any]]:
         """Return persisted DE analyses in creation order, including their full result payloads."""
