@@ -312,3 +312,44 @@ GEO record: https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE111062
 Study paper: https://pmc.ncbi.nlm.nih.gov/articles/PMC7030938/
 
 The published paper and GEO record establish the study context and deposited data, but the paper's overall high-light findings are **not** a curated truth set for this exact 48-hour contrast. Do not score this contrast against an aggregate DEG count or an unrelated gene list. A benchmark manifest must use a documented, contrast-matched reference gene set before known-positive recovery metrics can be interpreted.
+
+
+### Download only selected GEO GSM supplementary count files
+
+GEO often exposes individual sample-level count files under each GSM accession, even when the Series supplementary directory contains a single archive. ORACLE can now discover and download only explicitly selected GSM files from the official NCBI HTTPS host. Each download is size-capped and receives a SHA-256 checksum.
+
+For the GSE111062 48-hour growth-light versus high-light contrast, GEO identifies these samples:
+
+- Growth light: GSM3021223 (GL48h1), GSM3021224 (GL48h2)
+- High light: GSM3021235 (HL48h1), GSM3021236 (HL48h2)
+
+Download:
+
+```bash
+python -m oracle --download-geo-samples \
+  --gsm GSM3021223 --gsm GSM3021224 \
+  --gsm GSM3021235 --gsm GSM3021236 \
+  --dataset-max-mb 5 --json
+```
+
+The files are saved under `data/geo_samples/GSM.../`. Then inspect one file's header and first rows before choosing columns:
+
+```bash
+gzip -cd data/geo_samples/GSM3021223/*.gz | head
+```
+
+Merge the four files (adjust column flags to the observed file format):
+
+```bash
+python -m oracle --merge-geo-counts \
+  --geo-sample-file GSM3021223=data/geo_samples/GSM3021223/GSM3021223_GL48h1.txt.gz \
+  --geo-sample-file GSM3021224=data/geo_samples/GSM3021224/GSM3021224_GL48h2.txt.gz \
+  --geo-sample-file GSM3021235=data/geo_samples/GSM3021235/GSM3021235_HL48h1.txt.gz \
+  --geo-sample-file GSM3021236=data/geo_samples/GSM3021236/GSM3021236_HL48h2.txt.gz \
+  --count-feature-column 0 --count-value-column -1 \
+  --count-output data/geo/GSE111062/HL48h_vs_GL48h_counts.tsv --json
+```
+
+**Do not assume the illustrative column positions are correct without inspecting the files.** The GSM records describe tab-delimited gene-level raw counts, aligned to TAIR10 and generated with HTSeq, but the actual downloaded header/columns must be checked before merging. If there are extra annotation columns, configure the correct count column. GEO sample records: [GSM3021223](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSM3021223), [GSM3021224](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSM3021224), [GSM3021235](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSM3021235), [GSM3021236](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSM3021236).
+
+After confirming sample identities, file format, count semantics, and biological replicate design, use the explicit `--geo-group` assignments documented above to run DESeq2. This downloader does not infer treatment groups, and downloading files is not itself a biological analysis.
