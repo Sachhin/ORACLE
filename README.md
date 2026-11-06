@@ -173,3 +173,27 @@ python -m oracle --geo-contrast expression.tsv --geo-scale log2_continuous \
 ```
 
 This runs a per-feature Welch two-sample t-test and Benjamini-Hochberg false-discovery-rate correction. Group assignments are explicit user input; ORACLE does not infer them from sample titles. The adapter requires at least two observations per group and complete sample mapping. It is **not suitable for raw RNA-seq counts**, does not normalize values or correct batch effects, and assumes independent biological replicates and appropriately transformed continuous log2 measurements. Results are statistical associations, not causal or validated biological discoveries.
+
+
+### Raw-count RNA-seq differential expression (optional DESeq2 backend)
+
+The raw-count workflow uses Bioconductor DESeq2 through `Rscript`. It is separate from the continuous-log2 Welch adapter above. Install R, then install DESeq2 in R:
+
+```r
+if (!requireNamespace("BiocManager", quietly=TRUE))
+    install.packages("BiocManager")
+BiocManager::install("DESeq2")
+```
+
+Run only on an unnormalized integer read-count matrix with biological replicates and an explicit sample-to-group mapping:
+
+```bash
+python -m oracle --geo-deseq2 raw_counts.tsv \
+  --geo-group GSM_A1=control --geo-group GSM_A2=control \
+  --geo-group GSM_B1=treated --geo-group GSM_B2=treated \
+  --geo-group-a control --geo-group-b treated --json
+```
+
+ORACLE validates non-negative integer counts, complete two-group sample assignment, unique feature IDs, and minimum replicate counts before invoking DESeq2. Results include base mean, log2 fold change, standard error, Wald statistic, p-value, adjusted p-value, matrix SHA-256, and R/DESeq2 versions. Python CI mocks the external R process; a live DESeq2 run is not claimed unless tested in an R environment with DESeq2 installed.
+
+This first adapter supports a simple two-group design only. It does not infer groups, remove outliers, correct batch effects, or replace review of library sizes and DESeq2 diagnostics. It is not for TPM/FPKM, normalized/log-transformed values, or single-cell pseudobulk without a correctly constructed count matrix and design.

@@ -1102,5 +1102,94 @@ class OracleTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "cover matrix samples exactly"):
             analyzer.analyze(matrix, {"C1": "control"}, "control", "treated", "log2_continuous")
 
+
+    def test_deseq2_adapter_validates_raw_counts_and_returns_reproducible_results(self):
+        from types import SimpleNamespace
+        from unittest.mock import patch
+        from oracle.geo_deseq2 import GEOCountAnalyzer
+        matrix = Path(self.tmp.name) / "counts.tsv"
+        matrix.write_text(
+            "ID_REF\tC1\tC2\tT1\tT2\n"
+            "gene_up\t10\t12\t40\t44\n"
+            "gene_stable\t20\t21\t20\t22\n",
+            encoding="utf-8",
+        )
+        groups = {"C1": "control", "C2": "control", "T1": "treated", "T2": "treated"}
+
+        script_text = []
+        def fake_run(command, **kwargs):
+            script_text.append(Path(command[2]).read_text(encoding="utf-8"))
+            output = Path(command[5])
+            output.write_text(
+                "feature\tbaseMean\tlog2FoldChange\tlfcSE\tstat\tpvalue\tpadj\n"
+                "gene_up\t25\t2.0\t0.2\t10\t0.0001\t0.0002\n"
+                "gene_stable\t20\t0.0\t0.3\t0\t1\t1\n",
+                encoding="utf-8",
+            )
+            return SimpleNamespace(returncode=0, stdout="4.4.0\t1.42.0", stderr="")
+
+        with patch("oracle.geo_deseq2.shutil.which", return_value="/usr/bin/Rscript"), \
+             patch("oracle.geo_deseq2.subprocess.run", side_effect=fake_run) as run:
+            result = GEOCountAnalyzer().analyze(
+                matrix, groups, "control", "treated",
+            )
+        self.assertEqual(result["method"], "DESeq2 negative-binomial GLM; Wald test; independent filtering; Benjamini-Hochberg FDR")
+        self.assertEqual(result["software"], {"r": "4.4.0", "deseq2": "1.42.0"})
+        self.assertEqual(result["features_input"], 2)
+        self.assertEqual(result["sample_groups"]["treated"], ["T1", "T2"])
+        self.assertEqual(result["results"][0]["feature"], "gene_up")
+        self.assertAlmostEqual(result["results"][0]["log2_fold_change"], 2.0)
+        self.assertEqual(len(result["matrix_sha256"]), 64)
+        command = run.call_args.args[0]
+        self.assertEqual(command[1], "--vanilla")
+        self.assertEqual(command[-2:], ["control", "treated"])
+        self.assertIn("DESeq2::DESeq", script_text[0])
+
+    def test_deseq2_adapter_rejects_noninteger_counts_missing_values_and_bad_design(self):
+        from unittest.mock import patch
+        from oracle.geo_deseq2 import GEOCountAnalyzer
+        matrix = Path(self.tmp.name) / "counts.tsv"
+        groups = {"C1": "control", "C2": "control", "T1": "treated", "T2": "treated"}
+        analyzer = GEOCountAnalyzer()
+        with patch("oracle.geo_deseq2.shutil.which", return_value="/usr/bin/Rscript"):
+            matrix.write_text(
+                "ID_REF\tC1\tC2\tT1\tT2\ngene\t1\t2\t3.5\t4\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "non-negative integers"):
+                analyzer.analyze(matrix, groups, "control", "treated")
+            matrix.write_text(
+                "ID_REF\tC1\tC2\tT1\tT2\ngene\t1\t2\tNA\t4\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "Missing/non-numeric"):
+                analyzer.analyze(matrix, groups, "control", "treated")
+            matrix.write_text(
+                "ID_REF\tC1\tC2\tT1\tT2\ngene\t1\t2\t3\t4\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "cover matrix samples exactly"):
+                analyzer.analyze(matrix, {"C1": "control"}, "control", "treated")
+
+    def test_deseq2_adapter_reports_missing_runtime_and_r_errors(self):
+        from types import SimpleNamespace
+        from unittest.mock import patch
+        from oracle.geo_deseq2 import DESeq2UnavailableError, GEOCountAnalyzer
+        matrix = Path(self.tmp.name) / "counts.tsv"
+        matrix.write_text(
+            "ID_REF\tC1\tC2\tT1\tT2\ngene\t1\t2\t3\t4\n",
+            encoding="utf-8",
+        )
+        groups = {"C1": "control", "C2": "control", "T1": "treated", "T2": "treated"}
+        with patch("oracle.geo_deseq2.shutil.which", return_value=None):
+            with self.assertRaises(DESeq2UnavailableError):
+                GEOCountAnalyzer().analyze(matrix, groups, "control", "treated")
+        with patch("oracle.geo_deseq2.shutil.which", return_value="/usr/bin/Rscript"), \
+             patch("oracle.geo_deseq2.subprocess.run", return_value=SimpleNamespace(
+                 returncode=1, stdout="", stderr="DESeq2 is not installed"
+             )):
+            with self.assertRaisesRegex(DESeq2UnavailableError, "BiocManager"):
+                GEOCountAnalyzer().analyze(matrix, groups, "control", "treated")
+
 if __name__ == "__main__":
     unittest.main()
