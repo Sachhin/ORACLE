@@ -868,5 +868,38 @@ class OracleTests(unittest.TestCase):
                 self.assertEqual(mocked.call_count, 1)
                 sleeper.assert_not_called()
 
+
+    def test_human_source_quality_review_updates_linked_evidence_reliability(self):
+        from oracle.models import SourceRecord
+        run = ResearchRun("Source quality review")
+        source = SourceRecord(title="A paper", source_id="quality-source")
+        run.sources.append(source)
+        first = Evidence("An observation.", source.title, source_id=source.source_id, reliability=0.5)
+        second = Evidence("A second observation.", source.title, source_id=source.source_id, reliability=0.5)
+        run.evidence.extend([first, second])
+        reviewed = KnowledgeBase().review_source_quality(
+            run, source.source_id, 0.85,
+            "Primary study with transparent methods and relevant controls; limitations noted.",
+        )
+        self.assertEqual(reviewed.reliability_score, 0.85)
+        self.assertTrue(reviewed.quality_reviewed_at)
+        self.assertEqual(first.reliability, 0.85)
+        self.assertEqual(second.reliability, 0.85)
+        self.store.save_run(run)
+        loaded = self.store.load_run(run.run_id)
+        self.assertEqual(loaded.sources[0].reliability_score, 0.85)
+        self.assertTrue(loaded.sources[0].quality_reviewer_note)
+
+    def test_source_quality_review_requires_valid_score_and_rationale(self):
+        from oracle.models import SourceRecord
+        run = ResearchRun("Source quality validation")
+        source = SourceRecord(title="Paper", source_id="quality-invalid")
+        run.sources.append(source)
+        kb = KnowledgeBase()
+        with self.assertRaises(ValueError):
+            kb.review_source_quality(run, source.source_id, 1.5, "Rationale.")
+        with self.assertRaises(ValueError):
+            kb.review_source_quality(run, source.source_id, 0.8, "")
+
 if __name__ == "__main__":
     unittest.main()
