@@ -1116,7 +1116,9 @@ class OracleTests(unittest.TestCase):
         )
         groups = {"C1": "control", "C2": "control", "T1": "treated", "T2": "treated"}
 
+        script_text = []
         def fake_run(command, **kwargs):
+            script_text.append(Path(command[2]).read_text(encoding="utf-8"))
             output = Path(command[5])
             output.write_text(
                 "feature\tbaseMean\tlog2FoldChange\tlfcSE\tstat\tpvalue\tpadj\n"
@@ -1141,7 +1143,7 @@ class OracleTests(unittest.TestCase):
         command = run.call_args.args[0]
         self.assertEqual(command[1], "--vanilla")
         self.assertEqual(command[-2:], ["control", "treated"])
-        self.assertIn("DESeq2::DESeq", Path(command[2]).read_text(encoding="utf-8"))
+        self.assertIn("DESeq2::DESeq", script_text[0])
 
     def test_deseq2_adapter_rejects_noninteger_counts_missing_values_and_bad_design(self):
         from unittest.mock import patch
