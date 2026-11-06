@@ -13,7 +13,7 @@ on:
         description: Gemini model ID
         required: true
         type: string
-        default: gemini-2.5-flash
+        default: gemini-3.8-flash
       max_claims:
         description: Optional pilot cap (0 = full split)
         required: true
@@ -30,7 +30,7 @@ jobs:
     env:
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       SPLIT: ${{ github.event_name == 'workflow_dispatch' && inputs.split || 'dev' }}
-      MODEL: ${{ github.event_name == 'workflow_dispatch' && inputs.model || 'gemini-2.5-flash' }}
+      MODEL: ${{ github.event_name == 'workflow_dispatch' && inputs.model || 'gemini-3.8-flash' }}
       MAX_CLAIMS: ${{ github.event_name == 'workflow_dispatch' && inputs.max_claims || '20' }}
     steps:
       - uses: actions/checkout@v4
