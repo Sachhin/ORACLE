@@ -28,7 +28,7 @@ Status reflects code currently present on the main branch; checked items are imp
 - [ ] Provenance-backed cross-domain connection proposals
 - [x] Research portfolio for saved runs and lexical retrieval of related prior questions
 - [ ] Shared cross-run scientific knowledge graph with reviewed cross-run claim/evidence reuse
-- [ ] Task-level completion criteria and task-budget enforcement
+- [x] Task acceptance criteria, source-backed completion, blocked/retry states, and bounded attempt counts
 
 ## Milestone 4 — Real research capabilities
 - [x] Common run(context) -> result contract with optional Gemini suite for planner, researcher, explorer, hypothesis, skeptic, and experiment agents

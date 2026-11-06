@@ -60,6 +60,15 @@ def build_parser() -> argparse.ArgumentParser:
                                  help="Find prior runs with lexically related research questions")
     portfolio_group.add_argument("--show-reviews", metavar="RUN_ID",
                                  help="Show pending and completed evidence-review candidates in a run")
+    portfolio_group.add_argument("--show-tasks", metavar="RUN_ID",
+                                 help="Show task status, criteria, and evidence links for a run")
+    parser.add_argument("--task-action", choices=["start", "complete", "block", "retry"],
+                        help="Update a research task lifecycle state")
+    parser.add_argument("--task-run", help="Research run containing the task")
+    parser.add_argument("--task-id", help="Research task ID to update")
+    parser.add_argument("--task-note", default="", help="Completion note or blocked reason")
+    parser.add_argument("--task-evidence-ids", default="",
+                        help="Comma-separated source-backed evidence IDs required to complete a task")
     parser.add_argument("--review-candidate", metavar="CANDIDATE_ID",
                         help="Accept, reject, or defer one evidence-review candidate")
     parser.add_argument("--review-run", help="Research run containing the evidence-review candidate")
@@ -73,6 +82,33 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> None:
     args = build_parser().parse_args()
     store = ResearchStore(args.db)
+    if args.task_action:
+        if not args.task_run or not args.task_id:
+            raise SystemExit("--task-action requires --task-run and --task-id.")
+        run = store.load_run(args.task_run)
+        if run is None:
+            raise SystemExit(f"Research run not found: {args.task_run}")
+        from .task_manager import TaskManager
+        manager = TaskManager()
+        if args.task_action == "start":
+            task = manager.start(run, args.task_id)
+        elif args.task_action == "complete":
+            evidence_ids = [item.strip() for item in args.task_evidence_ids.split(",") if item.strip()]
+            task = manager.complete(run, args.task_id, evidence_ids, args.task_note)
+        elif args.task_action == "block":
+            task = manager.block(run, args.task_id, args.task_note)
+        else:
+            task = manager.retry(run, args.task_id)
+        store.save_run(run)
+        if args.json:
+            print(json.dumps({"run_id": run.run_id, "task": task.__dict__}, indent=2, ensure_ascii=False))
+        else:
+            print(f"Task {task.task_id}: {task.status} | attempts {task.attempts}")
+            if task.blocked_reason:
+                print(f"Blocked: {task.blocked_reason}")
+            if task.completion_note:
+                print(f"Completion: {task.completion_note}")
+        return
     if args.review_candidate:
         if not args.review_run or not args.review_status or not args.review_note.strip():
             raise SystemExit("--review-candidate requires --review-run, --review-status, and --review-note.")
@@ -126,7 +162,7 @@ def main() -> None:
             print(f"Experiment {experiment.experiment_id}: {experiment.status.value} ({experiment.execution_kind})")
             print(experiment.limitations)
         return
-    if args.portfolio or args.assess_gaps or args.related_to is not None or args.show_reviews:
+    if args.portfolio or args.assess_gaps or args.related_to is not None or args.show_reviews or args.show_tasks:
         from dataclasses import asdict
         from .portfolio import ResearchPortfolio
         portfolio = ResearchPortfolio(store)
@@ -140,6 +176,25 @@ def main() -> None:
                     print(f"- {item['run_id']} | {item['status']} | gap score {item['knowledge_gap_score']}/100")
                     print(f"  {item['question']}")
                     print(f"  Sources: {item['sources']} | Evidence: {item['evidence']} | Claims: {item['claims']} | Hypotheses: {item['hypotheses']}")
+            return
+        if args.show_tasks:
+            run = store.load_run(args.show_tasks)
+            if run is None:
+                raise SystemExit(f"Research run not found: {args.show_tasks}")
+            items = [task.__dict__ for task in run.tasks]
+            if args.json:
+                print(json.dumps(items, indent=2, ensure_ascii=False))
+            else:
+                if not items:
+                    print("No research tasks in this run.")
+                for task in items:
+                    print(f"- {task['task_id']} | {task['status']} | {task['name']} | attempts {task['attempts']}")
+                    print(f"  Acceptance: {'; '.join(task['acceptance_criteria'])}")
+                    print(f"  Evidence IDs: {', '.join(task['evidence_ids']) or 'none'}")
+                    if task['blocked_reason']:
+                        print(f"  Blocked: {task['blocked_reason']}")
+                    if task['completion_note']:
+                        print(f"  Completed: {task['completion_note']}")
             return
         if args.show_reviews:
             run = store.load_run(args.show_reviews)

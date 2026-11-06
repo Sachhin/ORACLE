@@ -259,6 +259,15 @@ class ResearchTask:
     priority: int = 3
     task_id: str = field(default_factory=lambda: new_id("task"))
     status: str = "pending"
+    acceptance_criteria: list[str] = field(default_factory=lambda: [
+        "Link at least one source-backed evidence record and record a concise completion note."
+    ])
+    evidence_ids: list[str] = field(default_factory=list)
+    completion_note: str = ""
+    blocked_reason: str = ""
+    attempts: int = 0
+    started_at: str = ""
+    completed_at: str = ""
 
 
 @dataclass

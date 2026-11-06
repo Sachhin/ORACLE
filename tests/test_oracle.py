@@ -732,5 +732,49 @@ class OracleTests(unittest.TestCase):
             loaded = self.store.load_run(run.run_id)
             self.assertEqual(loaded.dataset_files[0].sha256, item.sha256)
 
+
+    def test_task_lifecycle_requires_source_backed_evidence_to_complete(self):
+        from oracle.models import ResearchTask, SourceRecord
+        from oracle.task_manager import TaskManager
+
+        run = ResearchRun("Task lifecycle")
+        task = ResearchTask("Review evidence", "Find and assess an independent source.")
+        run.tasks.append(task)
+        manager = TaskManager(max_attempts=2)
+        manager.start(run, task.task_id)
+        source = SourceRecord(title="Paper", source_id="task-source")
+        run.sources.append(source)
+        source_evidence = Evidence(
+            "A source reports an observed result.", source.title,
+            source_id=source.source_id, locator="Abstract",
+        )
+        inference = Evidence("A model guess.", "ORACLE", EvidenceKind.INFERENCE)
+        run.evidence.extend([source_evidence, inference])
+        with self.assertRaises(ValueError):
+            manager.complete(run, task.task_id, [inference.evidence_id], "Reviewed.")
+        completed = manager.complete(
+            run, task.task_id, [source_evidence.evidence_id], "Source passage inspected."
+        )
+        self.assertEqual(completed.status, "completed")
+        self.assertEqual(completed.evidence_ids, [source_evidence.evidence_id])
+        self.assertTrue(completed.completed_at)
+        with self.assertRaises(ValueError):
+            manager.start(run, task.task_id)
+
+    def test_task_retry_and_attempt_budget_are_bounded(self):
+        from oracle.models import ResearchTask
+        from oracle.task_manager import TaskManager
+        run = ResearchRun("Task attempts")
+        task = ResearchTask("Fetch sources", "Retrieve source records.")
+        run.tasks.append(task)
+        manager = TaskManager(max_attempts=2)
+        manager.start(run, task.task_id)
+        manager.block(run, task.task_id, "Provider temporarily unavailable.")
+        manager.retry(run, task.task_id)
+        manager.start(run, task.task_id)
+        manager.block(run, task.task_id, "Second attempt failed.")
+        with self.assertRaises(ValueError):
+            manager.retry(run, task.task_id)
+
 if __name__ == "__main__":
     unittest.main()
