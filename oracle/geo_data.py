@@ -189,3 +189,96 @@ class GEOSupplementaryClient:
             f"{report.files_skipped_size} skipped by size limit."
         )
         return report
+
+
+    @staticmethod
+    def sample_directory(accession: str) -> str:
+        import re
+        match = re.fullmatch(r"GSM(\d+)", accession.upper())
+        if not match:
+            raise ValueError("Only GEO Sample accessions in GSM format are supported.")
+        digits = match.group(1)
+        range_name = digits[:-3] + "nnn" if len(digits) > 3 else "nnn"
+        return (
+            f"https://ftp.ncbi.nlm.nih.gov/geo/samples/"
+            f"GSM{range_name}/GSM{digits}/suppl/"
+        )
+
+    def download_sample_files(
+        self,
+        accessions: list[str],
+        output_dir: str | Path = "data/geo_samples",
+        max_file_bytes: int = 50_000_000,
+    ) -> dict:
+        """Discover and download supplementary files for explicitly selected GSMs."""
+        if not 1_000_000 <= max_file_bytes <= 1_000_000_000:
+            raise ValueError("max_file_bytes must be between 1 MB and 1 GB.")
+        if not accessions:
+            raise ValueError("At least one explicit GSM accession is required.")
+        if len({item.upper() for item in accessions}) != len(accessions):
+            raise ValueError("GSM accessions must be unique.")
+        root = Path(output_dir)
+        report = {
+            "samples_examined": 0, "files_discovered": 0,
+            "files_downloaded": 0, "files_skipped_size": 0,
+            "files": [], "warnings": [],
+        }
+        for raw_accession in accessions:
+            accession = raw_accession.upper()
+            report["samples_examined"] += 1
+            try:
+                base_url = self.sample_directory(accession)
+                listing = self._fetch_listing(base_url)
+                files = self.parse_listing(listing, base_url)
+                report["files_discovered"] += len(files)
+                if not files:
+                    report["warnings"].append(
+                        f"{accession}: no supported supplementary files found."
+                    )
+                    continue
+                target_dir = root / accession
+                target_dir.mkdir(parents=True, exist_ok=True)
+                for filename, url in files:
+                    target = target_dir / filename
+                    temporary = target.with_name(target.name + ".part")
+                    digest = hashlib.sha256()
+                    written = 0
+                    try:
+                        request = Request(
+                            url, headers={"User-Agent": "ORACLE-GEO-Sample-Downloader/1.0"}
+                        )
+                        with urlopen(request, timeout=self.timeout) as response:
+                            length = response.headers.get("Content-Length")
+                            if length and int(length) > max_file_bytes:
+                                report["files_skipped_size"] += 1
+                                report["files"].append({
+                                    "accession": accession, "filename": filename,
+                                    "status": "skipped_size", "size_bytes": int(length),
+                                })
+                                continue
+                            with temporary.open("wb") as output:
+                                while True:
+                                    chunk = response.read(1024 * 1024)
+                                    if not chunk:
+                                        break
+                                    written += len(chunk)
+                                    if written > max_file_bytes:
+                                        raise RuntimeError(
+                                            f"File exceeded the {max_file_bytes}-byte cap."
+                                        )
+                                    digest.update(chunk)
+                                    output.write(chunk)
+                        temporary.replace(target)
+                        report["files_downloaded"] += 1
+                        report["files"].append({
+                            "accession": accession, "filename": filename,
+                            "status": "downloaded", "local_path": str(target),
+                            "size_bytes": written, "sha256": digest.hexdigest(),
+                            "url": url,
+                        })
+                    except Exception:
+                        temporary.unlink(missing_ok=True)
+                        raise
+            except Exception as exc:
+                report["warnings"].append(f"{accession}: {exc}")
+        return report
