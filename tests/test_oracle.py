@@ -60,7 +60,7 @@ class OracleTests(unittest.TestCase):
         decision = choose_next_action(
             2, 5, progress=False, consecutive_no_progress=0, max_no_progress=2
         )
-        self.assertEqual(decision.action, "continue")
+        self.assertEqual(decision.action, "replan")
         decision = choose_next_action(
             3, 5, progress=False, consecutive_no_progress=1, max_no_progress=2
         )
@@ -331,6 +331,8 @@ class OracleTests(unittest.TestCase):
         self.assertEqual(run.status, RunStatus.STOPPED)
         self.assertEqual(run.current_cycle, 3)
         self.assertEqual(run.consecutive_no_progress_cycles, 2)
+        self.assertTrue(any(event["event_type"] == "plan_revised"
+                            for event in self.store.list_events(run.run_id)))
         self.assertEqual(len(run.evidence), 1)
         self.assertEqual(len(run.experiments), 1)
         self.assertIn("run_stopped", [event["event_type"] for event in self.store.list_events(run.run_id)])
