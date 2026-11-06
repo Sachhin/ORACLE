@@ -170,6 +170,19 @@ class EvidenceComparison:
 
 
 @dataclass
+class CitationLink:
+    source_id: str
+    target_doi: str
+    target_title: str = ""
+    target_author: str = ""
+    target_year: str = ""
+    provider: str = "Crossref"
+    relation: str = "references"
+    citation_id: str = field(default_factory=lambda: new_id("cite"))
+    discovered_at: str = field(default_factory=utc_now)
+
+
+@dataclass
 class EvidenceReviewCandidate:
     claim_id: str
     evidence_id: str
@@ -292,6 +305,7 @@ class ResearchRun:
     evidence_comparisons: list[EvidenceComparison] = field(default_factory=list)
     evidence_review_candidates: list[EvidenceReviewCandidate] = field(default_factory=list)
     dataset_files: list[DatasetFileRecord] = field(default_factory=list)
+    citation_links: list[CitationLink] = field(default_factory=list)
     contradiction_candidates: list[ContradictionCandidate] = field(default_factory=list)
     hypotheses: list[Hypothesis] = field(default_factory=list)
     hypothesis_groups: list[HypothesisGroup] = field(default_factory=list)

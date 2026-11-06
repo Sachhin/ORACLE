@@ -164,6 +164,7 @@ class ResearchPortfolio:
                 "claims": len(run.claims),
                 "hypotheses": len(run.hypotheses),
                 "dataset_files": len(run.dataset_files),
+                "citation_links": len(run.citation_links),
                 "knowledge_gap_score": assessment.score,
             })
         return entries

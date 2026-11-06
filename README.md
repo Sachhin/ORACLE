@@ -49,7 +49,7 @@ ORACLE can search Europe PMC and Crossref public REST APIs without API keys or t
     python -m oracle "How does a fertilized egg develop?" --research-literature --extract-claims --review-evidence --agent-provider gemini --cycles 3
     python -m oracle --literature "plant nonsense-mediated mRNA decay" --provider europepmc --limit 15 --json
     python -m oracle --literature "Arabidopsis heat stress" --provider geo --limit 10
-    python -m oracle --literature "embryo development" --provider all --limit 15
+    python -m oracle --literature "embryo development" --provider all --limit 15 --citation-network
     python -m oracle "Arabidopsis heat stress" --research-literature --provider geo --discover-geo-files
     python -m oracle "Arabidopsis heat stress" --research-literature --provider geo --download-geo-files --dataset-max-mb 50
     python -m oracle "How does a fertilized egg develop?" --research-literature --full-text --agent-provider gemini --cycles 3
@@ -76,6 +76,14 @@ Add --compare-papers together with --extract-claims to compare candidate stateme
     python -m oracle --literature "Arabidopsis heat stress" --provider all --limit 12 --extract-claims --compare-papers --json
 
 Gemini can propose one of four cross-paper relations: corroborates, contrasts, contextual, or not_comparable. Separately, --review-evidence asks Gemini to propose supports, refutes, or contextual for a candidate claim against an independent source passage. Both workflows require exact source quotations and preserve pending human review; model suggestions never change evidence stance or weight automatically. Inspect candidates with `python -m oracle --show-reviews RUN_ID`, then explicitly decide one with `python -m oracle --review-run RUN_ID --review-candidate CANDIDATE_ID --review-status accepted --review-note "Checked the source context." --review-strength 0.6`. Use `rejected` or `needs_context` when appropriate. Every saved comparison must include exact quotations found in BOTH source abstracts/summaries. Comparisons retain both source and evidence IDs, model, rationale, and pending_review status. These are review candidates, not verified contradictions or proof of agreement. ORACLE does not change claim status, evidence stance, or uncertainty scores based on these model suggestions. At most 30 claim pairs are sent per run by default.
+
+### Citation network
+
+Retrieve first-degree reference metadata for DOI-backed sources:
+
+    python -m oracle --literature "cell fate signaling" --provider both --citation-network
+
+This follows references reported by Crossref for retrieved DOI-backed works. It is not a complete incoming/outgoing citation graph; references without DOI are retained as title-only records where possible.
 
 ### Research portfolio and knowledge gaps
 
