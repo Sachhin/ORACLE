@@ -121,6 +121,7 @@ jobs:
             validation-artifacts/gse176261-reference-report.json
 
       - name: Upload same-study validation-cohort evidence
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: oracle-gse176261-same-study-validation-cohort
