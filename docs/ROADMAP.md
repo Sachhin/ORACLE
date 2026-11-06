@@ -28,8 +28,9 @@ Status reflects code currently present on the main branch plus the adaptive-cycl
 - [ ] Task-level completion criteria and task-budget enforcement
 
 ## Milestone 4 — Real research capabilities
-- [ ] Common model-provider interface for planner, researcher, explorer, hypothesis, skeptic, auditor, and experiment agents
-- [ ] Adaptive model routing with rate limits, timeouts, retries, and quota awareness
+- [x] Common run(context) -> result contract with optional Gemini suite for planner, researcher, explorer, hypothesis, skeptic, and experiment agents
+- [ ] Provider-backed auditor and literature-grounded novelty assessment
+- [ ] Adaptive model routing with quota-aware retries and fallback policy (Gemini request timeout is implemented)
 - [ ] Legal open-access full-text retrieval with licence checks
 - [ ] GEO supplementary/raw data discovery and safe dataset ingestion
 - [ ] Citation-network exploration and source-level quality assessment
