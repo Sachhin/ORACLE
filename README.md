@@ -17,6 +17,15 @@ python -m oracle "How does a fertilized egg develop into a whole organism?"
 python -m unittest discover -s tests -v
 ```
 
+### Optional Gemini research agents
+
+The normal run remains deterministic and offline. To explicitly opt in to Gemini-backed planning, research synthesis, exploration, competing hypothesis generation, skeptic review, and experiment proposal:
+
+    export GEMINI_API_KEY="YOUR_GEMINI_API_KEY"
+    python -m oracle "How does a fertilized egg develop?" --agent-provider gemini --gemini-model gemini-2.5-flash --cycles 3
+
+The Gemini agent suite uses the same `run(context) -> result` contract as the deterministic agents. Model-generated research statements are stored only as INFERENCE, never as source evidence. Hypotheses remain provisional and experiment designs remain PROPOSED. The structural auditor and novelty assessor remain conservative deterministic components. The default provider is still `deterministic`; Gemini is never called unless explicitly selected. A provider error fails and checkpoints the run rather than silently pretending that deterministic output came from Gemini.
+
 ## Modes
 
 - `deep_research`: prioritize structured investigation and evidence assessment.
@@ -42,7 +51,7 @@ ORACLE can search Europe PMC and Crossref public REST APIs without API keys or t
 
 Each work is stored with DOI/PMID when available, authors, journal, date, provider, landing URL, licence/open-access metadata, and abstract text. Abstracts are source evidence with the exact "Abstract" locator. Sentence splitting produces unreviewed statement candidates only: it does not prove a claim or decide whether a paper supports/refutes it. Initial evidence links are contextual with zero weight until reviewed.
 
-Optional Gemini claim extraction is available with --extract-claims. It creates source-quoted, unreviewed candidates only; it does not determine truth, entailment, contradiction, or whether a paper supports a hypothesis. Full-text retrieval, raw GEO matrix downloads, other dataset repositories, semantic evidence review of support/refutation, citation-network exploration, and LLM-driven planning/reasoning across all agents are not yet included. Publisher copyright may apply to abstract text.
+Optional Gemini claim extraction is available with --extract-claims. It creates source-quoted, unreviewed candidates only; it does not determine truth, entailment, contradiction, or whether a paper supports a hypothesis. Full-text retrieval, raw GEO matrix downloads, other dataset repositories, semantic evidence review of support/refutation, citation-network exploration, and LLM-driven planning/reasoning across all agents are not yet included. The opt-in Gemini suite covers planner, researcher, explorer, hypothesis generator, skeptic, and experiment designer; auditor and novelty assessment remain deterministic and conservative. Publisher copyright may apply to abstract text.
 
 ### Optional Gemini claim extraction
 
