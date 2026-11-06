@@ -101,14 +101,14 @@ def evaluate_row_median_imputation(
     for _ in range(replicates):
         masked = []
         for row in matrix:
-            observed = [v for v in row if rng.random() >= missing_fraction]
-            if not observed:
-                observed = [row[rng.randrange(len(row))]]
-            observed_sorted = sorted(observed)
+            keep = [rng.random() >= missing_fraction for _ in row]
+            if not any(keep):
+                keep[rng.randrange(len(row))] = True
+            observed_sorted = sorted(v for v, retained in zip(row, keep) if retained)
             mid = len(observed_sorted)//2
             median = (observed_sorted[mid] if len(observed_sorted)%2
                       else (observed_sorted[mid-1]+observed_sorted[mid])/2)
-            masked.extend((median-v) for v in row if v not in observed)
+            masked.extend((median-v) for v, retained in zip(row, keep) if not retained)
         if masked:
             errors.extend(abs(v) for v in masked)
             biases.extend(masked)
