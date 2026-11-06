@@ -130,6 +130,14 @@ Then record a human evaluation:
 
 The execution kind remains preserved after evaluation. ORACLE does not execute physical experiments or invent results.
 
+### Offline integrity benchmark
+
+Run the cross-domain golden-question integrity benchmark:
+
+    python -m unittest tests.test_golden_benchmark -v
+
+It checks that the deterministic baseline preserves provenance and status invariants across eight question areas. It does not score scientific answer quality or validate Gemini reasoning.
+
 ## Current limitations
 
 The Gemini adapter currently extracts quote-grounded candidate claims and proposes cross-paper relationships; it does not perform complete entailment verification or update scientific truth status. The autonomous cycle defaults to deterministic baseline agents; the optional Gemini agent suite can be selected explicitly. The decision engine's progress signal measures newly persisted unique records, not scientific quality. A stopped run can be explicitly resumed; repeated no-progress cycles will stop it again unless a provider or new input produces new information.
