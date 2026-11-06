@@ -6,7 +6,7 @@ ORACLE combines Deep Research and Autonomous Discovery under a balanced operatin
 
 ## Current build status
 
-The offline research foundation remains usable without credentials. Optional network literature retrieval uses public scholarly APIs; optional Gemini extraction and cross-paper comparison use a real model only when explicitly enabled. The baseline agents remain deterministic scaffolding. The orchestrator now measures whether unique research information was added, suppresses repeated scaffold records, checks core graph invariants, and stops after repeated no-progress cycles. This is safer lifecycle control, not proof of autonomous scientific reasoning.
+The offline research foundation remains usable without credentials. Optional network literature retrieval uses public scholarly APIs; optional Gemini extraction and cross-paper comparison use a real model only when explicitly enabled. The baseline agents remain deterministic scaffolding. The orchestrator measures unique research progress, suppresses repeated scaffold records, checks core graph invariants, and stops after repeated no-progress cycles. Review agents receive the current cycle's newly generated evidence and hypotheses; novelty and cross-domain agents are restricted to source-backed records; adaptive replanning receives the latest task/evidence state. This is safer, more coherent lifecycle control, not proof of autonomous scientific reasoning.
 
 ## Quick start
 
