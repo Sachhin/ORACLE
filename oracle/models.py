@@ -270,6 +270,29 @@ class DatasetFileRecord:
 
 
 @dataclass
+class DatasetAnalysisRecord:
+    file_id: str
+    accession: str
+    source_id: str
+    filename: str
+    sha256: str
+    parser: str
+    feature_rows: int
+    sample_count: int
+    numeric_cells: int
+    missing_cells: int
+    mean: float
+    minimum: float
+    maximum: float
+    sample_summaries: list[dict[str, Any]] = field(default_factory=list)
+    status: str = "analyzed"
+    limitations: str = "Descriptive parsing only; no normalization, differential-expression test, or biological interpretation."
+    analysis_id: str = field(default_factory=lambda: new_id("dsa"))
+    analyzed_at: str = field(default_factory=utc_now)
+    evidence_id: str = ""
+
+
+@dataclass
 class ResearchTask:
     name: str
     description: str
@@ -305,6 +328,7 @@ class ResearchRun:
     evidence_comparisons: list[EvidenceComparison] = field(default_factory=list)
     evidence_review_candidates: list[EvidenceReviewCandidate] = field(default_factory=list)
     dataset_files: list[DatasetFileRecord] = field(default_factory=list)
+    dataset_analyses: list[DatasetAnalysisRecord] = field(default_factory=list)
     citation_links: list[CitationLink] = field(default_factory=list)
     contradiction_candidates: list[ContradictionCandidate] = field(default_factory=list)
     hypotheses: list[Hypothesis] = field(default_factory=list)
