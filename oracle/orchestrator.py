@@ -65,11 +65,11 @@ class OracleOrchestrator:
         self.explorer = agent_suite.explorer if agent_suite else ExplorerAgent()
         self.hypothesizer = agent_suite.hypothesizer if agent_suite else HypothesisAgent()
         self.skeptic = agent_suite.skeptic if agent_suite else SkepticAgent()
-        self.auditor = AuditorAgent()
+        self.auditor = agent_suite.auditor if agent_suite and hasattr(agent_suite, "auditor") else AuditorAgent()
         self.experiment_designer = (
             agent_suite.experiment_designer if agent_suite else ExperimentDesignerAgent()
         )
-        self.novelty = NoveltyAssessorAgent()
+        self.novelty = agent_suite.novelty if agent_suite and hasattr(agent_suite, "novelty") else NoveltyAssessorAgent()
         self.knowledge = KnowledgeBase()
 
     def _event(self, run: ResearchRun, kind: str, payload: dict,
