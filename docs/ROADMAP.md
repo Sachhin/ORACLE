@@ -23,10 +23,11 @@ Status reflects code currently present on the main branch; checked items are imp
 - [x] Persisted no-progress state and explicit resume of safely stopped runs
 
 ## Milestone 3 — Discovery quality
-- [ ] Transparent knowledge-gap scoring based on evidence coverage
+- [x] Transparent knowledge-gap scoring based on source, claim-review, hypothesis, contradiction, and task coverage
 - [ ] Literature-grounded novelty assessment (provisional; never a priority claim)
 - [ ] Provenance-backed cross-domain connection proposals
-- [ ] Research portfolio and shared cross-run memory
+- [x] Research portfolio for saved runs and lexical retrieval of related prior questions
+- [ ] Shared cross-run scientific knowledge graph with reviewed cross-run claim/evidence reuse
 - [ ] Task-level completion criteria and task-budget enforcement
 
 ## Milestone 4 — Real research capabilities
