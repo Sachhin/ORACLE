@@ -38,7 +38,8 @@ Status reflects code currently present on the main branch; checked items are imp
 - [x] Bounded Europe PMC open-access full-text retrieval with strict Creative Commons licence checks
 - [x] GEO Series supplementary file discovery and size-capped download with SHA-256 checksums
 - [ ] Automatic parsing/normalization of downloaded GEO matrices and raw data into scientific evidence
-- [ ] Citation-network exploration
+- [x] Bounded first-degree reference discovery from DOI-backed Crossref works
+- [ ] Incoming citation discovery, graph ranking, and broader citation-network exploration
 - [x] Explicit experiment lifecycle recording for proposed, simulated, performed, and evaluated states with execution provenance
 - [ ] Domain-specific experiment protocols and reproducible analysis adapters
 
