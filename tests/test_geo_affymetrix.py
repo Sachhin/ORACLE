@@ -81,9 +81,9 @@ class AffymetrixRMATests(unittest.TestCase):
 
             def fake_run(command, **kwargs):
                 output = Path(command[5])
-                output.write_text("feature\\ta\\tb\\nprobe_1\\t5.0\\t6.0\\n", encoding="utf-8")
+                output.write_text("feature\ta\tb\nprobe_1\t5.0\t6.0\n", encoding="utf-8")
                 return SimpleNamespace(
-                    returncode=0, stdout="R 4.5.0\\t1.70.0\\thgu133a", stderr=""
+                    returncode=0, stdout="R 4.5.0\t1.70.0\thgu133a", stderr=""
                 )
 
             destination = Path(tmp) / "out.tsv"
