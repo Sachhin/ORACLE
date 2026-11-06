@@ -35,7 +35,8 @@ class OracleOrchestrator:
                  incoming_citation_network_enabled: bool = False,
                  max_tasks: int = 50,
                  max_task_attempts: int = 3,
-                 gemini_model: str = "gemini-2.5-flash") -> None:
+                 gemini_model: str = "gemini-2.5-flash",
+                 literature_client=None) -> None:
         if not 1 <= max_no_progress_cycles <= 10:
             raise ValueError("max_no_progress_cycles must be between 1 and 10.")
         if not 1 <= literature_limit <= 50:
@@ -60,6 +61,8 @@ class OracleOrchestrator:
         self.incoming_citation_network_enabled = incoming_citation_network_enabled
         self.task_manager = TaskManager(max_attempts=max_task_attempts, max_tasks=max_tasks)
         self.gemini_model = gemini_model
+        # Injectable for deterministic tests; production creates the public-API client lazily.
+        self._literature_client = literature_client
         # Every agent implements run(context) -> AgentResult. Deterministic
         # agents remain the default; an optional suite can replace selected agents.
         self.planner = agent_suite.planner if agent_suite else PlannerAgent()
@@ -222,7 +225,8 @@ class OracleOrchestrator:
             return
         if self.literature_enabled and not run.sources:
             from .literature import LiteratureClient
-            client = LiteratureClient(mailto=self.literature_mailto)
+            client = self._literature_client or LiteratureClient(mailto=self.literature_mailto)
+            self._literature_client = client
             report = client.search(
                 run.question, limit=self.literature_limit,
                 providers=self.literature_providers,
@@ -283,6 +287,97 @@ class OracleOrchestrator:
             review = GeminiEvidenceReviewer(model=self.gemini_model).review(run)
             self._event(run, "literature_evidence_reviewed", review.__dict__)
 
+    def _execute_research_tasks(self, run: ResearchRun, cycle: int,
+                                max_per_cycle: int = 2) -> list[str]:
+        """Execute a bounded number of pending research tasks against scholarly APIs.
+
+        A task is completed only when retrieval yields source-backed abstract/dataset
+        evidence. Metadata-only hits and provider failures leave an explicit blocked
+        task; retrieved abstracts are not treated as reviewed scientific conclusions.
+        """
+        if not self.literature_enabled:
+            return []
+        from .literature import LiteratureClient
+        client = self._literature_client or LiteratureClient(mailto=self.literature_mailto)
+        self._literature_client = client
+        candidates = sorted(
+            (task for task in run.tasks
+             if task.status in {"pending", "blocked"}
+             and task.attempts < self.task_manager.max_attempts),
+            key=lambda task: (task.priority, task.task_id),
+        )[:max_per_cycle]
+        events = []
+        for task in candidates:
+            try:
+                if task.status == "blocked":
+                    self.task_manager.retry(run, task.task_id)
+                self.task_manager.start(run, task.task_id)
+                self._event(run, "research_task_started", {
+                    "task_id": task.task_id, "name": task.name,
+                    "cycle": cycle, "attempt": task.attempts,
+                }, False, f"task:{task.task_id}:attempt:{task.attempts}:started")
+                query = (run.question + " " + task.name + " " + task.description)[:500]
+                report = client.search(
+                    query, limit=min(5, self.literature_limit),
+                    providers=self.literature_providers,
+                )
+                client.ingest(run, report)
+                titles = {str(item.get("title", "")).strip().casefold()
+                          for item in report.records if item.get("title")}
+                dois = {str(item.get("doi", "")).strip().casefold()
+                        for item in report.records if item.get("doi")}
+                pmids = {str(item.get("pmid", "")).strip().casefold()
+                         for item in report.records if item.get("pmid")}
+                urls = {str(item.get("url", "")).strip()
+                        for item in report.records if item.get("url")}
+                source_ids = {
+                    source.source_id for source in run.sources
+                    if (source.title.strip().casefold() in titles
+                        or (source.doi and source.doi.casefold() in dois)
+                        or (source.pmid and source.pmid.casefold() in pmids)
+                        or (source.url and source.url in urls))
+                }
+                evidence_ids = [
+                    item.evidence_id for item in run.evidence
+                    if item.source_id in source_ids and item.kind.value != "inference"
+                ]
+                if evidence_ids:
+                    self.task_manager.complete(
+                        run, task.task_id, evidence_ids,
+                        f"Retrieved {len(evidence_ids)} source-backed abstract/dataset evidence "
+                        "record(s). Relevance, methods, and study quality remain unreviewed.",
+                    )
+                    outcome = "completed"
+                else:
+                    reason = (
+                        "Search returned no abstract-backed source evidence; metadata-only "
+                        "records are insufficient for task completion."
+                    )
+                    self.task_manager.block(run, task.task_id, reason)
+                    outcome = "blocked"
+                self._event(run, "research_task_finished", {
+                    "task_id": task.task_id, "status": task.status,
+                    "evidence_ids": task.evidence_ids,
+                    "blocked_reason": task.blocked_reason,
+                    "records_retrieved": report.retrieved,
+                    "warnings": report.warnings,
+                }, False, f"task:{task.task_id}:attempt:{task.attempts}:finished")
+                events.append(f"Task {task.name}: {outcome} ({len(task.evidence_ids)} linked evidence record(s)).")
+            except Exception as exc:
+                if task.status != "completed":
+                    try:
+                        self.task_manager.block(run, task.task_id, f"Retrieval attempt failed: {exc}")
+                    except ValueError:
+                        pass
+                self._event(run, "research_task_failed", {
+                    "task_id": task.task_id, "status": task.status,
+                    "error": str(exc)[:1200],
+                }, False, f"task:{task.task_id}:attempt:{task.attempts}:failed")
+                events.append(f"Task {task.name}: blocked ({str(exc)[:300]}).")
+        if events:
+            self._add_unique_strings(run.findings, events)
+        return events
+
     def _execute(self, run: ResearchRun) -> ResearchRun:
         checkpoint = deepcopy(run)
         final_action = "conclude"
@@ -300,8 +395,11 @@ class OracleOrchestrator:
                           len(run.sources), len(run.claims), len(run.findings),
                           len(run.evidence_comparisons), len(run.cross_domain_connections),
                           tuple((task.task_id, task.status) for task in run.tasks))
-                context = AgentContext(run.question, cycle, run.mode.value,
-                                       run.evidence, run.hypotheses, run.findings)
+                self._execute_research_tasks(run, cycle)
+                context = AgentContext(
+                    run.question, cycle, run.mode.value,
+                    run.evidence, run.hypotheses, run.findings, run.tasks,
+                )
 
                 research = self.researcher.run(context)
                 self._add_unique_evidence(run, research.items)
