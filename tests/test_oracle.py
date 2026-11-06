@@ -426,12 +426,14 @@ class OracleTests(unittest.TestCase):
                     title="A source-grounded paper", source_id="source-1",
                     url="https://example.org/paper", provider="Fake provider",
                 )
-                run.sources.append(source)
-                run.evidence.append(Evidence(
-                    "The abstract reports a measured association.",
-                    source.title, kind=EvidenceKind.SOURCE, source_id=source.source_id,
-                    locator="Abstract", method="Published abstract",
-                ))
+                if not any(item.source_id == source.source_id for item in run.sources):
+                    run.sources.append(source)
+                if not any(item.source_id == source.source_id for item in run.evidence):
+                    run.evidence.append(Evidence(
+                        "The abstract reports a measured association.",
+                        source.title, kind=EvidenceKind.SOURCE, source_id=source.source_id,
+                        locator="Abstract", method="Published abstract",
+                    ))
                 report.ingested_sources = 1
                 report.evidence_records = 1
 
@@ -1457,7 +1459,8 @@ class OracleTests(unittest.TestCase):
                     "doi": f"10.1234/task{self.calls}",
                     "pmid": "", "url": f"https://example.org/task{self.calls}",
                     "abstract": "This study reports a measurable biological observation across independent samples and describes the experimental methods used.",
-                }], retrieved=1, warnings=[])
+                }], retrieved=1, ingested_sources=0, evidence_records=0,
+                    providers=list(providers), warnings=[])
             def ingest(self, run, report):
                 item = report.records[0]
                 source = SourceRecord(
@@ -1477,7 +1480,7 @@ class OracleTests(unittest.TestCase):
             literature_limit=5,
         )
         run = orchestrator.run("How do cells coordinate tissue development?", max_cycles=1)
-        self.assertEqual(client.calls, 2, "Task retrieval must be bounded to two tasks per cycle.")
+        self.assertEqual(client.calls, 3, "One run-level search plus two task searches are expected.")
         completed = [task for task in run.tasks if task.status == "completed"]
         pending = [task for task in run.tasks if task.status == "pending"]
         self.assertEqual(len(completed), 2)
@@ -1502,7 +1505,8 @@ class OracleTests(unittest.TestCase):
                 return SimpleNamespace(records=[{
                     "title": "Metadata-only record", "doi": "10.1234/metadata",
                     "pmid": "", "url": "https://example.org/metadata", "abstract": "",
-                }], retrieved=1, warnings=[])
+                }], retrieved=1, ingested_sources=0, evidence_records=0,
+                    providers=list(providers), warnings=[])
             def ingest(self, run, report):
                 run.sources.append(SourceRecord(
                     title="Metadata-only record", doi="10.1234/metadata",
