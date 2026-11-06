@@ -12,7 +12,7 @@ class BlindedReviewTests(unittest.TestCase):
         source_packet = {"paper": [{"source_id": "S1", "text": "frozen abstract"}]}
         payload = {"benchmark_id": "test", "cases": [{
             "case_id": "C1", "question": "Question?", "source_packet": source_packet,
-            "baseline_answer": "Baseline answer", "candidate_answer": "Candidate answer",
+            "baseline_answer": "The observed mechanism explains the result.", "candidate_answer": "The competing interpretation explains the result.",
             "prompt_version": "prompt-v1", "model_version": "baseline-v1|candidate-v1",
         }]}
         path = root / "input.json"
