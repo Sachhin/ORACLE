@@ -170,6 +170,48 @@ The PEPerMINT article also describes a HeLa/E. coli mixture dataset
 downstream differential-abundance ground-truth check but is not a substitute
 for the real-missing-cell HIV benchmark.
 
+## PXD000279 controlled-mixture missingness benchmark
+
+A second, complementary validation path uses the MaxQuant
+`proteinGroups.txt` output from the public PXD000279
+`proteomebenchmark.zip` archive. The Cox et al. experiment mixed a fixed
+60 micrograms of HeLa lysate with either 10 or 30 micrograms of E. coli
+lysate, with three replicates per mixture. Therefore the expected Ecoli30
+versus Ecoli10 log2 fold change is 0 for unambiguous human proteins and
+log2(3) for unambiguous E. coli proteins. The publication describes
+protein-level inclusion requiring non-zero intensity in at least two of
+three replicates in each condition.
+
+The new reproducible runner evaluates the same eligible protein universe
+using three downstream-effect strategies:
+
+- observed-only log2 LFQ values (no imputation);
+- per-protein row-median imputation;
+- a deterministic left-censored MinProb baseline, with fixed seed.
+
+It reports per-species protein counts, median estimated log2 fold change,
+MAE/RMSE from the known mixture ratio, fraction within 0.5 log2 units,
+the deposited missing fraction, input SHA-256, and skipped-row counts.
+
+Run locally after downloading and extracting the public MaxQuant output:
+
+```bash
+python scripts/benchmark_pxd000279_mixture.py \
+  --input data/pxd000279/proteinGroups.txt \
+  --output data/pxd000279/known-mixture-report.json
+```
+
+GitHub Actions downloads the published archive, runs the evaluator and
+offline tests, then uploads a frozen report and source archive. The workflow
+is defined in `.github/workflows/pxd000279-known-mixture.yml`.
+
+This is a known biological mixture-ratio check under real deposited LFQ
+missingness. It evaluates downstream species-level effect recovery; it does
+not reveal exact individual missing-cell abundances. It complements, but
+does not replace, PXD047528's paired DDA/DIA cell-level reconstruction
+benchmark. Do not interpret it as proof that one imputation method is
+universally superior.
+
 The evaluator does not download or infer labels. It rejects mismatched sample
 or feature identifiers and records SHA-256 hashes for every input. DIA is an
 orthogonal reference, not a perfect physical truth; outcome association is not
