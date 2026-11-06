@@ -61,7 +61,7 @@ class LiteratureClient:
         doi=(x.get("doi") or "").lower().strip(); pmid=str(x.get("pmid") or "")
         url="https://doi.org/"+doi if doi else ("https://europepmc.org/article/MED/"+pmid if pmid else "")
         return {"provider":"Europe PMC","provider_id":str(x.get("id") or ""),
-            "doi":doi,"pmid":pmid,"title":cls._clean(x.get("title") or "Untitled record"),
+            "doi":doi,"pmid":pmid,"pmcid":str(x.get("pmcid") or ""),"title":cls._clean(x.get("title") or "Untitled record"),
             "authors":x.get("authorString") or "","journal":x.get("journalTitle") or "",
             "year":str(x.get("firstPublicationDate") or x.get("pubYear") or "")[:10],
             "url":url,"abstract":cls._clean(x.get("abstractText") or ""),
@@ -74,7 +74,7 @@ class LiteratureClient:
     def _crossref_record(cls, x: dict[str, Any]) -> dict[str, Any]:
         doi=(x.get("DOI") or "").lower().strip()
         authors="; ".join(" ".join(filter(None,(a.get("given"),a.get("family")))) for a in x.get("author",[])[:30])
-        return {"provider":"Crossref","provider_id":doi,"doi":doi,"pmid":"",
+        return {"provider":"Crossref","provider_id":doi,"doi":doi,"pmid":"","pmcid":"",
             "title":cls._clean((x.get("title") or ["Untitled record"])[0]),"authors":authors,
             "journal":(x.get("container-title") or [""])[0],
             "year":cls._date(x.get("published") or x.get("created")),
@@ -113,7 +113,7 @@ class LiteratureClient:
             if not accession:
                 continue
             records.append({
-                "provider":"NCBI GEO","provider_id":str(uid),"doi":"","pmid":"",
+                "provider":"NCBI GEO","provider_id":str(uid),"doi":"","pmid":"","pmcid":"",
                 "title":item.get("title") or accession,"authors":"","journal":"",
                 "year":str(item.get("pdat") or ""),
                 "url":"https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc="+accession,
@@ -178,7 +178,8 @@ class LiteratureClient:
                 source_type=item.get("publication_type") or "scholarly_record",published_at=item.get("year",""),
                 accessed_at=now,reliability_score=0.5,
                 reliability_rationale="Unassessed metadata; peer review and study quality not independently evaluated.",
-                source_id=sid,doi=doi,pmid=pmid,authors=item.get("authors",""),journal=item.get("journal",""),
+                source_id=sid,doi=doi,pmid=pmid,pmcid=item.get("pmcid",""),
+                authors=item.get("authors",""),journal=item.get("journal",""),
                 abstract=item.get("abstract",""),provider=item.get("provider",""),
                 open_access=bool(item.get("open_access")),license=item.get("license",""),
                 dataset_accession=item.get("dataset_accession",""),organism=item.get("organism",""),

@@ -63,7 +63,8 @@ class CrossPaperComparator:
             ev = evidence.get(link.evidence_id)
             if not claim or not ev or not ev.source_id or ev.source_id not in sources:
                 continue
-            if ev.locator not in {"Abstract", "GEO dataset summary"} or not ev.claim.strip():
+            if (ev.locator not in {"Abstract", "GEO dataset summary"}
+                    and not ev.locator.startswith("Full text (")) or not ev.claim.strip():
                 continue
             if claim.status != "unreviewed_candidate":
                 continue

@@ -25,6 +25,7 @@ class OracleOrchestrator:
                  extract_literature_claims: bool = False,
                  compare_literature_papers: bool = False,
                  review_literature_evidence: bool = False,
+                 full_text_enabled: bool = False,
                  gemini_model: str = "gemini-2.5-flash") -> None:
         if not 1 <= max_no_progress_cycles <= 10:
             raise ValueError("max_no_progress_cycles must be between 1 and 10.")
@@ -41,6 +42,7 @@ class OracleOrchestrator:
         self.extract_literature_claims = extract_literature_claims
         self.compare_literature_papers = compare_literature_papers
         self.review_literature_evidence = review_literature_evidence
+        self.full_text_enabled = full_text_enabled
         self.gemini_model = gemini_model
         # Every agent implements run(context) -> AgentResult. Deterministic
         # agents remain the default; an optional suite can replace selected agents.
@@ -188,7 +190,7 @@ class OracleOrchestrator:
 
     def _prepare_literature(self, run: ResearchRun) -> None:
         """Optionally retrieve source-backed literature before the reasoning cycle."""
-        if not self.literature_enabled and not self.extract_literature_claims:
+        if not self.literature_enabled and not self.extract_literature_claims and not self.full_text_enabled:
             return
         if self.literature_enabled and not run.sources:
             from .literature import LiteratureClient
@@ -210,6 +212,10 @@ class OracleOrchestrator:
                 "providers": report.providers,
                 "warnings": report.warnings,
             })
+        if self.full_text_enabled:
+            from .fulltext import OpenAccessFullTextClient
+            full_text = OpenAccessFullTextClient().ingest(run)
+            self._event(run, "open_access_full_text_ingested", full_text.__dict__)
         if self.extract_literature_claims:
             from .llm import GeminiClaimExtractor
             extractor = GeminiClaimExtractor(model=self.gemini_model)

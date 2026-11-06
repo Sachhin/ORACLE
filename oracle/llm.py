@@ -101,7 +101,8 @@ class GeminiClaimExtractor:
         kb = KnowledgeBase()
         source_titles = {source.source_id: source.title for source in run.sources}
         for evidence in list(run.evidence):
-            if evidence.locator not in {"Abstract", "GEO dataset summary"} or not evidence.source_id:
+            if (evidence.locator not in {"Abstract", "GEO dataset summary"}
+                    and not evidence.locator.startswith("Full text (")) or not evidence.source_id:
                 continue
             if not evidence.claim.strip():
                 continue
