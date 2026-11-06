@@ -352,6 +352,24 @@ class ResearchTask:
 
 
 @dataclass
+class CrossRunClaimLink:
+    """Human-reviewed relationship between claims from two distinct research runs."""
+    run_a_id: str
+    claim_a_id: str
+    run_b_id: str
+    claim_b_id: str
+    relation: str
+    rationale: str
+    evidence_a_ids: list[str]
+    evidence_b_ids: list[str]
+    status: str = "pending_review"
+    reviewer_note: str = ""
+    link_id: str = field(default_factory=lambda: new_id("xrun"))
+    created_at: str = field(default_factory=utc_now)
+    reviewed_at: str = ""
+
+
+@dataclass
 class ResearchRun:
     question: str
     mode: ResearchMode = ResearchMode.BOTH
