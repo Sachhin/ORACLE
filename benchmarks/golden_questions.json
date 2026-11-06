@@ -1,0 +1,34 @@
+[
+  {
+    "id": "developmental_biology",
+    "question": "How does a fertilized egg coordinate cell division and cell fate during early development?"
+  },
+  {
+    "id": "plant_stress",
+    "question": "How do plants regulate gene expression during heat stress?"
+  },
+  {
+    "id": "neuroscience",
+    "question": "Which mechanisms contribute to synaptic plasticity during learning?"
+  },
+  {
+    "id": "immunology",
+    "question": "How do innate immune cells distinguish tissue damage from infection?"
+  },
+  {
+    "id": "climate_science",
+    "question": "How do aerosols influence cloud formation and regional precipitation?"
+  },
+  {
+    "id": "materials_science",
+    "question": "Which structural factors influence ion transport in solid-state battery materials?"
+  },
+  {
+    "id": "astrophysics",
+    "question": "What observations constrain the formation of terrestrial planets?"
+  },
+  {
+    "id": "microbiology",
+    "question": "How do microbial communities respond to changes in nutrient availability?"
+  }
+]
