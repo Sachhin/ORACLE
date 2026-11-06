@@ -255,3 +255,28 @@ python -m oracle --screen-replication RUN_ID \
 ```
 
 The screen reports whether other eligible datasets show a significant effect in the same or opposite direction, a non-significant effect, or did not test the feature. It excludes analyses that reuse the source accession or matrix checksum. This is deliberately a **directional consistency screen, not a replication verdict**: distinct accessions/checksums do not prove independent cohorts, and group labels alone do not prove comparable biology. A scientist must verify treatment/genotype, tissue, timepoint, phenotype, feature annotation, and design before calling results replication. It does not perform meta-analysis, batch correction, causal inference, or automatic claim promotion.
+
+
+### Curated known-positive benchmark for DESeq2
+
+ORACLE includes a reproducible **known-positive recovery** scorer. Supply a DESeq2 JSON output (the `--json` result) or a result TSV, plus a separately curated JSON manifest:
+
+```json
+{
+  "dataset_accession": "GSE12345",
+  "reference": "https://doi.org/REPLACE-WITH-CURATED-REFERENCE",
+  "truth_set_version": "v1",
+  "contrast": {"group_a": "control", "group_b": "treated"},
+  "known_positive_features": ["GENE_A", "GENE_B"]
+}
+```
+
+Run:
+
+```bash
+python -m oracle --benchmark-results deseq2-results.json \
+  --benchmark-manifest benchmark-truth.json --benchmark-fdr 0.05 \
+  --benchmark-abs-log2fc 0.0 --json
+```
+
+The report distinguishes recovered known positives, missed positives that were tested, positives absent from the tested matrix, and significant hits absent from the curated reference. It records both input SHA-256 checksums and the thresholds. This is a **known-positive recovery/overlap** score, not a complete classifier benchmark: unmatched hits are not automatically biological false positives, because the curated reference may be incomplete. Feature identifiers and contrast direction must be harmonized by the benchmark curator. Do not use placeholder manifests as biological evidence; include a real dataset-specific curation reference and documented truth-set version.

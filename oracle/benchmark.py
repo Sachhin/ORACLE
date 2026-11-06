@@ -34,9 +34,9 @@ def evaluate_known_positive_recovery(
         raise ValueError("Benchmark manifest requires an HTTPS reference URL")
     if not isinstance(positives, list) or not positives:
         raise ValueError("Benchmark manifest requires a non-empty known_positive_features list")
-    truth = {str(item).strip() for item in positives if str(item).strip()}
-    if len(truth) != len(positives):
+    if any(not isinstance(item, str) or not item.strip() for item in positives):
         raise ValueError("Known-positive feature identifiers must be non-empty strings")
+    truth = {item.strip() for item in positives}
     if len(truth) != len(positives):
         raise ValueError("Known-positive feature identifiers must be unique")
 
