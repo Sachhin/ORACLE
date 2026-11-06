@@ -34,7 +34,9 @@ class EvidenceBenchmarkTests(unittest.TestCase):
         rows = [
             self.case(case_id="E1", reviewer_labels={"R1":"supports","R2":"supports"}),
             self.case(case_id="E2", reviewer_labels={"R1":"refutes","R2":"contextual"},
-                      predicted_source_id=None, predicted_quote=None),
+                      predicted_source_id=None, predicted_quote=None,
+                      adjudication_note="Reviewers disagreed; adjudicated as refutes after source inspection.",
+                      adjudicator_id="adjudicator-1"),
         ]
         report = evaluate_evidence_predictions(rows)
         self.assertEqual(report["reviewer_annotation_cases"], 4)
