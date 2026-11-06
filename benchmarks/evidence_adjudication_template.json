@@ -1,6 +1,6 @@
 {
   "benchmark_id": "ORACLE-EVIDENCE-ADJUDICATED-TEMPLATE",
-  "version": "1.0",
+  "version": "1.1",
   "status": "empty_template_requires_human_annotations",
   "label_policy": {
     "supports": "The cited passage directly supports the stated claim within its stated scope.",
@@ -13,7 +13,9 @@
     "Record reviewer IDs, source IDs, verbatim quote, organism, tissue, assay, conditions, and locator.",
     "Adjudicate disagreements with a written note; never infer the gold label from model output.",
     "Split train/development/test by source or study, not random claim fragments, to reduce leakage.",
-    "Publish class counts and reviewer agreement before interpreting accuracy or macro-F1."
+    "Publish class counts and reviewer agreement before interpreting accuracy or macro-F1.",
+    "For each case, store reviewer_labels as a reviewer_id-to-stance object before adjudication; retain gold_stance as the adjudicated label.",
+    "Report inter-reviewer agreement and annotation coverage; do not treat adjudicated accuracy as meaningful without annotation reliability."
   ],
   "cases": []
 }
