@@ -84,10 +84,10 @@ def benchmark_pxd000279(input_path: str | Path, *, seed: int = 1729) -> dict:
             canonical = fields[88:94]
             if len(canonical) == 6 and all(c.startswith("LFQ intensity ") for c in canonical):
                 intensity_cols = canonical
-                group10, group30 = canonical[:3], canonical[3:]
+                group30, group10 = canonical[:3], canonical[3:]
                 group_assignment_method = (
-                    "published DEqMS PXD000279 column contract: proteinGroups columns 89-91=Ecoli10 "
-                    "and 92-94=Ecoli30 (H/L order)"
+                    "published DEqMS PXD000279 design: proteinGroups columns 89-91=H=Ecoli30 "
+                    "and 92-94=L=Ecoli10; DEqMS contrast is H-L"
                 )
             else:
                 raise ValueError(
