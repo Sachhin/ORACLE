@@ -46,9 +46,11 @@ explicitly distinguishes synthetic masked-value proxies from genuine
 DDA-missing/DIA-observed measurements. Its B2 dataset is PXD047528, an HIV
 blood/plasma dataset with 15 biological samples, 2,535 peptides, 435 proteins,
 and 41.8% peptide-level missingness in the published benchmark table. The
-ProteomeXchange record describes a study of HIV and herpes-virus infections
-and HIV-associated neurocognitive disorder (HAND). These disease/cognitive
-groups are candidate biological outcomes, but the sample-to-group mapping must
+ProteomeXchange record describes a study comparing plasma proteomes from
+patients with HIV or herpes-virus infections, and a secondary analysis of
+HIV-associated neurocognitive disorder (HAND) versus cognitively normal people
+with HIV. The primary candidate outcome is HIV versus herpes-virus infection;
+HAND status is a separate within-HIV analysis. The sample-to-group mapping must
 be taken from the original study's metadata—not inferred from filenames.
 
 Sources:
