@@ -426,7 +426,7 @@ def main() -> None:
         if geo_download_report:
             print(f"GEO downloads: {geo_download_report.files_downloaded} downloaded; {geo_download_report.files_skipped_size} skipped by size cap.")
         if geo_analysis_report:
-            print(f"GEO matrix analysis: {geo_analysis_report.files_analyzed} parsed; {geo_analysis_report.files_skipped} skipped.")
+            print(f"GEO matrix analysis: {geo_analysis_report.files_analyzed} parsed; {geo_analysis_report.files_skipped} skipped; {geo_analysis_report.samples_flagged} sample columns flagged by QC (none automatically removed).")
             for warning in geo_analysis_report.warnings:
                 print(f"WARNING: {warning}")
         if citation_report:
