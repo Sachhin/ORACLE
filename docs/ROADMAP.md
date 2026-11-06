@@ -41,10 +41,10 @@ Status reflects code currently present on the main branch. Checked items are imp
 - [x] Per-sample missingness/variance quality-control flags that preserve all original samples and never silently filter
 - [x] Preserve GEO sample accessions, titles, and characteristics for later explicitly defined group comparisons
 - [x] Explicit GEO quantile normalization for continuous microarray-like matrices and CPM/log2-CPM transforms for integer raw counts (separate output with checksums)
-- [x] TMM effective-library-size CPM/log2-CPM adapter with deterministic tests and factor provenance (independent edgeR reference validation still pending)
+- [x] TMM effective-library-size CPM/log2-CPM adapter with deterministic tests and factor provenance; optional same-matrix edgeR factor comparison CLI added (actual edgeR comparison run remains pending)
 - [x] Optional limma-voom adapter with explicit two-group raw-count design, R/edgeR/limma version provenance, checksum, and mocked-subprocess tests (trusted reference-output comparison remains pending)
 - [x] Optional Affymetrix CEL RMA adapter for explicit affy/oligo package families, with input checksums, software provenance, bounded execution, and mocked contract tests (real CEL/reference validation and platform annotation remain pending)
-- [x] Explicit row-median imputation for continuous matrices with a separate SHA-256 missingness mask and recorded imputation values (bias evaluation and alternative missingness models remain pending)
+- [x] Explicit row-median imputation for continuous matrices with a separate SHA-256 missingness mask and recorded imputation values; reproducible MCAR masking stress-test diagnostic added (MAR/MNAR and downstream bias evaluation remain pending)
 - [x] Count-aware DESeq2 raw-count analysis with explicit categorical batch/covariate designs, rank-deficiency checks, and default median-of-ratios size-factor normalization
 - [x] Optional DESeq2 adapter for explicitly mapped raw integer-count two-group designs (external R runtime; CI subprocess mocked)
 - [x] Explicit-design Welch contrasts with BH-FDR for user-declared continuous log2 GEO matrices; raw counts rejected
@@ -57,17 +57,17 @@ Status reflects code currently present on the main branch. Checked items are imp
 - [x] Domain-specific proposed protocol templates for plant, molecular, cell, and computational biology
 - [x] Deterministic GEO normalization adapters with input/output checksums and same-runtime byte-identical rerun check
 - [x] Cross-Python-version golden-byte normalization check exercised by the Python 3.10–3.14 CI matrix (does not replace an independent implementation comparison)
-- [ ] Independent implementation/cross-platform scientific rerun comparison and broader domain-specific analysis adapters
+- [ ] Independent implementation/cross-platform scientific validation results (edgeR TMM comparator and Affymetrix RMA adapter are implemented; real reference runs remain pending)
 
 ## Milestone 5 — Evaluation and scientific validation
 - [x] Cross-domain golden-question integrity benchmark for the deterministic baseline
 - [x] Human answer-quality rubric, score validation, source-ID checks, persistence, and per-run aggregation workflow
-- [ ] Curated expert-scored scientific answer benchmark set with multiple reviewers and adjudicated labels
-- [ ] Benchmarked evidence attribution, entailment, contradiction, and hallucination evaluations (model review suggestions are implemented but not validated as accurate)
+- [ ] Curated expert-scored scientific answer benchmark set with multiple reviewers and adjudicated labels (rubric, starter questions, and adjudication protocol exist; real labels remain pending)
+- [ ] Empirical evidence attribution, entailment, contradiction, and hallucination benchmark results (human-label evaluator and empty adjudication template implemented; expert-labelled corpus and model predictions remain pending)
 - [x] Reproducibility and regression suite across Python 3.10–3.14 CI matrix
 - [x] High-impact claim review requires independent source groups, reviewer identity, and rationale
 - [x] Performed-experiment execution provenance requires independent human acceptance before evaluation
-- [ ] Independent validation that model outputs improve scientific reasoning over deterministic baselines
+- [ ] Independent validation that model outputs improve scientific reasoning over deterministic baselines (matched-answer scoring workflow exists; controlled multi-run evaluation remains pending)
 
 ## Explicit non-goals until validated
 - No automatic promotion of model-generated candidates to facts.
