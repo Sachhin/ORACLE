@@ -198,7 +198,7 @@ def normalize_geo_matrix(
     if method == "quantile-row-median":
         mask_destination = Path(str(destination) + ".missing-mask.tsv")
         with mask_destination.open("w", encoding="utf-8", newline="") as mask_handle:
-            mask_writer = csv.writer(mask_handle, delimiter="\\t", lineterminator="\\n")
+            mask_writer = csv.writer(mask_handle, delimiter="\t", lineterminator="\n")
             mask_writer.writerow(["feature", *samples])
             for feature, row in zip(features, missing_mask):
                 mask_writer.writerow([feature, *[int(value) for value in row]])
