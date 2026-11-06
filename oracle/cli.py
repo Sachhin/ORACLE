@@ -224,7 +224,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--count-delimiter", choices=["auto", "tab", "comma"], default="auto", help="Delimiter used by per-sample count files")
     parser.add_argument("--count-output", default="data/geo/merged_counts.tsv", help="Output matrix path for --merge-geo-counts")
     parser.add_argument("--compare-tmm-edger", default="", help="Compare ORACLE TMM factors with edgeR on the same raw-count matrix")
-    parser.add_argument("--imputation-benchmark", default="", help="Run a reproducible MCAR row-median imputation stress test on a complete matrix")
+    parser.add_argument("--imputation-benchmark", default="", help="Run a reproducible MCAR/MAR/MNAR row-median imputation stress test on a complete matrix")
+    parser.add_argument("--imputation-mechanism", choices=["MCAR", "MAR", "MNAR"], default="MCAR")
     parser.add_argument("--imputation-missing-fraction", type=float, default=0.1)
     parser.add_argument("--imputation-replicates", type=int, default=20)
     parser.add_argument("--imputation-seed", type=int, default=1729)
@@ -270,6 +271,7 @@ def main() -> None:
                 args.imputation_benchmark,
                 missing_fraction=args.imputation_missing_fraction,
                 replicates=args.imputation_replicates, seed=args.imputation_seed,
+                mechanism=args.imputation_mechanism,
             )
         except (OSError, ValueError, RuntimeError) as exc:
             raise SystemExit(f"Imputation benchmark failed: {exc}") from exc
