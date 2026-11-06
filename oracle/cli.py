@@ -35,6 +35,8 @@ def build_parser() -> argparse.ArgumentParser:
                         help="Download and parse supported GEO TSV/CSV expression matrices (descriptive only)")
     parser.add_argument("--geo-deseq2", metavar="MATRIX_PATH",
                         help="Run optional DESeq2 negative-binomial analysis on raw integer RNA-seq counts")
+    parser.add_argument("--geo-run-id", default="", help="Persist this DESeq2 result into an existing ORACLE research run")
+    parser.add_argument("--geo-accession", default="", help="GEO accession for the analyzed count matrix (e.g. GSE12345)")
     parser.add_argument("--rscript", default="Rscript", help="Rscript executable for the optional DESeq2 backend")
     parser.add_argument("--deseq2-timeout", type=int, default=900, help="Maximum DESeq2 runtime in seconds")
     parser.add_argument("--geo-contrast", metavar="MATRIX_PATH",
@@ -132,6 +134,37 @@ def main() -> None:
             )
         except (OSError, ValueError, RuntimeError) as exc:
             raise SystemExit(f"DESeq2 analysis failed: {exc}") from exc
+        if args.geo_run_id:
+            from .models import DifferentialExpressionAnalysisRecord
+            store = ResearchStore(args.db)
+            run = store.load_run(args.geo_run_id)
+            if run is None:
+                raise SystemExit(f"Research run not found: {args.geo_run_id}")
+            record = DifferentialExpressionAnalysisRecord(
+                dataset_accession=args.geo_accession.strip() or "unspecified",
+                source_file=str(args.geo_deseq2),
+                matrix_sha256=result["matrix_sha256"],
+                method=result["method"],
+                contrast=result["contrast"],
+                sample_groups=result["sample_groups"],
+                sample_count=result["sample_count"],
+                features_input=result["features_input"],
+                software=result["software"],
+                results=result["results"],
+                limitations=result["limitations"],
+                features_returned=result["features_returned"],
+                features_with_adjusted_p_value=result["features_with_adjusted_p_value"],
+            )
+            run.differential_expression_analyses.append(record)
+            store.save_run(run)
+            store.log_event(
+                run.run_id, "differential_expression_analysis_saved",
+                {"analysis_id": record.analysis_id, "dataset_accession": record.dataset_accession,
+                 "matrix_sha256": record.matrix_sha256, "method": record.method},
+                event_key=f"differential-expression:{record.analysis_id}",
+            )
+            result["analysis_id"] = record.analysis_id
+            result["persisted_to_run"] = run.run_id
         if args.json:
             print(json.dumps(result, indent=2, ensure_ascii=False))
         else:
@@ -139,6 +172,10 @@ def main() -> None:
             print(f"Contrast: {args.geo_group_b} vs {args.geo_group_a}; "
                   f"{result['features_returned']} result rows from {result['features_input']} input features")
             print(f"R {result['software']['r']} | DESeq2 {result['software']['deseq2']}")
+            if result.get("analysis_id"):
+                print(f"Persisted analysis: {result['analysis_id']} in run {result['persisted_to_run']}")
+            else:
+                print("Not persisted: pass --geo-run-id to attach this result to an ORACLE run.")
             for item in result["results"][:20]:
                 print(f"{item['feature']}: log2FC={item['log2_fold_change']}, "
                       f"p={item['p_value']}, BH-FDR={item['p_value_adjusted_bh']}")
