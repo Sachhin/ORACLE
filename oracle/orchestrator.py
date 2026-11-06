@@ -16,18 +16,23 @@ from .storage import ResearchStore
 
 class OracleOrchestrator:
     def __init__(self, store: ResearchStore | None = None,
-                 max_no_progress_cycles: int = 2) -> None:
+                 max_no_progress_cycles: int = 2,
+                 agent_suite=None) -> None:
         if not 1 <= max_no_progress_cycles <= 10:
             raise ValueError("max_no_progress_cycles must be between 1 and 10.")
         self.store = store or ResearchStore()
         self.max_no_progress_cycles = max_no_progress_cycles
-        self.planner = PlannerAgent()
-        self.researcher = ResearcherAgent()
-        self.explorer = ExplorerAgent()
-        self.hypothesizer = HypothesisAgent()
-        self.skeptic = SkepticAgent()
+        # Every agent implements run(context) -> AgentResult. Deterministic
+        # agents remain the default; an optional suite can replace selected agents.
+        self.planner = agent_suite.planner if agent_suite else PlannerAgent()
+        self.researcher = agent_suite.researcher if agent_suite else ResearcherAgent()
+        self.explorer = agent_suite.explorer if agent_suite else ExplorerAgent()
+        self.hypothesizer = agent_suite.hypothesizer if agent_suite else HypothesisAgent()
+        self.skeptic = agent_suite.skeptic if agent_suite else SkepticAgent()
         self.auditor = AuditorAgent()
-        self.experiment_designer = ExperimentDesignerAgent()
+        self.experiment_designer = (
+            agent_suite.experiment_designer if agent_suite else ExperimentDesignerAgent()
+        )
         self.novelty = NoveltyAssessorAgent()
         self.knowledge = KnowledgeBase()
 
