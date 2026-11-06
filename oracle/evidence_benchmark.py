@@ -59,6 +59,11 @@ def evaluate_evidence_predictions(cases: list[dict[str, Any]]) -> dict[str, Any]
                 raise ValueError(f"Case {index} reviewer_labels must contain every reviewer_id exactly once.")
             if any(label not in LABELS for label in individual.values()):
                 raise ValueError(f"Case {index} reviewer labels must be supports, refutes, or contextual.")
+            if len(set(individual.values())) > 1:
+                if not case.get("adjudication_note") or not case.get("adjudicator_id"):
+                    raise ValueError(
+                        f"Case {index} with reviewer disagreement requires adjudication_note and adjudicator_id."
+                    )
             for reviewer, label in individual.items():
                 reviewer_labels.setdefault(reviewer, {})[case_id] = label
             for left, right in combinations(sorted(reviewers), 2):
