@@ -59,6 +59,16 @@ python -m oracle --geo-affymetrix-rma sample1.CEL --geo-affymetrix-rma sample2.C
 
 The adapter records every CEL SHA-256, file size, R/package versions, output checksum, and bounded runtime. It preserves feature/probe-set identifiers but does not perform annotation mapping, batch correction, differential testing, or biological interpretation. Install the selected Bioconductor package and its platform-specific annotation/CDF dependencies separately. CI tests the adapter contract with a mocked R subprocess; real CEL execution and comparison with trusted platform reference outputs remain unvalidated.
 
+## Paired model evaluation
+
+To compare a Gemini/hosted model with ORACLE's deterministic baseline, use the paired human-scoring template at `benchmarks/paired_model_comparison_template.json`. Populate it only after both systems answer the same frozen question using the same source packet, then have at least two reviewers score both answers with the same five-dimension rubric.
+
+```bash
+python -m oracle --paired-answer-benchmark benchmarks/my_paired_scores.json
+```
+
+The evaluator reports per-dimension paired score deltas and reproducible bootstrap intervals. Scores are subjective ordinal judgments, not calibrated accuracy or proof of general model superiority. The checked-in template contains no fabricated results.
+
 ## Independent preprocessing and evidence benchmarks
 
 Compare ORACLE TMM normalization factors with a local edgeR installation on the exact same raw-count matrix:
