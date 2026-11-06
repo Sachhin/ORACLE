@@ -140,9 +140,11 @@ def evaluate_scifact(claims_path: str | Path, corpus_path: str | Path,
             pred_sentence_count += len(item["sentences"])
             gold = gold_docs.get(doc)
             if gold and gold["label"] == item["label"]:
+                credited_sentences = set()
                 for rationale in gold["rationales"]:
                     if rationale.issubset(item["sentences"]):
-                        correct_sentence_count += len(rationale)
+                        credited_sentences.update(rationale)
+                correct_sentence_count += len(credited_sentences)
         claim_rows.append({
             "claim_id": cid, "gold_stance": gold_stance,
             "predicted_stance": predicted_stance,
