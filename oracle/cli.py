@@ -27,6 +27,8 @@ def build_parser() -> argparse.ArgumentParser:
                         help="Retrieve licence-eligible Europe PMC open-access full text for PMCID records")
     parser.add_argument("--citation-network", action="store_true",
                         help="Retrieve first-degree reference metadata for DOI-backed sources from Crossref")
+    parser.add_argument("--incoming-citations", action="store_true",
+                        help="Find works that cite DOI-backed sources using the OpenAlex API")
     parser.add_argument("--download-geo-series-archive", metavar="GSE_ACCESSION", help="Download the official GSE *_RAW.tar archive")
     parser.add_argument("--extract-geo-archive", metavar="TAR_PATH", help="Safely extract GSM-prefixed regular files from a downloaded GEO tar archive")
     parser.add_argument("--download-geo-samples", action="store_true", help="Download supplementary count files for explicitly selected GSM accessions")
@@ -799,7 +801,8 @@ def main() -> None:
         return
     if args.research_literature and args.literature is not None:
         raise SystemExit("Use either --literature or --research-literature, not both.")
-    if (args.full_text or args.discover_geo_files or args.download_geo_files or args.analyze_geo_files or args.citation_network) and args.literature is None and not args.research_literature:
+    if (args.full_text or args.discover_geo_files or args.download_geo_files or args.analyze_geo_files
+            or args.citation_network or args.incoming_citations) and args.literature is None and not args.research_literature:
         raise SystemExit("--full-text and GEO file options require --literature or --research-literature.")
     if not 1 <= args.dataset_max_mb <= 1000:
         raise SystemExit("--dataset-max-mb must be between 1 and 1000.")
@@ -819,6 +822,10 @@ def main() -> None:
         if args.citation_network:
             from .citation_network import CrossrefCitationClient
             citation_report = CrossrefCitationClient(mailto=args.mailto).discover(run)
+        incoming_citation_report = None
+        if args.incoming_citations:
+            from .incoming_citations import OpenAlexIncomingCitationClient
+            incoming_citation_report = OpenAlexIncomingCitationClient(mailto=args.mailto).discover(run)
         geo_discovery_report = None
         geo_download_report = None
         geo_analysis_report = None
@@ -839,7 +846,7 @@ def main() -> None:
         evidence_review_report = GeminiEvidenceReviewer(model=args.gemini_model).review(run) if args.review_evidence else None
         store.save_run(run)
         if args.json:
-            print(json.dumps({"run": run.to_dict(), "literature_report": report.__dict__, "claim_extraction_report": (extraction_report.__dict__ if extraction_report else None), "comparison_report": (comparison_report.__dict__ if comparison_report else None), "evidence_review_report": (evidence_review_report.__dict__ if evidence_review_report else None), "full_text_report": (full_text_report.__dict__ if full_text_report else None), "geo_discovery_report": (geo_discovery_report.__dict__ if geo_discovery_report else None), "geo_download_report": (geo_download_report.__dict__ if geo_download_report else None), "geo_analysis_report": (geo_analysis_report.__dict__ if geo_analysis_report else None), "citation_report": (citation_report.__dict__ if citation_report else None)}, indent=2, ensure_ascii=False))
+            print(json.dumps({"run": run.to_dict(), "literature_report": report.__dict__, "claim_extraction_report": (extraction_report.__dict__ if extraction_report else None), "comparison_report": (comparison_report.__dict__ if comparison_report else None), "evidence_review_report": (evidence_review_report.__dict__ if evidence_review_report else None), "full_text_report": (full_text_report.__dict__ if full_text_report else None), "geo_discovery_report": (geo_discovery_report.__dict__ if geo_discovery_report else None), "geo_download_report": (geo_download_report.__dict__ if geo_download_report else None), "geo_analysis_report": (geo_analysis_report.__dict__ if geo_analysis_report else None), "citation_report": (citation_report.__dict__ if citation_report else None), "incoming_citation_report": (incoming_citation_report.__dict__ if incoming_citation_report else None)}, indent=2, ensure_ascii=False))
             return
         print(f"ORACLE literature run: {run.run_id}")
         print(f"Retrieved: {report.retrieved} | Sources: {report.ingested_sources} | Abstracts: {report.evidence_records} | Candidate statements: {report.candidate_statements}")
@@ -871,6 +878,8 @@ def main() -> None:
                 print(f"WARNING: {warning}")
         if citation_report:
             print(f"Citation network: {citation_report.links_created} first-degree references discovered.")
+        if incoming_citation_report:
+            print(f"Incoming citations: {incoming_citation_report.links_created} citing works discovered.")
         return
     agent_suite = None
     if args.agent_provider in {"gemini", "auto"}:
@@ -895,6 +904,7 @@ def main() -> None:
         geo_analysis_enabled=args.analyze_geo_files,
         geo_max_file_bytes=args.dataset_max_mb * 1_000_000,
         citation_network_enabled=args.citation_network,
+        incoming_citation_network_enabled=args.incoming_citations,
         gemini_model=args.gemini_model,
     )
     if args.resume_id:
