@@ -57,7 +57,7 @@ def build_parser() -> argparse.ArgumentParser:
                         help="Repeat the normalization in the same runtime and compare output SHA-256")
     parser.add_argument("--normalization-prior-count", type=float, default=0.5,
                         help="Positive log2-CPM prior count (default 0.5)")
-    parser.add_argument("--geo-deseq2", metavar="MATRIX_PATH",
+    parser.add_argument("--geo-voom", metavar="MATRIX_PATH",\n                        help="Run optional edgeR TMM + limma-voom analysis on raw integer counts")\n    parser.add_argument("--voom-timeout", type=int, default=900, help="Maximum limma-voom runtime in seconds")\n    parser.add_argument("--geo-deseq2", metavar="MATRIX_PATH",
                         help="Run optional DESeq2 negative-binomial analysis on raw integer RNA-seq counts")
     parser.add_argument("--geo-run-id", default="", help="Persist this DESeq2 result into an existing ORACLE research run")
     parser.add_argument("--geo-accession", default="", help="GEO accession for the analyzed count matrix (e.g. GSE12345)")
