@@ -6,7 +6,18 @@ on:
     paths:
       - ".github/workflows/affymetrix-rma-validation.yml"
       - "oracle/geo_affymetrix.py"
+      - "scripts/compare_affymetrix_rma_reference.py"
       - "tests/test_geo_affymetrix.py"
+      - "tests/test_affymetrix_rma_reference.py"
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/affymetrix-rma-validation.yml"
+      - ".github/workflows/affymetrix-rma-reference.yml"
+      - "oracle/geo_affymetrix.py"
+      - "scripts/compare_affymetrix_rma_reference.py"
+      - "tests/test_geo_affymetrix.py"
+      - "tests/test_affymetrix_rma_reference.py"
   workflow_dispatch:
 
 permissions:
@@ -107,3 +118,82 @@ jobs:
             data_geo_download.json
           if-no-files-found: error
           retention-days: 14
+
+  gse12837-reference:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+      - name: Install GEOquery and GPL96 Bioconductor dependencies
+        run: |
+          Rscript -e 'if (!requireNamespace("BiocManager", quietly=TRUE)) install.packages("BiocManager"); BiocManager::install(c("GEOquery","affy","hgu133acdf"), ask=FALSE, update=FALSE, Ncpus=2)'
+          Rscript -e 'stopifnot(requireNamespace("GEOquery", quietly=TRUE), requireNamespace("affy", quietly=TRUE), requireNamespace("hgu133acdf", quietly=TRUE))'
+      - name: Download all GSE12837 raw CEL files
+        run: |
+          set -euo pipefail
+          mkdir -p data/gse12837/raw
+          curl --fail --location --retry 4 --retry-all-errors --connect-timeout 20 --max-time 1200 \
+            https://ftp.ncbi.nlm.nih.gov/geo/series/GSE12nnn/GSE12837/suppl/GSE12837_RAW.tar \
+            -o data/gse12837/GSE12837_RAW.tar
+          tar -xf data/gse12837/GSE12837_RAW.tar -C data/gse12837/raw
+          find data/gse12837/raw -type f -iname '*.CEL.gz' -print0 | while IFS= read -r -d '' f; do gzip -dk "$f"; done
+          count="$(find data/gse12837/raw -type f -iname '*.CEL' | wc -l)"
+          test "$count" -eq 24
+          find data/gse12837/raw -type f -iname '*.CEL' -print | sort > data/gse12837/cel_paths.txt
+      - name: Fetch the submitter-deposited GEO RMA reference matrix
+        run: |
+          Rscript - <<'RS'
+          suppressPackageStartupMessages(library(GEOquery))
+          suppressPackageStartupMessages(library(Biobase))
+          x <- getGEO("GSE12837", GSEMatrix=TRUE, getGPL=FALSE)
+          if (!is.list(x) || length(x) != 1L) stop("Expected one GPL96 ExpressionSet for GSE12837")
+          eset <- x[[1]]
+          if (!identical(annotation(eset), "hgu133a")) stop(paste("Unexpected annotation:", annotation(eset)))
+          expr <- exprs(eset)
+          if (ncol(expr) != 24L || nrow(expr) < 22000L) stop("Unexpected GSE12837 reference dimensions")
+          out <- data.frame(feature=rownames(expr), expr, check.names=FALSE)
+          write.table(out, "data/gse12837/GSE12837_GEO_RMA_reference.tsv",
+                      sep="\\t", quote=FALSE, row.names=FALSE, na="NA")
+          writeLines(colnames(expr), "data/gse12837/reference_samples.txt")
+          RS
+      - name: Run ORACLE RMA on all 24 CEL files
+        run: |
+          mapfile -t CEL_FILES < data/gse12837/cel_paths.txt
+          args=()
+          for cel in "${CEL_FILES[@]}"; do args+=(--geo-affymetrix-rma "$cel"); done
+          python -m oracle "${args[@]}" \
+            --affy-backend affy --affy-platform hgu133a \
+            --affy-output data/gse12837/ORACLE_GSE12837_RMA.tsv --json \
+            > data/gse12837/ORACLE_GSE12837_RMA_report.json
+      - name: Compare ORACLE output with published GEO RMA matrix
+        run: |
+          python scripts/compare_affymetrix_rma_reference.py \
+            --oracle data/gse12837/ORACLE_GSE12837_RMA.tsv \
+            --reference data/gse12837/GSE12837_GEO_RMA_reference.tsv \
+            --output data/gse12837/rma-reference-comparison.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report=json.loads(Path("data/gse12837/rma-reference-comparison.json").read_text())
+          print(json.dumps(report, indent=2))
+          if report["status"] != "PASS":
+              raise SystemExit("GSE12837 platform-matched RMA reference comparison did not pass")
+          PY
+      - name: Upload raw CEL source and reproducible RMA comparison
+        uses: actions/upload-artifact@v4
+        with:
+          name: oracle-gse12837-gpl96-rma-reference
+          path: |
+            data/gse12837/GSE12837_RAW.tar
+            data/gse12837/ORACLE_GSE12837_RMA.tsv
+            data/gse12837/ORACLE_GSE12837_RMA_report.json
+            data/gse12837/GSE12837_GEO_RMA_reference.tsv
+            data/gse12837/rma-reference-comparison.json
+          if-no-files-found: error
+          retention-days: 90
