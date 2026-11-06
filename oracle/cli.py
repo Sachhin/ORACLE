@@ -31,6 +31,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--agent-provider", choices=["deterministic", "gemini"], default="deterministic",
                         help="Research-agent backend; deterministic remains the safe default")
     parser.add_argument("--compare-papers", action="store_true", help="Compare extracted claims across distinct papers")
+    parser.add_argument("--review-evidence", action="store_true",
+                        help="Ask Gemini for quote-grounded support/refute/contextual suggestions; requires human review")
     return parser
 
 
@@ -41,8 +43,8 @@ def main() -> None:
         raise SystemExit("Use either --literature or --research-literature, not both.")
     if (args.extract_claims or args.compare_papers) and args.literature is None and not args.research_literature:
         raise SystemExit("--extract-claims and --compare-papers require --literature or --research-literature.")
-    if args.compare_papers and not args.extract_claims:
-        raise SystemExit("--compare-papers also requires --extract-claims.")
+    if (args.compare_papers or args.review_evidence) and not args.extract_claims:
+        raise SystemExit("--compare-papers and --review-evidence require --extract-claims.")
     if args.literature is not None:
         run = ResearchRun(question=args.literature)
         providers = {"both": ("europepmc", "crossref"), "all": ("europepmc", "crossref", "geo"), "europepmc": ("europepmc",), "crossref": ("crossref",), "geo": ("geo",)}[args.provider]
@@ -51,9 +53,11 @@ def main() -> None:
         client.ingest(run, report)
         extraction_report = GeminiClaimExtractor(model=args.gemini_model).extract(run) if args.extract_claims else None
         comparison_report = CrossPaperComparator(model=args.gemini_model).compare(run) if args.compare_papers else None
+        from .evidence_review import GeminiEvidenceReviewer
+        evidence_review_report = GeminiEvidenceReviewer(model=args.gemini_model).review(run) if args.review_evidence else None
         store.save_run(run)
         if args.json:
-            print(json.dumps({"run": run.to_dict(), "literature_report": report.__dict__, "claim_extraction_report": (extraction_report.__dict__ if extraction_report else None), "comparison_report": (comparison_report.__dict__ if comparison_report else None)}, indent=2, ensure_ascii=False))
+            print(json.dumps({"run": run.to_dict(), "literature_report": report.__dict__, "claim_extraction_report": (extraction_report.__dict__ if extraction_report else None), "comparison_report": (comparison_report.__dict__ if comparison_report else None), "evidence_review_report": (evidence_review_report.__dict__ if evidence_review_report else None)}, indent=2, ensure_ascii=False))
             return
         print(f"ORACLE literature run: {run.run_id}")
         print(f"Retrieved: {report.retrieved} | Sources: {report.ingested_sources} | Abstracts: {report.evidence_records} | Candidate statements: {report.candidate_statements}")
@@ -70,6 +74,9 @@ def main() -> None:
         if comparison_report:
             print(f"Cross-paper comparison: {comparison_report.comparisons_created} review candidates from {comparison_report.pairs_submitted} pairs; {comparison_report.comparisons_rejected} rejected.")
             print("Comparisons are pending review; no claim status or evidence stance was changed.")
+        if evidence_review_report:
+            print(f"Evidence review: {evidence_review_report.candidates_created} quote-grounded suggestions; {evidence_review_report.candidates_rejected} rejected.")
+            print("Evidence review suggestions are pending human review; no evidence stance or weight was changed.")
         return
     agent_suite = None
     if args.agent_provider == "gemini":
@@ -84,6 +91,7 @@ def main() -> None:
         literature_mailto=args.mailto,
         extract_literature_claims=args.extract_claims,
         compare_literature_papers=args.compare_papers,
+        review_literature_evidence=args.review_evidence,
         gemini_model=args.gemini_model,
     )
     if args.resume_id:
