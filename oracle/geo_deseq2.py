@@ -10,6 +10,7 @@ import hashlib
 import io
 import json
 import math
+import re
 import shutil
 import subprocess
 import tempfile
@@ -26,6 +27,7 @@ metadata_path <- args[[2]]
 output_path <- args[[3]]
 group_a <- args[[4]]
 group_b <- args[[5]]
+covariate_names <- if (length(args) >= 6 && nzchar(args[[6]])) strsplit(args[[6]], ",", fixed=TRUE)[[1]] else character(0)
 suppressPackageStartupMessages({
   if (!requireNamespace("DESeq2", quietly=TRUE)) {
     stop("DESeq2 is not installed. Install it with BiocManager::install('DESeq2').")
@@ -36,8 +38,20 @@ metadata <- read.delim(metadata_path, row.names=1, check.names=FALSE)
 if (!identical(colnames(counts), rownames(metadata))) stop("Sample order mismatch.")
 metadata$group <- factor(metadata$group, levels=c(group_a, group_b))
 if (any(is.na(metadata$group))) stop("Unexpected group label.")
+for (name in covariate_names) {
+  metadata[[name]] <- factor(metadata[[name]])
+  if (any(is.na(metadata[[name]])) || nlevels(metadata[[name]]) < 2) {
+    stop(paste("Invalid or constant covariate:", name))
+  }
+}
+design_terms <- c(covariate_names, "group")
+design_formula <- as.formula(paste("~", paste(design_terms, collapse=" + ")))
+design_matrix <- model.matrix(design_formula, data=metadata)
+if (qr(design_matrix)$rank < ncol(design_matrix)) {
+  stop("Design matrix is rank deficient; group and covariates are confounded.")
+}
 dds <- DESeq2::DESeqDataSetFromMatrix(
-  countData=as.matrix(counts), colData=metadata, design=~group
+  countData=as.matrix(counts), colData=metadata, design=design_formula
 )
 dds <- dds[rowSums(DESeq2::counts(dds)) > 0,]
 if (nrow(dds) == 0) stop("No non-zero features remain.")
@@ -69,6 +83,7 @@ class GEOCountAnalyzer:
         min_replicates: int = 2,
         max_features: int = 100_000,
         max_cells: int = 5_000_000,
+        covariates: Mapping[str, Mapping[str, str]] | None = None,
     ) -> dict:
         if not group_a or not group_b or group_a == group_b:
             raise ValueError("Two distinct non-empty contrast groups are required.")
@@ -104,6 +119,26 @@ class GEOCountAnalyzer:
         unexpected = sorted(set(group_labels.values()) - {group_a, group_b})
         if unexpected:
             raise ValueError(f"Only the two requested groups may be present; found {unexpected}.")
+        validated_covariates: dict[str, dict[str, str]] = {}
+        for name, assignments in (covariates or {}).items():
+            if (not isinstance(name, str) or not name
+                    or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]{0,39}", name)
+                    or name == "group" or name in {"sample", "feature"}):
+                raise ValueError(f"Invalid or reserved covariate name: {name!r}.")
+            if name in validated_covariates or not isinstance(assignments, Mapping):
+                raise ValueError(f"Covariate {name!r} must map every sample to a category.")
+            if set(assignments) != set(samples):
+                raise ValueError(f"Covariate {name!r} must cover matrix samples exactly.")
+            values = {}
+            for sample in samples:
+                value = assignments[sample]
+                if not isinstance(value, str) or not value.strip() or len(value.strip()) > 100:
+                    raise ValueError(f"Covariate {name!r} has an invalid value for {sample!r}.")
+                values[sample] = value.strip()
+            if len(set(values.values())) < 2:
+                raise ValueError(f"Covariate {name!r} must contain at least two categories.")
+            validated_covariates[name] = values
+
         left_samples = [sample for sample in samples if group_labels[sample] == group_a]
         right_samples = [sample for sample in samples if group_labels[sample] == group_b]
         if len(left_samples) < min_replicates or len(right_samples) < min_replicates:
@@ -164,14 +199,19 @@ class GEOCountAnalyzer:
                     writer.writerow([feature, *values])
             with metadata_path.open("w", encoding="utf-8", newline="") as handle:
                 writer = csv.writer(handle, delimiter="\t", lineterminator="\n")
-                writer.writerow(["sample", "group"])
+                covariate_names = list(validated_covariates)
+                writer.writerow(["sample", "group", *covariate_names])
                 for sample in samples:
-                    writer.writerow([sample, group_labels[sample]])
+                    writer.writerow([
+                        sample, group_labels[sample],
+                        *(validated_covariates[name][sample] for name in covariate_names),
+                    ])
             script_path.write_text(_DESEQ2_SCRIPT, encoding="utf-8")
             try:
                 completed = subprocess.run(
                     [executable, "--vanilla", str(script_path), str(counts_path),
-                     str(metadata_path), str(output_path), group_a, group_b],
+                     str(metadata_path), str(output_path), group_a, group_b,
+                     ",".join(validated_covariates)],
                     capture_output=True, text=True, timeout=timeout_seconds, check=False,
                 )
             except subprocess.TimeoutExpired as exc:
@@ -214,7 +254,13 @@ class GEOCountAnalyzer:
         ))
         return {
             "method": "DESeq2 negative-binomial GLM; Wald test; independent filtering; Benjamini-Hochberg FDR",
-            "contrast": {"group_a": group_a, "group_b": group_b, "direction": f"{group_b} vs {group_a}"},
+            "contrast": {
+                "group_a": group_a, "group_b": group_b,
+                "direction": f"{group_b} vs {group_a}",
+                "design_formula": "~ " + " + ".join([*validated_covariates, "group"]),
+                "covariates": {name: sorted(set(values.values())) for name, values in validated_covariates.items()},
+            },
+            "normalization": "DESeq2 median-of-ratios size-factor normalization (DESeq2 default)",
             "sample_groups": {group_a: left_samples, group_b: right_samples},
             "sample_count": len(samples),
             "features_input": len(features),
@@ -225,7 +271,7 @@ class GEOCountAnalyzer:
             "results": results,
             "limitations": (
                 "Requires raw, unnormalized integer read counts and independent biological replicates. "
-                "The design is a simple two-group comparison with no batch/covariate correction. "
+                "The design includes the explicitly supplied categorical covariates, if any; no covariates are inferred. "
                 "No automatic sample exclusion or group inference is performed. Inspect library sizes, "
                 "sample QC, study design, and DESeq2 diagnostics before biological interpretation. "
                 "Adjusted p-values may be unavailable for filtered or all-zero features. "
