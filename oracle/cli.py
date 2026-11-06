@@ -29,6 +29,10 @@ def build_parser() -> argparse.ArgumentParser:
                         help="Retrieve first-degree reference metadata for DOI-backed sources from Crossref")
     parser.add_argument("--incoming-citations", action="store_true",
                         help="Find works that cite DOI-backed sources using the OpenAlex API")
+    parser.add_argument("--incoming-citation-depth", type=int, default=1,
+                        help="OpenAlex incoming-citation expansion depth (1-5; default 1)")
+    parser.add_argument("--incoming-citation-nodes", type=int, default=100,
+                        help="Maximum metadata-only external citation nodes to add (1-250)")
     parser.add_argument("--download-geo-series-archive", metavar="GSE_ACCESSION", help="Download the official GSE *_RAW.tar archive")
     parser.add_argument("--extract-geo-archive", metavar="TAR_PATH", help="Safely extract GSM-prefixed regular files from a downloaded GEO tar archive")
     parser.add_argument("--download-geo-samples", action="store_true", help="Download supplementary count files for explicitly selected GSM accessions")
@@ -1030,7 +1034,9 @@ def main() -> None:
         incoming_citation_report = None
         if args.incoming_citations:
             from .incoming_citations import OpenAlexIncomingCitationClient
-            incoming_citation_report = OpenAlexIncomingCitationClient(mailto=args.mailto).discover(run)
+            incoming_citation_report = OpenAlexIncomingCitationClient(
+                mailto=args.mailto, max_depth=args.incoming_citation_depth,
+                max_nodes=args.incoming_citation_nodes).discover(run)
         geo_discovery_report = None
         geo_download_report = None
         geo_analysis_report = None
