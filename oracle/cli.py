@@ -49,7 +49,7 @@ def build_parser() -> argparse.ArgumentParser:
                         help="Download and parse supported GEO TSV/CSV expression matrices (descriptive only)")
     parser.add_argument("--normalize-geo-matrix", metavar="MATRIX_PATH",
                         help="Normalize a GEO matrix into a separate output file")
-    parser.add_argument("--normalization-method", choices=["quantile", "cpm", "log2-cpm"], default="",
+    parser.add_argument("--normalization-method", choices=["quantile", "quantile-row-median", "cpm", "log2-cpm", "tmm-cpm", "tmm-log2-cpm"], default="",
                         help="quantile for continuous microarray-like data; cpm/log2-cpm for raw integer counts")
     parser.add_argument("--normalization-output", default="",
                         help="Required output TSV path; raw input is never overwritten")
