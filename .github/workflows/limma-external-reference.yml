@@ -7,7 +7,7 @@ on:
       - ".github/workflows/limma-external-reference.yml"
       - "scripts/validate_gse176260_voom.R"
       - "scripts/validate_gse176261_voom.R"
-      - "scripts/validate_gse158765_voom.R"
+      - "scripts/validate_gse64099_voom.R"
   pull_request:
     branches: [main]
     paths:
@@ -128,11 +128,11 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-  gse158765-independent-study:
-    name: GSE158765 independent-study published voom reference
+  gse64099-independent-dataset:
+    name: GSE64099 independent Smchd1 GEO experiment
     needs: gse176260-reference
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 60
     steps:
       - name: Check out ORACLE
         uses: actions/checkout@v4
@@ -143,21 +143,24 @@ jobs:
           r-version: "4.5.2"
           use-public-rspm: true
 
-      - name: Install GEOquery, edgeR, limma, digest, and jsonlite
+      - name: Install edgeR, limma, digest, and jsonlite
         run: |
           Rscript -e 'if (!requireNamespace("BiocManager", quietly=TRUE)) install.packages("BiocManager", repos="https://cloud.r-project.org")'
-          Rscript -e 'BiocManager::install(c("GEOquery", "edgeR", "limma"), ask=FALSE, update=FALSE, Ncpus=2)'
+          Rscript -e 'BiocManager::install(c("edgeR", "limma"), ask=FALSE, update=FALSE, Ncpus=2)'
           Rscript -e 'install.packages(c("digest", "jsonlite"), repos="https://cloud.r-project.org")'
-          Rscript -e 'stopifnot(requireNamespace("GEOquery"), requireNamespace("edgeR"), requireNamespace("limma"), requireNamespace("digest"), requireNamespace("jsonlite"))'
+          Rscript -e 'stopifnot(requireNamespace("edgeR"), requireNamespace("limma"), requireNamespace("digest"), requireNamespace("jsonlite"))'
 
-      - name: Recompute GSE158765 repeated-measures limma-voom and compare published E and weights
+      - name: Recompute GSE64099 voom and compare published Smchd1 results
         run: |
-          Rscript scripts/validate_gse158765_voom.R validation-artifacts/gse158765-reference-report.json
+          Rscript scripts/validate_gse64099_voom.R validation-artifacts/gse64099-reference-report.json
 
-      - name: Upload independent-study validation evidence
+      - name: Upload independent-dataset numerical evidence
         uses: actions/upload-artifact@v4
         with:
-          name: oracle-gse158765-independent-study-voom-reference
-          path: validation-artifacts/gse158765-reference-report.json
+          name: oracle-gse64099-independent-dataset-voom-reference
+          path: |
+            validation-artifacts/gse64099-reference-report.json
+            validation-artifacts/gse64099_voom_E.tsv.gz
+            validation-artifacts/gse64099_voom_weights.tsv.gz
           if-no-files-found: error
           retention-days: 30
