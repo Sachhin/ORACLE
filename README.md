@@ -197,3 +197,18 @@ python -m oracle --geo-deseq2 raw_counts.tsv \
 ORACLE validates non-negative integer counts, complete two-group sample assignment, unique feature IDs, and minimum replicate counts before invoking DESeq2. Results include base mean, log2 fold change, standard error, Wald statistic, p-value, adjusted p-value, matrix SHA-256, and R/DESeq2 versions. Python CI mocks the external R process; a live DESeq2 run is not claimed unless tested in an R environment with DESeq2 installed.
 
 This first adapter supports a simple two-group design only. It does not infer groups, remove outliers, correct batch effects, or replace review of library sizes and DESeq2 diagnostics. It is not for TPM/FPKM, normalized/log-transformed values, or single-cell pseudobulk without a correctly constructed count matrix and design.
+
+
+### Persisting a DESeq2 result in an ORACLE research run
+
+To keep the analysis, its complete result table, contrast, sample mapping, matrix checksum, software versions, and limitations with an existing run, pass that run's ID:
+
+```bash
+python -m oracle --geo-deseq2 raw_counts.tsv \
+  --geo-group C1=control --geo-group C2=control \
+  --geo-group T1=treated --geo-group T2=treated \
+  --geo-group-a control --geo-group-b treated \
+  --geo-run-id RUN_ID --geo-accession GSE12345 --json
+```
+
+The analysis is stored in the run payload and the SQLite `differential_expression_analyses` table. It starts with `review_status=unreviewed`; no gene result is automatically promoted to a scientific claim or evidence link. Without `--geo-run-id`, the command remains a standalone analysis and does not persist a run record.
