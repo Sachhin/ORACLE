@@ -37,7 +37,8 @@ Status reflects code currently present on the main branch. Checked items are imp
 - [ ] Adaptive routing across multiple model providers and explicit fallback policy
 - [x] Bounded Europe PMC open-access full-text retrieval with strict Creative Commons licence checks
 - [x] GEO Series supplementary file discovery and size-capped download with SHA-256 checksums
-- [ ] Automatic parsing/normalization of downloaded GEO matrices and raw data into scientific evidence
+- [x] Bounded descriptive parsing of downloaded GEO TSV/CSV expression matrices with checksums, per-sample summaries, and source-linked dataset records
+- [ ] GEO matrix normalization, quality-control diagnostics, differential-expression statistics, and reproducible domain adapters
 - [x] Bounded first-degree reference discovery from DOI-backed Crossref works
 - [ ] Incoming citation discovery, graph ranking, and broader citation-network exploration
 - [x] Explicit experiment lifecycle recording for proposed, simulated, performed, and evaluated states with execution provenance
