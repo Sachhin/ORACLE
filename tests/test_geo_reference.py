@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
-from oracle.geo_reference import compare_tmm_to_edger, evaluate_row_median_imputation, evaluate_imputation_downstream_bias
+from oracle.geo_reference import compare_tmm_to_edger, evaluate_row_median_imputation, evaluate_imputation_downstream_bias, evaluate_imputation_holdout
 
 class GEOReferenceTests(unittest.TestCase):
     def setUp(self):
@@ -50,6 +50,30 @@ class GEOReferenceTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Exactly the two requested groups"):
             evaluate_imputation_downstream_bias(
                 self.path, {"A":"x","B":"y","C":"z"}, group_a="x", group_b="y")
+
+    def test_observed_holdout_compares_methods_reproducibly(self):
+        a = evaluate_imputation_holdout(
+            self.path, missing_fraction=.2, replicates=5, seed=7, mechanism="MCAR")
+        b = evaluate_imputation_holdout(
+            self.path, missing_fraction=.2, replicates=5, seed=7, mechanism="MCAR")
+        self.assertEqual(a, b)
+        self.assertGreater(a["heldout_values"], 0)
+        self.assertEqual(set(a["methods"]), {"row_median", "column_median", "global_median"})
+        self.assertEqual(len(a["mae_ranking_best_first"]), 3)
+        self.assertIn("genuinely missing", a["interpretation"])
+
+    def test_observed_holdout_supports_mar_and_mnar_and_rejects_incomplete_matrix(self):
+        mar = evaluate_imputation_holdout(
+            self.path, missing_fraction=.2, replicates=3, seed=5, mechanism="MAR")
+        mnar = evaluate_imputation_holdout(
+            self.path, missing_fraction=.2, replicates=3, seed=5, mechanism="MNAR")
+        self.assertEqual(mar["missingness_mechanism"], "MAR")
+        self.assertEqual(mnar["missingness_mechanism"], "MNAR")
+        incomplete = Path(self.tmp.name) / "incomplete.tsv"
+        incomplete.write_text("gene\\tA\\tB\\ng1\\t1\\tNA\\ng2\\t2\\t3\\n", encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "complete numeric matrix"):
+            evaluate_imputation_holdout(incomplete)
+
     def test_invalid_mechanism_rejected(self):
         with self.assertRaisesRegex(ValueError, "mechanism"):
             evaluate_row_median_imputation(self.path, mechanism="UNKNOWN")
