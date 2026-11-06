@@ -85,7 +85,18 @@ python -m oracle --imputation-benchmark complete-matrix.tsv \
   --imputation-mechanism MNAR
 ```
 
-MCAR uses random masking, MAR depends on an observed sample-position covariate, and MNAR preferentially masks low values. These synthetic sensitivity tests do not identify a dataset’s actual missingness mechanism or establish downstream statistical bias.
+MCAR uses random masking, MAR depends on an observed sample-position covariate, and MNAR preferentially masks low values. These synthetic sensitivity tests do not identify a dataset’s actual missingness mechanism. To quantify how masking plus row-median imputation changes an explicitly declared two-group Welch/BH analysis, run:
+
+```bash
+python -m oracle --imputation-de-bias complete-log2-matrix.tsv \
+  --geo-group C1=control --geo-group C2=control \
+  --geo-group T1=treated --geo-group T2=treated \
+  --imputation-group-a control --imputation-group-b treated \
+  --imputation-mechanism MNAR --imputation-missing-fraction 0.1 \
+  --imputation-replicates 50
+```
+
+This is still a synthetic masking sensitivity test: the complete matrix is the reference, not biological ground truth. It does not establish real-world downstream bias, validate a measurement scale, or replace covariate-aware DESeq2/limma analysis.
 
 For evidence attribution and entailment, `benchmarks/evidence_adjudication_template.json` defines a human-label schema. Populate it only after at least two reviewers independently check each source and disagreements are adjudicated. Score a completed file with:
 
