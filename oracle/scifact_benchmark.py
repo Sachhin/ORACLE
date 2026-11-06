@@ -49,9 +49,14 @@ def evaluate_scifact(claims_path: str | Path, corpus_path: str | Path,
     claims = _jsonl(claims_path)
     corpus = _jsonl(corpus_path)
     predictions = _jsonl(predictions_path)
-    corpus_ids = {str(row.get("doc_id")) for row in corpus}
+    corpus_by_id = {str(row.get("doc_id")): row for row in corpus}
+    corpus_ids = set(corpus_by_id)
     if len(corpus_ids) != len(corpus):
         raise ValueError("SciFact corpus contains duplicate doc_id values")
+    for doc_id, document in corpus_by_id.items():
+        abstract = document.get("abstract")
+        if not isinstance(abstract, list) or any(not isinstance(sentence, str) for sentence in abstract):
+            raise ValueError(f"SciFact corpus document {doc_id} must contain a sentence-list abstract")
     claim_by_id = {}
     for row in claims:
         cid = str(row.get("id"))
@@ -75,10 +80,12 @@ def evaluate_scifact(claims_path: str | Path, corpus_path: str | Path,
             if not isinstance(item, dict) or item.get("label") not in LABEL_MAP:
                 raise ValueError(f"Prediction {cid}/{doc_id}: label must be SUPPORT or CONTRADICT")
             sentences = item.get("sentences")
+            abstract_length = len(corpus_by_id[str(doc_id)]["abstract"])
             if (not isinstance(sentences, list) or
-                    any(isinstance(x, bool) or not isinstance(x, int) or x < 0 for x in sentences) or
+                    any(isinstance(x, bool) or not isinstance(x, int) or x < 0 or x >= abstract_length
+                        for x in sentences) or
                     len(set(sentences)) != len(sentences)):
-                raise ValueError(f"Prediction {cid}/{doc_id}: sentences must be unique non-negative indices")
+                raise ValueError(f"Prediction {cid}/{doc_id}: sentences must be unique in-range abstract indices")
             normalized[str(doc_id)] = {
                 "label": LABEL_MAP[item["label"]],
                 "sentences": set(sentences),
@@ -111,6 +118,9 @@ def evaluate_scifact(claims_path: str | Path, corpus_path: str | Path,
                 if (not isinstance(sentence_ids, list) or not sentence_ids or
                         any(isinstance(x, bool) or not isinstance(x, int) or x < 0 for x in sentence_ids)):
                     raise ValueError(f"Claim {cid}/{doc}: invalid gold sentence rationale")
+                abstract_length = len(corpus_by_id[doc]["abstract"])
+                if any(index >= abstract_length for index in sentence_ids):
+                    raise ValueError(f"Claim {cid}/{doc}: gold sentence index is outside the abstract")
                 if len(set(sentence_ids)) != len(sentence_ids):
                     raise ValueError(f"Claim {cid}/{doc}: duplicate sentence indices")
                 doc_labels.add(LABEL_MAP[rationale["label"]])
