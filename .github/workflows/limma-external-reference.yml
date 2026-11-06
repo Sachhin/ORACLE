@@ -1,13 +1,6 @@
 name: External real-dataset limma-voom reference validation
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/limma-external-reference.yml"
-      - "scripts/validate_gse176260_voom.R"
-      - "scripts/validate_gse176261_voom.R"
-      - "scripts/validate_gse64099_voom.R"
   pull_request:
     branches: [main]
     paths:
