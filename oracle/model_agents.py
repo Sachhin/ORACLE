@@ -323,7 +323,7 @@ class GeminiAuditorAgent(_GeminiAgent):
             severity = item.get("severity", "medium")
             ids = item.get("evidence_ids", [])
             if (not isinstance(finding, str) or not finding.strip() or len(finding) > 1200
-                    or severity not in {"high", "medium", "low"} or not isinstance(ids, list)):
+                    or not isinstance(severity, str) or severity not in {"high", "medium", "low"}\n                    or not isinstance(ids, list)):
                 continue
             valid_ids = [value for value in ids if isinstance(value, str) and value in eligible_ids]
             if len(valid_ids) != len(ids):
