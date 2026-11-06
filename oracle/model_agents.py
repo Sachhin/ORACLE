@@ -111,6 +111,8 @@ class _GeminiAgent:
             "text": item.claim[:1800],
             "kind": item.kind.value,
             "source": item.source[:300],
+            "evidence_id": item.evidence_id,
+            "source_id": item.source_id,
             "locator": item.locator,
             "limitations": item.limitations[:500],
         } for item in context.evidence[-20:]]
@@ -296,8 +298,81 @@ class GeminiExperimentDesignerAgent(_GeminiAgent):
         return AgentResult(self.name, "Gemini proposed an experiment; no execution occurred.", [experiment])
 
 
+class GeminiAuditorAgent(_GeminiAgent):
+    """Provider-backed review suggestions; never mutates scientific truth or evidence links."""
+    name = "auditor"
+
+    def run(self, context: AgentContext) -> AgentResult:
+        eligible_ids = {item.evidence_id for item in context.evidence}
+        data = self._call(context,
+            "Audit the supplied evidence and hypotheses for unsupported factual wording, "
+            "provenance gaps, inference/evidence confusion, overclaiming, missing controls, and "
+            "internal inconsistencies. Do not decide scientific truth and do not invent sources. "
+            "Return up to 8 actionable findings. Each evidence_ids value must contain only IDs "
+            "present in the supplied evidence. "
+            'Schema: {"findings":[{"severity":"high|medium|low","finding":"...",'
+            '"evidence_ids":["..."]}]}')
+        raw = data.get("findings")
+        if not isinstance(raw, list):
+            raise GeminiAgentError("Auditor response must contain a findings array.")
+        warnings = []
+        for item in raw[:8]:
+            if not isinstance(item, dict):
+                continue
+            finding = item.get("finding")
+            severity = item.get("severity", "medium")
+            ids = item.get("evidence_ids", [])
+            if (not isinstance(finding, str) or not finding.strip() or len(finding) > 1200
+                    or severity not in {"high", "medium", "low"} or not isinstance(ids, list)):
+                continue
+            valid_ids = [value for value in ids if isinstance(value, str) and value in eligible_ids]
+            if len(valid_ids) != len(ids):
+                raise GeminiAgentError("Auditor referenced an evidence ID absent from its input.")
+            suffix = " [evidence: " + ", ".join(valid_ids) + "]" if valid_ids else ""
+            warnings.append(f"{severity.upper()}: {finding.strip()}{suffix}")
+        return AgentResult(self.name, "Gemini completed a provisional integrity review; human verification is required.",
+                           warnings=warnings or ["Auditor found no reportable issue; this is not proof of validity."])
+
+
+class GeminiNoveltyAssessorAgent(_GeminiAgent):
+    """Literature-conditioned novelty triage, never a novelty or priority guarantee."""
+    name = "novelty_assessor"
+
+    def run(self, context: AgentContext) -> AgentResult:
+        source_evidence = [item for item in context.evidence
+                           if item.kind != EvidenceKind.INFERENCE and item.source_id]
+        if not source_evidence:
+            return AgentResult(self.name,
+                "Novelty unassessed: no source-backed literature evidence is available.",
+                warnings=["Novelty status: unassessed; retrieve and review literature before making novelty claims."])
+        allowed_ids = {item.source_id for item in source_evidence}
+        data = self._call(context,
+            "Perform cautious prior-art triage using ONLY the supplied source-backed literature "
+            "records. Do not use general memory as evidence, invent citations, or claim exhaustive "
+            "coverage. Select status: potentially_novel_gap, possibly_previously_reported, or "
+            "insufficient_coverage. Cite only supplied source IDs. Explain overlap/difference, "
+            "missing searches, and what a human should verify. This is not a priority claim. "
+            'Schema: {"status":"potentially_novel_gap|possibly_previously_reported|insufficient_coverage",'
+            '"rationale":"...","source_ids":["..."],"search_gaps":["..."]}')
+        status = data.get("status")
+        rationale = data.get("rationale")
+        source_ids = data.get("source_ids", [])
+        gaps = self._strings(data.get("search_gaps", []), "search_gaps", 6)
+        if (status not in {"potentially_novel_gap", "possibly_previously_reported", "insufficient_coverage"}
+                or not isinstance(rationale, str) or not rationale.strip() or len(rationale) > 1800
+                or not isinstance(source_ids, list)):
+            raise GeminiAgentError("Novelty assessor returned an invalid structured assessment.")
+        if any(not isinstance(value, str) or value not in allowed_ids for value in source_ids):
+            raise GeminiAgentError("Novelty assessor referenced a source ID absent from its input.")
+        cited = ", ".join(dict.fromkeys(source_ids)) or "none"
+        summary = f"Provisional literature triage: {status}. {rationale.strip()} Sources: {cited}."
+        warnings = ["This is a bounded literature triage, not an exhaustive systematic review or scientific-priority claim."]
+        warnings.extend("Search gap: " + gap for gap in gaps)
+        return AgentResult(self.name, summary, items=[summary], warnings=warnings)
+
+
 class GeminiAgentSuite:
-    """Drop-in agent collection for OracleOrchestrator; auditor/novelty stay conservative."""
+    """Drop-in Gemini-backed agent collection; all judgements remain provisional."""
 
     def __init__(self, api_key: str | None = None,
                  model: str = "gemini-2.5-flash", timeout: float = 45.0):
@@ -308,3 +383,5 @@ class GeminiAgentSuite:
         self.hypothesizer = GeminiHypothesisAgent(provider)
         self.skeptic = GeminiSkepticAgent(provider)
         self.experiment_designer = GeminiExperimentDesignerAgent(provider)
+        self.auditor = GeminiAuditorAgent(provider)
+        self.novelty = GeminiNoveltyAssessorAgent(provider)
