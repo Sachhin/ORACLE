@@ -403,5 +403,45 @@ class OracleTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 GeminiAgentSuite()
 
+
+    def test_full_research_cycle_can_ingest_literature_before_agents(self):
+        from types import SimpleNamespace
+        from unittest.mock import patch
+        from oracle.models import Evidence, EvidenceKind, SourceRecord
+
+        class FakeLiteratureClient:
+            def __init__(self, mailto=""):
+                self.mailto = mailto
+
+            def search(self, query, limit, providers):
+                return SimpleNamespace(
+                    retrieved=1, ingested_sources=1, evidence_records=1,
+                    providers=list(providers), warnings=[], records=[],
+                )
+
+            def ingest(self, run, report):
+                source = SourceRecord(
+                    title="A source-grounded paper", source_id="source-1",
+                    url="https://example.org/paper", provider="Fake provider",
+                )
+                run.sources.append(source)
+                run.evidence.append(Evidence(
+                    "The abstract reports a measured association.",
+                    source.title, kind=EvidenceKind.SOURCE, source_id=source.source_id,
+                    locator="Abstract", method="Published abstract",
+                ))
+                report.ingested_sources = 1
+                report.evidence_records = 1
+
+        with patch("oracle.literature.LiteratureClient", FakeLiteratureClient):
+            run = OracleOrchestrator(
+                self.store, literature_enabled=True, literature_providers=("europepmc",)
+            ).run("What mechanism explains the measured association?", max_cycles=1)
+
+        self.assertEqual(len(run.sources), 1)
+        self.assertEqual(len(run.evidence), 2)  # one retrieved source plus one labelled scaffold inference
+        self.assertEqual(run.evidence[0].locator, "Abstract")
+        self.assertIn("literature_ingested", [e["event_type"] for e in self.store.list_events(run.run_id)])
+
 if __name__ == "__main__":
     unittest.main()

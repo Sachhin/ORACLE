@@ -17,11 +17,29 @@ from .storage import ResearchStore
 class OracleOrchestrator:
     def __init__(self, store: ResearchStore | None = None,
                  max_no_progress_cycles: int = 2,
-                 agent_suite=None) -> None:
+                 agent_suite=None,
+                 literature_enabled: bool = False,
+                 literature_providers: tuple[str, ...] = ("europepmc", "crossref"),
+                 literature_limit: int = 10,
+                 literature_mailto: str = "",
+                 extract_literature_claims: bool = False,
+                 compare_literature_papers: bool = False,
+                 gemini_model: str = "gemini-2.5-flash") -> None:
         if not 1 <= max_no_progress_cycles <= 10:
             raise ValueError("max_no_progress_cycles must be between 1 and 10.")
+        if not 1 <= literature_limit <= 50:
+            raise ValueError("literature_limit must be between 1 and 50.")
+        if compare_literature_papers and not extract_literature_claims:
+            raise ValueError("Cross-paper comparison requires Gemini claim extraction.")
         self.store = store or ResearchStore()
         self.max_no_progress_cycles = max_no_progress_cycles
+        self.literature_enabled = literature_enabled
+        self.literature_providers = literature_providers
+        self.literature_limit = literature_limit
+        self.literature_mailto = literature_mailto
+        self.extract_literature_claims = extract_literature_claims
+        self.compare_literature_papers = compare_literature_papers
+        self.gemini_model = gemini_model
         # Every agent implements run(context) -> AgentResult. Deterministic
         # agents remain the default; an optional suite can replace selected agents.
         self.planner = agent_suite.planner if agent_suite else PlannerAgent()
@@ -144,10 +162,45 @@ class OracleOrchestrator:
                                          "new_cycle_limit": run.max_cycles}, event_key=f"resume:{run.current_cycle}:{run.max_cycles}")
         return self._execute(run)
 
+    def _prepare_literature(self, run: ResearchRun) -> None:
+        """Optionally retrieve source-backed literature before the reasoning cycle."""
+        if not self.literature_enabled and not self.extract_literature_claims:
+            return
+        if self.literature_enabled and not run.sources:
+            from .literature import LiteratureClient
+            client = LiteratureClient(mailto=self.literature_mailto)
+            report = client.search(
+                run.question, limit=self.literature_limit,
+                providers=self.literature_providers,
+            )
+            client.ingest(run, report)
+            run.findings.append(
+                f"Literature retrieval: {report.retrieved} records retrieved; "
+                f"{report.ingested_sources} sources and {report.evidence_records} evidence records ingested."
+            )
+            run.findings.extend("Literature warning: " + item for item in report.warnings)
+            self._event(run, "literature_ingested", {
+                "retrieved": report.retrieved,
+                "sources": report.ingested_sources,
+                "evidence": report.evidence_records,
+                "providers": report.providers,
+                "warnings": report.warnings,
+            })
+        if self.extract_literature_claims:
+            from .llm import GeminiClaimExtractor
+            extractor = GeminiClaimExtractor(model=self.gemini_model)
+            extraction = extractor.extract(run)
+            self._event(run, "literature_claims_extracted", extraction.__dict__)
+        if self.compare_literature_papers:
+            from .comparison import CrossPaperComparator
+            comparison = CrossPaperComparator(model=self.gemini_model).compare(run)
+            self._event(run, "literature_papers_compared", comparison.__dict__)
+
     def _execute(self, run: ResearchRun) -> ResearchRun:
         checkpoint = deepcopy(run)
         final_action = "conclude"
         try:
+            self._prepare_literature(run)
             if not run.tasks:
                 plan = self.planner.run(AgentContext(run.question, 0, run.mode.value))
                 run.tasks.extend(plan.items)

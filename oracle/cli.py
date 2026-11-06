@@ -20,7 +20,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--resume", dest="resume_id", help="Resume an existing run by ID")
     parser.add_argument("--db", default="data/oracle.sqlite3")
     parser.add_argument("--json", action="store_true", help="Print machine-readable run output")
-    parser.add_argument("--literature", metavar="QUERY", help="Search scholarly APIs and ingest abstracts")
+    parser.add_argument("--literature", metavar="QUERY", help="Run a standalone scholarly literature search")
+    parser.add_argument("--research-literature", action="store_true",
+                        help="Retrieve scholarly literature as the evidence input to a full research cycle")
     parser.add_argument("--limit", type=int, default=10, help="Maximum literature records (1-50)")
     parser.add_argument("--provider", choices=["both", "all", "europepmc", "crossref", "geo"], default="both")
     parser.add_argument("--mailto", default="", help="Optional contact email for Crossref polite pool")
@@ -35,8 +37,10 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> None:
     args = build_parser().parse_args()
     store = ResearchStore(args.db)
-    if (args.extract_claims or args.compare_papers) and args.literature is None:
-        raise SystemExit("--extract-claims and --compare-papers require --literature.")
+    if args.research_literature and args.literature is not None:
+        raise SystemExit("Use either --literature or --research-literature, not both.")
+    if (args.extract_claims or args.compare_papers) and args.literature is None and not args.research_literature:
+        raise SystemExit("--extract-claims and --compare-papers require --literature or --research-literature.")
     if args.compare_papers and not args.extract_claims:
         raise SystemExit("--compare-papers also requires --extract-claims.")
     if args.literature is not None:
@@ -71,7 +75,17 @@ def main() -> None:
     if args.agent_provider == "gemini":
         from .model_agents import GeminiAgentSuite
         agent_suite = GeminiAgentSuite(model=args.gemini_model)
-    orchestrator = OracleOrchestrator(store, agent_suite=agent_suite)
+    providers = {"both": ("europepmc", "crossref"), "all": ("europepmc", "crossref", "geo"), "europepmc": ("europepmc",), "crossref": ("crossref",), "geo": ("geo",)}[args.provider]
+    orchestrator = OracleOrchestrator(
+        store, agent_suite=agent_suite,
+        literature_enabled=args.research_literature,
+        literature_providers=providers,
+        literature_limit=args.limit,
+        literature_mailto=args.mailto,
+        extract_literature_claims=args.extract_claims,
+        compare_literature_papers=args.compare_papers,
+        gemini_model=args.gemini_model,
+    )
     if args.resume_id:
         run = orchestrator.resume(args.resume_id, additional_cycles=args.cycles)
     else:
