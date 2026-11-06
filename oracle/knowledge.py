@@ -120,6 +120,8 @@ class KnowledgeBase:
         """Apply a model suggestion only after an explicit human acceptance."""
         if status not in {"accepted", "rejected", "needs_context"}:
             raise ValueError("Status must be accepted, rejected, or needs_context.")
+        if not reviewer_note.strip():
+            raise ValueError("A reviewer note is required for every evidence-review decision.")
         candidate = next((item for item in run.evidence_review_candidates
                           if item.candidate_id == candidate_id), None)
         if candidate is None:
@@ -127,8 +129,6 @@ class KnowledgeBase:
         if candidate.status != "pending_review":
             raise ValueError("Evidence review candidate has already been reviewed.")
         if status == "accepted":
-            if not reviewer_note.strip():
-                raise ValueError("A reviewer note is required to accept a model suggestion.")
             self.link_evidence(
                 run, candidate.claim_id, candidate.evidence_id,
                 candidate.proposed_stance, strength,
