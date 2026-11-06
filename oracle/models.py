@@ -183,6 +183,23 @@ class CitationLink:
 
 
 @dataclass
+class CrossDomainConnection:
+    """Provisional, source-linked cross-domain research connection."""
+    statement: str
+    domain_a: str
+    domain_b: str
+    rationale: str
+    source_ids: list[str]
+    testable_prediction: str
+    limitations: str
+    status: str = "pending_review"
+    reviewer_note: str = ""
+    connection_id: str = field(default_factory=lambda: new_id("conn"))
+    created_at: str = field(default_factory=utc_now)
+    reviewed_at: str = ""
+
+
+@dataclass
 class EvidenceReviewCandidate:
     claim_id: str
     evidence_id: str
@@ -355,6 +372,7 @@ class ResearchRun:
     dataset_analyses: list[DatasetAnalysisRecord] = field(default_factory=list)
     differential_expression_analyses: list[DifferentialExpressionAnalysisRecord] = field(default_factory=list)
     citation_links: list[CitationLink] = field(default_factory=list)
+    cross_domain_connections: list[CrossDomainConnection] = field(default_factory=list)
     contradiction_candidates: list[ContradictionCandidate] = field(default_factory=list)
     hypotheses: list[Hypothesis] = field(default_factory=list)
     hypothesis_groups: list[HypothesisGroup] = field(default_factory=list)
