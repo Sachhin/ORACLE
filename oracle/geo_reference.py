@@ -55,7 +55,8 @@ def compare_tmm_to_edger(matrix_path: str | Path, *, rscript: str = "Rscript",
             raise RuntimeError("edgeR reference comparison failed: " + (run.stderr or run.stdout)[-3000:])
         if not out.is_file():
             raise RuntimeError("edgeR did not write normalization factors.")
-        rows = list(csv.DictReader(out.open(encoding="utf-8"), delimiter="\t"))
+        with out.open(encoding="utf-8", newline="") as handle:
+            rows = list(csv.DictReader(handle, delimiter="\t"))
         ref = {r["sample"]: float(r["factor"]) for r in rows}
         if set(ref) != set(samples) or any(not math.isfinite(v) or v <= 0 for v in ref.values()):
             raise RuntimeError("edgeR returned invalid or incomplete factors.")
