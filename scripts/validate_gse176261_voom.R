@@ -145,7 +145,7 @@ write_matrix_gz <- function(x, path) {
   con <- gzfile(path, open = "wt")
   on.exit(close(con), add = TRUE)
   utils::write.table(cbind(feature_id = rownames(x), x), con,
-                     sep = "\\t", quote = FALSE, row.names = FALSE)
+                     sep = "\t", quote = FALSE, row.names = FALSE)
 }
 write_matrix_gz(voom_result$E, file.path(out_dir, "gse176261_recomputed_E.tsv.gz"))
 write_matrix_gz(voom_result$weights, file.path(out_dir, "gse176261_recomputed_weights.tsv.gz"))
@@ -168,7 +168,7 @@ sample_diagnostics <- lapply(seq_len(ncol(voom_result$E)), function(j) {
 sample_diagnostics <- as.data.frame(do.call(rbind, sample_diagnostics), stringsAsFactors = FALSE)
 utils::write.table(sample_diagnostics,
                    file.path(out_dir, "gse176261_sample_diagnostics.tsv"),
-                   sep = "\\t", quote = FALSE, row.names = FALSE)
+                   sep = "\t", quote = FALSE, row.names = FALSE)
 
 
 report <- list(
