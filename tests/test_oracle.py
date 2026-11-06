@@ -625,5 +625,43 @@ class OracleTests(unittest.TestCase):
                 run, candidate.candidate_id, "rejected", "",
             )
 
+
+    def test_open_access_full_text_requires_reuse_license_and_preserves_source(self):
+        from oracle.fulltext import OpenAccessFullTextClient
+        from oracle.models import SourceRecord
+
+        run = ResearchRun("Open access full text")
+        allowed = SourceRecord(
+            title="CC BY paper", source_id="pmc-allowed", pmcid="PMC123",
+            open_access=True, license="CC BY 4.0", doi="10.1000/allowed",
+        )
+        noncommercial = SourceRecord(
+            title="Noncommercial paper", source_id="pmc-nc", pmcid="PMC456",
+            open_access=True, license="CC BY-NC 4.0",
+        )
+        no_pmcid = SourceRecord(
+            title="No PMCID", source_id="no-pmcid", open_access=True, license="CC BY 4.0",
+        )
+        run.sources.extend([allowed, noncommercial, no_pmcid])
+        client = OpenAccessFullTextClient()
+        xml = b"""<article><body><sec><title>Results</title><p>Pathway activation changed cell fate in the tested model.</p></sec><ref-list><ref><label>1</label><mixed-citation>Reference text must be excluded.</mixed-citation></ref></ref-list></body></article>"""
+        client._fetch_xml = lambda pmcid: xml
+        report = client.ingest(run)
+        self.assertEqual(report.full_text_records, 1)
+        self.assertEqual(report.skipped_license, 1)
+        self.assertEqual(report.skipped_no_pmcid, 1)
+        evidence = next(item for item in run.evidence if item.source_id == allowed.source_id)
+        self.assertIn("Pathway activation changed cell fate", evidence.claim)
+        self.assertNotIn("Reference text must be excluded", evidence.claim)
+        self.assertEqual(evidence.locator, "Full text (PMC123)")
+        self.assertIn("CC BY 4.0", evidence.limitations)
+
+    def test_open_access_license_gate_rejects_unknown_and_nd_licenses(self):
+        from oracle.fulltext import OpenAccessFullTextClient
+        self.assertTrue(OpenAccessFullTextClient.license_allowed("CC BY 4.0"))
+        self.assertFalse(OpenAccessFullTextClient.license_allowed("CC BY-NC 4.0"))
+        self.assertFalse(OpenAccessFullTextClient.license_allowed("CC BY-ND 4.0"))
+        self.assertFalse(OpenAccessFullTextClient.license_allowed("unknown"))
+
 if __name__ == "__main__":
     unittest.main()
