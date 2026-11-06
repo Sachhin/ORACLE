@@ -49,7 +49,7 @@ def evaluate_evidence_predictions(cases: list[dict[str, Any]]) -> dict[str, Any]
         reviewers = case.get("reviewer_ids")
         if (not isinstance(reviewers, list)
                 or any(not isinstance(r, str) or not r.strip() for r in reviewers)
-                or len(set(reviewers)) < 2):
+                or len(set(reviewers)) != len(reviewers) or len(reviewers) < 2):
             raise ValueError(f"Case {index} requires at least two distinct reviewers.")
         if len(set(reviewers)) > 2 and not case.get("adjudication_note"):
             raise ValueError(f"Case {index} with multiple reviewers requires adjudication_note.")
