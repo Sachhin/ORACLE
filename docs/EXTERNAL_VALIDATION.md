@@ -159,7 +159,7 @@ genuinely independent study:
   both matrices numerically.
 - **GSE176261** is the validation cohort from the *same* publication, not an
   independent study. It is a same-study cohort replication check only.
-- **GSE158765** is an independent platelet RNA-seq study. Its GEO sample
+- **GSE64099** is an independent platelet RNA-seq study. Its GEO sample
   records describe sample-level `QCed_counts.txt`,
   `Log2_normalized_expression.txt`, and `Voom_weights.txt` files, TMM
   normalization, and the design
@@ -169,5 +169,5 @@ genuinely independent study:
   voom pipeline, and compares expression and weight matrices.
 
 A dataset is not marked passed until its live Actions run completes and the
-JSON report artifact has been inspected. GSE158765 is the independent-study
+JSON report artifact has been inspected. GSE64099 is the independent-study
 test; GSE176261 is not.
