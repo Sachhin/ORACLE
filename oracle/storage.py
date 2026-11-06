@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from .models import (
-    Claim, ClaimRevision, ContradictionCandidate, Evidence, EvidenceClaimLink,
+    Claim, ClaimRevision, ContradictionCandidate, Evidence, EvidenceClaimLink, EvidenceComparison,
     EvidenceKind, EvidenceStance, Experiment, ExperimentStatus, Hypothesis,
     HypothesisGroup, HypothesisStatus, ResearchMode, ResearchRun, ResearchTask,
     RunStatus, SourceRecord, UncertaintyAssessment, utc_now,
@@ -149,6 +149,7 @@ class ResearchStore:
             claim_revisions=[ClaimRevision(**x) for x in data.get("claim_revisions", [])],
             evidence_claim_links=[EvidenceClaimLink(**{**x, "stance": EvidenceStance(x["stance"])})
                                   for x in data.get("evidence_claim_links", [])],
+            evidence_comparisons=[EvidenceComparison(**x) for x in data.get("evidence_comparisons", [])],
             contradiction_candidates=[ContradictionCandidate(**x) for x in data.get("contradiction_candidates", [])],
             hypotheses=[Hypothesis(**{**x, "status": enum_value(HypothesisStatus, x.get("status", "proposed"))})
                         for x in data.get("hypotheses", [])],
