@@ -52,7 +52,8 @@ Status reflects code currently present on the main branch. Checked items are imp
 - [ ] Broader citation-network discovery beyond DOI-resolved sources already present in a run
 - [x] Explicit experiment lifecycle recording for proposed, simulated, performed, and evaluated states with execution provenance
 - [x] Domain-specific proposed protocol templates for plant, molecular, cell, and computational biology
-- [ ] Reproducible domain-specific analysis adapters and independent rerun verification
+- [x] Deterministic GEO normalization adapters with input/output checksums and same-runtime byte-identical rerun check
+- [ ] Independent cross-runtime rerun verification and broader domain-specific analysis adapters
 
 ## Milestone 5 — Evaluation and scientific validation
 - [x] Cross-domain golden-question integrity benchmark for the deterministic baseline
