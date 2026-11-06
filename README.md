@@ -26,6 +26,16 @@ The normal run remains deterministic and offline. To explicitly opt in to Gemini
 
 The Gemini agent suite uses the same `run(context) -> result` contract as the deterministic agents. Model-generated research statements are stored only as INFERENCE, never as source evidence. Hypotheses remain provisional and experiment designs remain PROPOSED. The Gemini auditor emits review warnings only and cannot alter evidence stance or claim status. Cross-domain proposals cite at least two existing source IDs, remain pending human review, and can be accepted/rejected/deferred through the CLI. The Gemini novelty assessor runs only when source-backed literature evidence is present, validates cited source IDs, and reports provisional prior-art triage rather than a novelty guarantee. These provider-backed review agents and cross-domain proposal gates have unit-level contract tests; live scientific quality has not yet been independently validated. The default provider is still `deterministic`; no model provider is called unless explicitly selected. `--agent-provider gemini` uses Gemini only. Opt-in `--agent-provider auto` enables ordered Gemini → Groq → OpenRouter fallback when credentials are configured. Set `GROQ_API_KEY` with `ORACLE_GROQ_MODEL`, and/or `OPENROUTER_API_KEY` with `ORACLE_OPENROUTER_MODEL`; provider keys are read only from environment variables and are never stored. Routing advances only for quota/rate-limit, network/timeout, and transient server failures; authentication/configuration errors stop rather than silently switching accounts. The active model is recorded on generated inference metadata. This is ordered failover, not automatic quality/cost optimization. Transient Gemini HTTP/network failures receive a small bounded retry; explicit quota-exhaustion responses stop immediately. Other provider errors fail and checkpoint the run rather than silently pretending that deterministic output came from Gemini.
 
+## Domain-specific experiment protocols
+
+ORACLE can append a conservative protocol scaffold to a saved run. Supported templates: `plant_biology`, `molecular_biology`, `cell_biology`, and `computational_biology`.
+
+```bash
+python -m oracle --propose-protocol RUN_ID --protocol-domain plant_biology --protocol-hypothesis-id HYPOTHESIS_ID
+```
+
+Templates prompt for controls, biological replication, randomization, batch metadata, pre-specified analysis, raw-data preservation, software versions, and checksums. They remain `PROPOSED`; they are not validated SOPs, do not execute experiments, and require qualified domain/ethics/biosafety review. Reproducible analysis adapters are still a separate pending milestone.
+
 ## Shared cross-run knowledge graph
 
 Saved runs can be searched for lexically similar claim pairs, but only when each claim has at least one source-backed evidence link. The candidate queue is a retrieval heuristic, not a semantic verdict. Inspect candidates, then persist a relationship explicitly:
