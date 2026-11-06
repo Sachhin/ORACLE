@@ -17,23 +17,19 @@ jobs:
   gse176260-reference:
     name: GSE176260 published voom reference
     runs-on: ubuntu-latest
+    container:
+      image: bioconductor/bioconductor_docker:RELEASE_3_22
+      options: --user root
     timeout-minutes: 45
     steps:
       - name: Check out ORACLE
         uses: actions/checkout@v4
 
-      - name: Set up R
-        uses: r-lib/actions/setup-r@v2
-        with:
-          r-version: "4.5.2"
-          use-public-rspm: true
-
-      - name: Install GEOquery, edgeR, limma, and digest
+      - name: Verify pinned Bioconductor runtime and required packages
         run: |
-          Rscript -e 'if (!requireNamespace("BiocManager", quietly=TRUE)) install.packages("BiocManager", repos="https://cloud.r-project.org")'
-          Rscript -e 'BiocManager::install(c("GEOquery", "edgeR", "limma"), ask=FALSE, update=FALSE, Ncpus=2)'
-          Rscript -e 'if (!requireNamespace("digest", quietly=TRUE)) install.packages("digest", repos="https://cloud.r-project.org")'
-          Rscript -e 'stopifnot(requireNamespace("GEOquery"), requireNamespace("edgeR"), requireNamespace("limma"), requireNamespace("digest"))'
+          Rscript -e 'stopifnot(getRversion() == "4.5.2", as.character(BiocManager::version()) == "3.22")'
+          Rscript -e 'stopifnot(requireNamespace("GEOquery"), requireNamespace("edgeR"), requireNamespace("limma"), requireNamespace("digest"), requireNamespace("jsonlite"))'
+          Rscript -e 'cat("R", getRversion(), "Bioconductor", BiocManager::version(), "GEOquery", packageVersion("GEOquery"), "edgeR", packageVersion("edgeR"), "limma", packageVersion("limma"), "\\n")'
 
       - name: Download frozen GEO submitter reference files
         shell: bash
@@ -71,23 +67,19 @@ jobs:
     name: GSE176261 same-study validation cohort
     needs: gse176260-reference
     runs-on: ubuntu-latest
+    container:
+      image: bioconductor/bioconductor_docker:RELEASE_3_22
+      options: --user root
     timeout-minutes: 45
     steps:
       - name: Check out ORACLE
         uses: actions/checkout@v4
 
-      - name: Set up R
-        uses: r-lib/actions/setup-r@v2
-        with:
-          r-version: "4.5.2"
-          use-public-rspm: true
-
-      - name: Install GEOquery, edgeR, limma, and digest
+      - name: Verify pinned Bioconductor runtime and required packages
         run: |
-          Rscript -e 'if (!requireNamespace("BiocManager", quietly=TRUE)) install.packages("BiocManager", repos="https://cloud.r-project.org")'
-          Rscript -e 'BiocManager::install(c("GEOquery", "edgeR", "limma"), ask=FALSE, update=FALSE, Ncpus=2)'
-          Rscript -e 'if (!requireNamespace("digest", quietly=TRUE)) install.packages("digest", repos="https://cloud.r-project.org")'
-          Rscript -e 'stopifnot(requireNamespace("GEOquery"), requireNamespace("edgeR"), requireNamespace("limma"), requireNamespace("digest"))'
+          Rscript -e 'stopifnot(getRversion() == "4.5.2", as.character(BiocManager::version()) == "3.22")'
+          Rscript -e 'stopifnot(requireNamespace("GEOquery"), requireNamespace("edgeR"), requireNamespace("limma"), requireNamespace("digest"), requireNamespace("jsonlite"))'
+          Rscript -e 'cat("R", getRversion(), "Bioconductor", BiocManager::version(), "GEOquery", packageVersion("GEOquery"), "edgeR", packageVersion("edgeR"), "limma", packageVersion("limma"), "\\n")'
 
       - name: Download frozen GEO validation-cohort reference files
         shell: bash
@@ -151,23 +143,19 @@ jobs:
     name: GSE64099 independent Smchd1 GEO experiment
     needs: gse176260-reference
     runs-on: ubuntu-latest
+    container:
+      image: bioconductor/bioconductor_docker:RELEASE_3_22
+      options: --user root
     timeout-minutes: 60
     steps:
       - name: Check out ORACLE
         uses: actions/checkout@v4
 
-      - name: Set up R
-        uses: r-lib/actions/setup-r@v2
-        with:
-          r-version: "4.5.2"
-          use-public-rspm: true
-
-      - name: Install edgeR, limma, digest, and jsonlite
+      - name: Verify pinned Bioconductor runtime and required packages
         run: |
-          Rscript -e 'if (!requireNamespace("BiocManager", quietly=TRUE)) install.packages("BiocManager", repos="https://cloud.r-project.org")'
-          Rscript -e 'BiocManager::install(c("edgeR", "limma"), ask=FALSE, update=FALSE, Ncpus=2)'
-          Rscript -e 'install.packages(c("digest", "jsonlite"), repos="https://cloud.r-project.org")'
+          Rscript -e 'stopifnot(getRversion() == "4.5.2", as.character(BiocManager::version()) == "3.22")'
           Rscript -e 'stopifnot(requireNamespace("edgeR"), requireNamespace("limma"), requireNamespace("digest"), requireNamespace("jsonlite"))'
+          Rscript -e 'cat("R", getRversion(), "Bioconductor", BiocManager::version(), "GEOquery", packageVersion("GEOquery"), "edgeR", packageVersion("edgeR"), "limma", packageVersion("limma"), "\\n")'
 
       - name: Recompute GSE64099 voom and compare published Smchd1 results
         run: |
