@@ -193,6 +193,8 @@ class Hypothesis:
     hypothesis_id: str = field(default_factory=lambda: new_id("hyp"))
     group_id: str = ""
     created_at: str = field(default_factory=utc_now)
+    reviewer_note: str = ""
+    reviewed_at: str = ""
 
 
 @dataclass
