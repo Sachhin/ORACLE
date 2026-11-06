@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import json
 
 from .knowledge import KnowledgeBase
 from .model_agents import GeminiJSONProvider
@@ -48,7 +49,7 @@ class GeminiEvidenceReviewer:
             'Return JSON only: {"reviews":[{"pair_index":0,"stance":"contextual",'
             '"rationale":"...","source_quote":"..."}]}\n'
             f"Research question: {question[:1200]}\nPAIRS:\n"
-            + __import__("json").dumps(pairs, ensure_ascii=False)
+            + json.dumps(pairs, ensure_ascii=False)
         )
 
     def review(self, run: ResearchRun) -> EvidenceReviewReport:
