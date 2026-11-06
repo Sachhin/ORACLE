@@ -76,6 +76,29 @@ Use the existing benchmark validators to reject missing reviewer pairs or
 unadjudicated disagreements. Store raw annotations separately from aggregate
 reports so results can be audited.
 
+## Real GEO reference datasets
+
+The external validation workflow distinguishes cohorts from the same
+publication from a genuinely independent study:
+
+- **GSE176260** is the primary discovery cohort. The submitter deposited QCed
+  counts and the exact `voom$E` and `voom$weights` matrices. ORACLE
+  reconstructs the documented `~ 0 + phenotype + gender` design and compares
+  both matrices numerically.
+- **GSE176261** is the validation cohort from the *same* publication, not an
+  independent study. It is a same-study cohort replication check only.
+- **GSE64099** is a separate Smchd1 knockout-versus-wild-type mouse RNA-seq
+  experiment, independent of the GSE176260 host-response cohort. Its public
+  R object and original supplementary analysis are available from the
+  voomWithQualityWeights authors. ORACLE reproduces the published CPM filter,
+  TMM normalization, `~ genotype` design, voom, lmFit, and eBayes workflow,
+  then compares stable GeneID-matched logFC values and significant-gene counts
+  against the published top-table results. This is a published DE-result
+  comparison, not a submitter-published E/weights matrix comparison.
+
+A dataset is not marked passed until its live Actions run completes and the
+JSON report artifact has been inspected.
+
 ## External limma-voom numerical runs (2026-11-06)
 
 Two real external datasets have passed numerical checks in the ORACLE
