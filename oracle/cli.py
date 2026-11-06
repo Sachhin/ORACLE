@@ -50,12 +50,40 @@ def build_parser() -> argparse.ArgumentParser:
                                  help="Explain the knowledge gaps recorded for a saved run")
     portfolio_group.add_argument("--related-to", metavar="QUESTION",
                                  help="Find prior runs with lexically related research questions")
+    portfolio_group.add_argument("--show-reviews", metavar="RUN_ID",
+                                 help="Show pending and completed evidence-review candidates in a run")
+    parser.add_argument("--review-candidate", metavar="CANDIDATE_ID",
+                        help="Accept, reject, or defer one evidence-review candidate")
+    parser.add_argument("--review-run", help="Research run containing the evidence-review candidate")
+    parser.add_argument("--review-status", choices=["accepted", "rejected", "needs_context"])
+    parser.add_argument("--review-note", default="", help="Human rationale for the review decision")
+    parser.add_argument("--review-strength", type=float, default=1.0,
+                        help="Evidence-link strength to apply on acceptance (0..1)")
     return parser
 
 
 def main() -> None:
     args = build_parser().parse_args()
     store = ResearchStore(args.db)
+    if args.review_candidate:
+        if not args.review_run or not args.review_status or not args.review_note.strip():
+            raise SystemExit("--review-candidate requires --review-run, --review-status, and --review-note.")
+        run = store.load_run(args.review_run)
+        if run is None:
+            raise SystemExit(f"Research run not found: {args.review_run}")
+        from .knowledge import KnowledgeBase
+        candidate = KnowledgeBase().review_evidence_candidate(
+            run, args.review_candidate, args.review_status, args.review_note,
+            strength=args.review_strength,
+        )
+        store.save_run(run)
+        if args.json:
+            print(json.dumps(candidate.__dict__, indent=2, ensure_ascii=False))
+        else:
+            print(f"Evidence review {candidate.candidate_id}: {candidate.status}")
+            print(f"Proposed stance: {candidate.proposed_stance.value}")
+            print(f"Reviewer note: {candidate.reviewer_note}")
+        return
     if args.experiment_action:
         if not args.experiment_run or not args.experiment_id:
             raise SystemExit("--experiment-action requires --experiment-run and --experiment-id.")
@@ -90,7 +118,7 @@ def main() -> None:
             print(f"Experiment {experiment.experiment_id}: {experiment.status.value} ({experiment.execution_kind})")
             print(experiment.limitations)
         return
-    if args.portfolio or args.assess_gaps or args.related_to is not None:
+    if args.portfolio or args.assess_gaps or args.related_to is not None or args.show_reviews:
         from dataclasses import asdict
         from .portfolio import ResearchPortfolio
         portfolio = ResearchPortfolio(store)
@@ -104,6 +132,37 @@ def main() -> None:
                     print(f"- {item['run_id']} | {item['status']} | gap score {item['knowledge_gap_score']}/100")
                     print(f"  {item['question']}")
                     print(f"  Sources: {item['sources']} | Evidence: {item['evidence']} | Claims: {item['claims']} | Hypotheses: {item['hypotheses']}")
+            return
+        if args.show_reviews:
+            run = store.load_run(args.show_reviews)
+            if run is None:
+                raise SystemExit(f"Research run not found: {args.show_reviews}")
+            claims = {item.claim_id: item for item in run.claims}
+            evidence = {item.evidence_id: item for item in run.evidence}
+            sources = {item.source_id: item for item in run.sources}
+            items = []
+            for candidate in run.evidence_review_candidates:
+                claim = claims.get(candidate.claim_id)
+                item = evidence.get(candidate.evidence_id)
+                source = sources.get(item.source_id) if item else None
+                items.append({
+                    **candidate.__dict__,
+                    "claim": claim.statement if claim else "[missing claim]",
+                    "evidence": item.claim if item else "[missing evidence]",
+                    "source_title": source.title if source else "[missing source]",
+                    "source_url": source.url if source else "",
+                })
+            if args.json:
+                print(json.dumps(items, indent=2, ensure_ascii=False))
+            else:
+                if not items:
+                    print("No evidence-review candidates in this run.")
+                for item in items:
+                    print(f"- {item['candidate_id']} | {item['status']} | proposed: {item['proposed_stance']}")
+                    print(f"  Claim: {item['claim']}")
+                    print(f"  Source: {item['source_title']} | {item['source_url']}")
+                    print(f"  Exact quote: {item['source_quote']}")
+                    print(f"  Rationale: {item['rationale']}")
             return
         if args.assess_gaps:
             assessment = asdict(portfolio.assess(args.assess_gaps))
