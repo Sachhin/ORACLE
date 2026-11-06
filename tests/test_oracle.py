@@ -504,5 +504,55 @@ class OracleTests(unittest.TestCase):
                 "A rationale.", "model inference", "test-model",
             )
 
+
+    def test_knowledge_gap_score_is_transparent_and_improves_after_review(self):
+        from oracle.models import SourceRecord
+        from oracle.portfolio import KnowledgeGapAssessor, ResearchPortfolio
+
+        run = ResearchRun("How does signaling influence cell fate?")
+        source = SourceRecord(title="Paper on cell signaling", source_id="source-gap")
+        run.sources.append(source)
+        evidence = Evidence(
+            "The paper reports a measured signaling association.", source.title,
+            source_id=source.source_id, locator="Abstract",
+        )
+        run.evidence.append(evidence)
+        claim = KnowledgeBase().add_claim(run, "Signaling is associated with cell fate.")
+        claim.status = "unreviewed_candidate"
+        KnowledgeBase().link_evidence(
+            run, claim.claim_id, evidence.evidence_id, EvidenceStance.CONTEXTUAL, 0.0
+        )
+        run.hypotheses.extend([
+            Hypothesis("Model A", "Reason A"),
+            Hypothesis("Model B", "Reason B"),
+        ])
+
+        assessor = KnowledgeGapAssessor()
+        before = assessor.assess(run)
+        self.assertEqual(before.criteria["source_coverage_gap"], 0.8)
+        self.assertGreater(before.score, 50)
+        self.assertTrue(any("lack accepted support/refute" in gap for gap in before.gaps))
+
+        KnowledgeBase().link_evidence(
+            run, claim.claim_id, evidence.evidence_id, EvidenceStance.SUPPORTS, 0.7,
+            "Human-reviewed source relationship.",
+        )
+        after = assessor.assess(run)
+        self.assertLess(after.score, before.score)
+        self.assertEqual(after.counts["reviewed_claims"], 1)
+
+        self.store.save_run(run)
+        portfolio = ResearchPortfolio(self.store)
+        entries = portfolio.list_entries()
+        self.assertEqual(entries[0]["run_id"], run.run_id)
+        related = portfolio.related_runs("cell fate signaling pathways")
+        self.assertEqual(related[0]["run_id"], run.run_id)
+        self.assertGreater(related[0]["lexical_similarity"], 0)
+
+    def test_portfolio_rejects_missing_run_gap_assessment(self):
+        from oracle.portfolio import ResearchPortfolio
+        with self.assertRaises(ValueError):
+            ResearchPortfolio(self.store).assess("missing-run")
+
 if __name__ == "__main__":
     unittest.main()
