@@ -331,6 +331,28 @@ class OracleOrchestrator:
                     max_no_progress=self.max_no_progress_cycles,
                 )
                 final_action = decision.action
+                if decision.action == "replan":
+                    revised = self.planner.run(context)
+                    self.task_manager.validate_plan(revised.items)
+                    known_tasks = {
+                        (self._normalise(task.name), self._normalise(task.description))
+                        for task in run.tasks
+                    }
+                    added_tasks = []
+                    for task in revised.items:
+                        key = (self._normalise(task.name), self._normalise(task.description))
+                        if key in known_tasks:
+                            continue
+                        if len(run.tasks) >= self.task_manager.max_tasks:
+                            break
+                        run.tasks.append(task)
+                        known_tasks.add(key)
+                        added_tasks.append(task.task_id)
+                    self._event(run, "plan_revised", {
+                        "cycle": cycle, "new_task_ids": added_tasks,
+                        "task_count": len(run.tasks),
+                        "reason": "No unique research information was added in the preceding cycle.",
+                    }, False, f"cycle:{cycle}:replan")
                 run.decisions.append(f"{decision.action}: {decision.reason}")
                 run.current_cycle = cycle
                 self._event(run, "cycle_decided", {
