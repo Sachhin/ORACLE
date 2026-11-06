@@ -33,7 +33,8 @@ Status reflects code currently present on the main branch; checked items are imp
 ## Milestone 4 — Real research capabilities
 - [x] Common run(context) -> result contract with optional Gemini suite for planner, researcher, explorer, hypothesis, skeptic, and experiment agents
 - [ ] Provider-backed auditor and literature-grounded novelty assessment
-- [ ] Adaptive model routing with quota-aware retries and fallback policy (Gemini request timeout is implemented)
+- [x] Bounded transient retries, timeouts, and quota-exhaustion detection for Gemini
+- [ ] Adaptive routing across multiple model providers and explicit fallback policy
 - [x] Bounded Europe PMC open-access full-text retrieval with strict Creative Commons licence checks
 - [x] GEO Series supplementary file discovery and size-capped download with SHA-256 checksums
 - [ ] Automatic parsing/normalization of downloaded GEO matrices and raw data into scientific evidence
