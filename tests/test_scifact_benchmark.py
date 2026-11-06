@@ -51,6 +51,29 @@ class SciFactBenchmarkTests(unittest.TestCase):
             self.assertEqual(report["abstract_level_evidence"]["correct"], 0)
             self.assertEqual(report["sentence_level_evidence"]["correct"], 0)
 
+
+    def test_rejects_prediction_sentence_outside_abstract(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            claims, corpus, predictions = [root / n for n in ("claims.jsonl", "corpus.jsonl", "pred.jsonl")]
+            claims.write_text(json.dumps({"id": 1, "claim": "A", "evidence": {}}) + "\\n")
+            corpus.write_text(json.dumps({"doc_id": 10, "abstract": ["only sentence"]}) + "\\n")
+            predictions.write_text(json.dumps({"id": 1, "evidence": {
+                "10": {"label": "SUPPORT", "sentences": [1]}}}) + "\\n")
+            with self.assertRaisesRegex(ValueError, "in-range abstract indices"):
+                evaluate_scifact(claims, corpus, predictions)
+
+    def test_rejects_gold_sentence_outside_abstract(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            claims, corpus, predictions = [root / n for n in ("claims.jsonl", "corpus.jsonl", "pred.jsonl")]
+            claims.write_text(json.dumps({"id": 1, "claim": "A", "evidence": {
+                "10": [{"label": "SUPPORT", "sentences": [2]}]}}) + "\\n")
+            corpus.write_text(json.dumps({"doc_id": 10, "abstract": ["only sentence"]}) + "\\n")
+            predictions.write_text(json.dumps({"id": 1, "evidence": {}}) + "\\n")
+            with self.assertRaisesRegex(ValueError, "gold sentence index is outside"):
+                evaluate_scifact(claims, corpus, predictions)
+
     def test_rejects_unlabelled_test_split(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
