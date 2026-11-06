@@ -41,8 +41,10 @@ Status reflects code currently present on the main branch. Checked items are imp
 - [x] Per-sample missingness/variance quality-control flags that preserve all original samples and never silently filter
 - [x] Preserve GEO sample accessions, titles, and characteristics for later explicitly defined group comparisons
 - [x] Explicit GEO quantile normalization for continuous microarray-like matrices and CPM/log2-CPM transforms for integer raw counts (separate output with checksums)
-- [ ] TMM/voom and platform-specific background-correction adapters with independently validated reference outputs
-- [ ] Explicit missing-value-aware normalization/imputation workflows with missingness provenance and bias evaluation
+- [x] TMM effective-library-size CPM/log2-CPM adapter with deterministic tests and factor provenance (independent edgeR reference validation still pending)
+- [ ] Limma-voom adapter with trusted reference outputs
+- [ ] Platform-specific background-correction adapters (require platform/raw probe-level inputs and reference datasets)
+- [x] Explicit row-median imputation for continuous matrices with a separate SHA-256 missingness mask and recorded imputation values (bias evaluation and alternative missingness models remain pending)
 - [x] Count-aware DESeq2 raw-count analysis with explicit categorical batch/covariate designs, rank-deficiency checks, and default median-of-ratios size-factor normalization
 - [x] Optional DESeq2 adapter for explicitly mapped raw integer-count two-group designs (external R runtime; CI subprocess mocked)
 - [x] Explicit-design Welch contrasts with BH-FDR for user-declared continuous log2 GEO matrices; raw counts rejected
@@ -50,7 +52,7 @@ Status reflects code currently present on the main branch. Checked items are imp
 - [x] Bounded incoming citation discovery for DOI-backed works via OpenAlex, with persisted source-linked citation records
 - [x] DOI-resolved directed citation graph ranking with degree counts and bounded PageRank
 - [x] Bounded multi-hop citation traversal with incoming/outgoing direction, shortest paths, and depth/node limits
-- [x] Bounded multi-hop incoming citation discovery via OpenAlex, adding DOI-backed metadata-only external nodes (outgoing external-reference expansion remains pending)
+- [x] Bounded multi-hop incoming citation discovery via OpenAlex and outgoing reference discovery via Crossref, adding DOI-backed metadata-only external nodes
 - [x] Explicit experiment lifecycle recording for proposed, simulated, performed, and evaluated states with execution provenance
 - [x] Domain-specific proposed protocol templates for plant, molecular, cell, and computational biology
 - [x] Deterministic GEO normalization adapters with input/output checksums and same-runtime byte-identical rerun check
