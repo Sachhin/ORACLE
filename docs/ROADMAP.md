@@ -39,6 +39,7 @@ Status reflects code currently present on the main branch. Checked items are imp
 - [x] GEO Series supplementary file discovery and size-capped download with SHA-256 checksums
 - [x] Bounded descriptive parsing of downloaded GEO TSV/CSV expression matrices with checksums, per-sample summaries, and source-linked dataset records
 - [x] Per-sample missingness/variance quality-control flags that preserve all original samples and never silently filter
+- [x] Preserve GEO sample accessions, titles, and characteristics for later explicitly defined group comparisons
 - [ ] GEO matrix normalization, quality-control diagnostics, differential-expression statistics, and reproducible domain adapters
 - [x] Bounded first-degree reference discovery from DOI-backed Crossref works
 - [ ] Incoming citation discovery, graph ranking, and broader citation-network exploration
