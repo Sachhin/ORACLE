@@ -28,6 +28,27 @@ class KnowledgeBase:
         run.sources.append(source)
         return source
 
+    def review_source_quality(
+        self, run: ResearchRun, source_id: str, reliability_score: float,
+        rationale: str,
+    ) -> SourceRecord:
+        """Record a human source-quality assessment and sync linked evidence weights."""
+        if not 0.0 <= reliability_score <= 1.0:
+            raise ValueError("Source reliability must be between 0 and 1.")
+        if not rationale.strip():
+            raise ValueError("A human quality-review rationale is required.")
+        source = next((item for item in run.sources if item.source_id == source_id), None)
+        if source is None:
+            raise ValueError(f"Unknown source: {source_id}")
+        source.reliability_score = reliability_score
+        source.reliability_rationale = rationale.strip()
+        source.quality_reviewer_note = rationale.strip()
+        source.quality_reviewed_at = utc_now()
+        for evidence in run.evidence:
+            if evidence.source_id == source_id:
+                evidence.reliability = reliability_score
+        return source
+
     def add_claim(self, run: ResearchRun, statement: str,
                   claim_type: str = "scientific") -> Claim:
         statement = statement.strip()
