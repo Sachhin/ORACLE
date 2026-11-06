@@ -24,7 +24,7 @@ full_sample_count <- ncol(x$counts)
 if (full_sample_count != 7) stop("Expected the published seven-sample GSE64099 experiment")
 fullanno <- x$genes
 sel <- rowSums(edgeR::cpm(x$counts) > 0.5) >= 3
-x <- x[sel, , keep.lib.sizes = FALSE]
+x <- x[sel, ]
 if (nrow(x$counts) < 100) stop("Unexpectedly few genes remain after the published CPM filter")
 x$genes <- x$genes[, c(1, 3), drop = FALSE]
 design <- model.matrix(~x$samples$group)
