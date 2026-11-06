@@ -1,6 +1,7 @@
 #!/usr/bin/env Rscript
 # Reproduce the submitter-published limma-voom E/weights for GSE176261
 # Diagnostic cohort job runs independently of the discovery and GSE64099 jobs.
+# Report remains explicit if the pre-registered tolerance is not met.
 # and compare them with the frozen GEO supplementary reference matrices.
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args) != 4L) {
