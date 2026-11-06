@@ -47,7 +47,7 @@ class GEOReferenceTests(unittest.TestCase):
     def test_downstream_bias_requires_explicit_complete_two_group_design(self):
         with self.assertRaisesRegex(ValueError, "cover every matrix sample"):
             evaluate_imputation_downstream_bias(self.path, {"A":"x"}, group_a="x", group_b="y")
-        with self.assertRaisesRegex(ValueError, "exactly the two requested groups"):
+        with self.assertRaisesRegex(ValueError, "Exactly the two requested groups"):
             evaluate_imputation_downstream_bias(
                 self.path, {"A":"x","B":"y","C":"z"}, group_a="x", group_b="y")
     def test_invalid_mechanism_rejected(self):
