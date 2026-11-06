@@ -40,7 +40,8 @@ Status reflects code currently present on the main branch. Checked items are imp
 - [x] Bounded descriptive parsing of downloaded GEO TSV/CSV expression matrices with checksums, per-sample summaries, and source-linked dataset records
 - [x] Per-sample missingness/variance quality-control flags that preserve all original samples and never silently filter
 - [x] Preserve GEO sample accessions, titles, and characteristics for later explicitly defined group comparisons
-- [ ] GEO matrix normalization and count-aware RNA-seq differential-expression adapters with covariates/batch design
+- [ ] General GEO matrix normalization beyond DESeq2 raw-count workflows
+- [x] Count-aware DESeq2 raw-count analysis with explicit categorical batch/covariate designs, rank-deficiency checks, and default median-of-ratios size-factor normalization
 - [x] Optional DESeq2 adapter for explicitly mapped raw integer-count two-group designs (external R runtime; CI subprocess mocked)
 - [x] Explicit-design Welch contrasts with BH-FDR for user-declared continuous log2 GEO matrices; raw counts rejected
 - [x] Bounded first-degree reference discovery from DOI-backed Crossref works
