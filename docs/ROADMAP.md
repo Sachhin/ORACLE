@@ -48,7 +48,8 @@ Status reflects code currently present on the main branch. Checked items are imp
 - [x] Bounded incoming citation discovery for DOI-backed works via OpenAlex, with persisted source-linked citation records
 - [ ] Citation graph ranking, traversal, and broader citation-network exploration
 - [x] Explicit experiment lifecycle recording for proposed, simulated, performed, and evaluated states with execution provenance
-- [ ] Domain-specific experiment protocols and reproducible analysis adapters
+- [x] Domain-specific proposed protocol templates for plant, molecular, cell, and computational biology
+- [ ] Reproducible domain-specific analysis adapters and independent rerun verification
 
 ## Milestone 5 — Evaluation and scientific validation
 - [x] Cross-domain golden-question integrity benchmark for the deterministic baseline
