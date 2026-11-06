@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from oracle.geo_normalization import normalize_geo_matrix
+from oracle.geo_normalization import normalize_geo_matrix, verify_geo_normalization_rerun
 
 
 class GEONormalizationTests(unittest.TestCase):
@@ -63,6 +63,19 @@ class GEONormalizationTests(unittest.TestCase):
         continuous = self.write("continuous.tsv", "gene\tA\tB\ng1\t1.5\t2\n")
         with self.assertRaisesRegex(ValueError, "non-negative integer raw counts"):
             normalize_geo_matrix(continuous, self.root / "bad.tsv", "cpm")
+
+
+    def test_rerun_verification_compares_output_checksums(self):
+        source = self.write(
+            "repeat.tsv",
+            "gene\\tA\\tB\\ng1\\t1\\t3\\ng2\\t4\\t2\\n",
+        )
+        report = verify_geo_normalization_rerun(
+            source, self.root / "repeat.normalized.tsv", "quantile",
+        )
+        self.assertTrue(report["byte_identical"])
+        self.assertEqual(report["first_output_sha256"], report["repeat_output_sha256"])
+        self.assertIn("Same-runtime", report["verification_scope"])
 
     def test_rejects_invalid_inputs_and_never_overwrites_raw_file(self):
         source = self.write("raw.tsv", "gene\tA\tB\ng1\t1\t2\n")
