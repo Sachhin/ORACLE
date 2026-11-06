@@ -96,6 +96,8 @@ def build_parser() -> argparse.ArgumentParser:
                                  help="Find source-backed claim pairs across runs for human review")
     portfolio_group.add_argument("--show-cross-run-links", nargs="?", const="",
                                  help="Show persisted cross-run claim links; optionally filter by run ID")
+    portfolio_group.add_argument("--rank-citation-graph", metavar="RUN_ID",
+                                 help="Rank source records in a DOI-resolved citation graph")
     portfolio_group.add_argument("--show-deseq2", metavar="RUN_ID",
                                  help="Show persisted DESeq2 analyses and provisional candidate findings")
     portfolio_group.add_argument("--show-reviews", metavar="RUN_ID",
@@ -660,7 +662,8 @@ def main() -> None:
         return
     if (args.portfolio or args.assess_gaps or args.related_to is not None or args.show_reviews
             or args.show_tasks or args.show_hypotheses or args.show_sources or args.show_connections
-            or args.cross_run_candidates or args.show_cross_run_links is not None):
+            or args.cross_run_candidates or args.show_cross_run_links is not None
+            or args.rank_citation_graph):
         from dataclasses import asdict
         from .portfolio import ResearchPortfolio
         portfolio = ResearchPortfolio(store)
@@ -674,6 +677,23 @@ def main() -> None:
                     print(f"- {item['run_id']} | {item['status']} | gap score {item['knowledge_gap_score']}/100")
                     print(f"  {item['question']}")
                     print(f"  Sources: {item['sources']} | Evidence: {item['evidence']} | Claims: {item['claims']} | Hypotheses: {item['hypotheses']}")
+            return
+        if args.rank_citation_graph:
+            run = store.load_run(args.rank_citation_graph)
+            if run is None:
+                raise SystemExit(f"Research run not found: {args.rank_citation_graph}")
+            from .citation_graph import rank_citation_graph
+            report = rank_citation_graph(run, limit=args.limit)
+            if args.json:
+                print(json.dumps(report, indent=2, ensure_ascii=False))
+            else:
+                print(f"Citation graph: {report['nodes']} source nodes | {report['resolved_edges']} resolved edges")
+                print(f"Unresolved citation records: {report['unresolved_citation_records']}")
+                for item in report["ranked_sources"]:
+                    print(f"- {item['source_id']} | PageRank {item['pagerank']:.6f} | "
+                          f"in {item['incoming_edges']} | out {item['outgoing_edges']}")
+                    print(f"  {item['title']} | DOI {item['doi'] or 'unknown'}")
+                print("Limitations: " + report["limitations"])
             return
         if args.cross_run_candidates:
             items = portfolio.cross_run_claim_candidates(args.cross_run_candidates, limit=args.limit)
