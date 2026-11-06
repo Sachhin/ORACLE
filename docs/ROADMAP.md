@@ -67,7 +67,7 @@ Status reflects code currently present on the main branch. Checked items are imp
 - [x] Reproducibility and regression suite across Python 3.10–3.14 CI matrix
 - [x] High-impact claim review requires independent source groups, reviewer identity, and rationale
 - [x] Performed-experiment execution provenance requires independent human acceptance before evaluation
-- [ ] Independent validation that model outputs improve scientific reasoning over deterministic baselines (matched-answer scoring workflow exists; controlled multi-run evaluation remains pending)
+- [ ] Empirical validation that model outputs improve scientific reasoning over deterministic baselines (paired same-source human scoring and bootstrap evaluator implemented; populated blinded evaluations remain pending)
 
 ## Explicit non-goals until validated
 - No automatic promotion of model-generated candidates to facts.
