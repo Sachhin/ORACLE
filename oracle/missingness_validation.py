@@ -22,7 +22,7 @@ _MISSING = {"", "NA", "N/A", "NaN", "nan", "null", "NULL"}
 
 def _read_matrix(path: str | Path) -> tuple[list[str], dict[str, dict[str, float | None]]]:
     with Path(path).open("r", encoding="utf-8-sig", newline="") as handle:
-        reader = csv.DictReader(handle, delimiter="\\t")
+        reader = csv.DictReader(handle, delimiter="\t")
         if not reader.fieldnames or len(reader.fieldnames) < 3:
             raise ValueError(f"{path}: expected feature ID plus at least two sample columns")
         feature_col = reader.fieldnames[0]
@@ -103,7 +103,7 @@ def _sha256(path: str | Path) -> str:
 
 def _read_labels(path: str | Path, samples: list[str], column: str):
     with Path(path).open("r", encoding="utf-8-sig", newline="") as handle:
-        reader = csv.DictReader(handle, delimiter="\\t")
+        reader = csv.DictReader(handle, delimiter="\t")
         if not reader.fieldnames or not {"sample_id", column}.issubset(reader.fieldnames):
             raise ValueError(f"labels file requires sample_id and {column!r} columns")
         labels = {}
