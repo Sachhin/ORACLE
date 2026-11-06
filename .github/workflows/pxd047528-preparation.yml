@@ -64,15 +64,15 @@ jobs:
             --dia-peptides data/pxd047528/source/datasets/blood_hiv_dda_dia/dia/peptides.tsv \
             --output-dir data/pxd047528/prepared
           python - <<'PY'
-          import hashlib, json
+          import json
           from pathlib import Path
           manifest = Path("data/pxd047528/prepared/preparation_manifest.json")
           data = json.loads(manifest.read_text())
-          archive = Path("data/pepermint/data.zip")
-          data["source_archive_sha256"] = hashlib.sha256(archive.read_bytes()).hexdigest()
+          data["source_archive_url"] = "https://zenodo.org/records/11216899/files/data.zip?download=1"
+          data["source_access_mode"] = "HTTP Range; only four selected TSV members fetched"
           data["source_protein_files"] = {
-              "dda": str(Path("data/pxd047528/source/dda/proteins.tsv")),
-              "dia": str(Path("data/pxd047528/source/dia/proteins.tsv")),
+              "dda": str(Path("data/pxd047528/source/datasets/blood_hiv_dda_dia/dda/proteins.tsv")),
+              "dia": str(Path("data/pxd047528/source/datasets/blood_hiv_dda_dia/dia/proteins.tsv")),
           }
           manifest.write_text(json.dumps(data, indent=2) + "\n")
           PY
@@ -89,8 +89,7 @@ jobs:
           name: oracle-pxd047528-real-missingness-preparation
           path: |
             data/pxd047528/prepared/
-            data/pxd047528/source/dda/proteins.tsv
-            data/pxd047528/source/dia/proteins.tsv
-            data/pxd047528/source_archive.sha256
+            data/pxd047528/source/datasets/blood_hiv_dda_dia/dda/proteins.tsv
+            data/pxd047528/source/datasets/blood_hiv_dda_dia/dia/proteins.tsv
           if-no-files-found: error
           retention-days: 90
