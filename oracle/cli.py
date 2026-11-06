@@ -25,7 +25,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--provider", choices=["both", "all", "europepmc", "crossref", "geo"], default="both")
     parser.add_argument("--mailto", default="", help="Optional contact email for Crossref polite pool")
     parser.add_argument("--extract-claims", action="store_true", help="Extract quote-grounded candidates with Gemini")
-    parser.add_argument("--gemini-model", default="gemini-2.5-flash", help="Gemini model for claim extraction and comparison")
+    parser.add_argument("--gemini-model", default="gemini-2.5-flash", help="Gemini model for optional claim extraction, comparison, or research agents")
+    parser.add_argument("--agent-provider", choices=["deterministic", "gemini"], default="deterministic",
+                        help="Research-agent backend; deterministic remains the safe default")
     parser.add_argument("--compare-papers", action="store_true", help="Compare extracted claims across distinct papers")
     return parser
 
@@ -65,7 +67,11 @@ def main() -> None:
             print(f"Cross-paper comparison: {comparison_report.comparisons_created} review candidates from {comparison_report.pairs_submitted} pairs; {comparison_report.comparisons_rejected} rejected.")
             print("Comparisons are pending review; no claim status or evidence stance was changed.")
         return
-    orchestrator = OracleOrchestrator(store)
+    agent_suite = None
+    if args.agent_provider == "gemini":
+        from .model_agents import GeminiAgentSuite
+        agent_suite = GeminiAgentSuite(model=args.gemini_model)
+    orchestrator = OracleOrchestrator(store, agent_suite=agent_suite)
     if args.resume_id:
         run = orchestrator.resume(args.resume_id, additional_cycles=args.cycles)
     else:
