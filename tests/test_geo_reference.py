@@ -19,7 +19,7 @@ class GEOReferenceTests(unittest.TestCase):
         b = evaluate_row_median_imputation(self.path, missing_fraction=.2, replicates=5, seed=7)
         self.assertEqual(a, b)
         self.assertGreater(a["masked_values"], 0)
-        self.assertIn("MCAR", a["limitations"])
+        self.assertIn("missingness mechanism", a["limitations"])
     def test_mar_and_mnar_diagnostics_are_reproducible_and_distinct(self):
         mar = evaluate_row_median_imputation(self.path, missing_fraction=.2, replicates=5, seed=7, mechanism="MAR")
         mnar = evaluate_row_median_imputation(self.path, missing_fraction=.2, replicates=5, seed=7, mechanism="MNAR")
