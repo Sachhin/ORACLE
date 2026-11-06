@@ -75,12 +75,12 @@ def benchmark_pxd000279(input_path: str | Path, *, seed: int = 1729) -> dict:
         group_assignment_method = "explicit sample labels in LFQ headers"
         if len(group10) != 3 or len(group30) != 3:
             # The published DEqMS PXD000279 workflow selects proteinGroups
-            # columns 89:94 (1-based), treating the first three as H and the
-            # final three as L. In the Cox mixture, H is Ecoli10 and L is
-            # Ecoli30 because the HeLa background is held constant while E. coli
-            # input rises from 10 to 30 micrograms. The MaxQuant headers in the
-            # deposited archive are run identifiers, not condition labels.
-            # Source: https://rdrr.io/github/yafeng/DEqMS/f/vignettes/DEqMS-package-vignette.Rmd
+            # columns 89:94 (1-based), with the first three labelled H and the
+            # final three L. DEqMS defines the contrast as H-L and its published
+            # example reports positive E. coli logFC values; therefore H is the
+            # high-spike Ecoli30 group and L is the low-spike Ecoli10 group.
+            # MaxQuant headers are run identifiers, not condition labels.
+            # Source: https://bioconductor.org/packages/release/bioc/vignettes/DEqMS/inst/doc/DEqMS-package-vignette.html
             canonical = fields[88:94]
             if len(canonical) == 6 and all(c.startswith("LFQ intensity ") for c in canonical):
                 intensity_cols = canonical
