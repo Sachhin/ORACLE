@@ -1,6 +1,6 @@
 # Implementation Roadmap
 
-Status reflects code currently present on the main branch. Checked items are implemented and covered by tests; they do not imply scientific validity or live-provider verification.
+Status reflects code currently present on the main branch. Checked items are implemented and covered by tests; they do not imply scientific validity or live-provider verification. Gemini auditor and novelty behavior has unit-level contract tests, but live model quality remains unvalidated.
 
 ## Milestone 1 — Offline foundation
 - [x] Domain models and integrity-oriented statuses
@@ -24,15 +24,15 @@ Status reflects code currently present on the main branch. Checked items are imp
 
 ## Milestone 3 — Discovery quality
 - [x] Transparent knowledge-gap scoring based on source, claim-review, hypothesis, contradiction, and task coverage
-- [ ] Literature-grounded novelty assessment (provisional; never a priority claim)
+- [x] Literature-grounded novelty triage with validated source IDs (provisional; never a priority claim)
 - [ ] Provenance-backed cross-domain connection proposals
 - [x] Research portfolio for saved runs and lexical retrieval of related prior questions
 - [ ] Shared cross-run scientific knowledge graph with reviewed cross-run claim/evidence reuse
 - [x] Task acceptance criteria, source-backed completion, blocked/retry states, and bounded attempt counts
 
 ## Milestone 4 — Real research capabilities
-- [x] Common run(context) -> result contract with optional Gemini suite for planner, researcher, explorer, hypothesis, skeptic, and experiment agents
-- [ ] Provider-backed auditor and literature-grounded novelty assessment
+- [x] Common run(context) -> result contract with optional Gemini suite for planner, researcher, explorer, hypothesis, skeptic, experiment, auditor, and novelty agents
+- [x] Provider-backed provisional auditor and literature-grounded novelty triage
 - [x] Bounded transient retries, timeouts, and quota-exhaustion detection for Gemini
 - [ ] Adaptive routing across multiple model providers and explicit fallback policy
 - [x] Bounded Europe PMC open-access full-text retrieval with strict Creative Commons licence checks
