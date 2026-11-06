@@ -186,6 +186,18 @@ class ResearchStore:
         return [{"event_type": r["event_type"], "payload": json.loads(r["payload"]),
                  "created_at": r["created_at"], "event_key": r["event_key"]} for r in rows]
 
+
+    def list_runs(self, limit: int = 100) -> list[dict[str, Any]]:
+        """List recent research runs without loading every full knowledge graph."""
+        if not 1 <= limit <= 500:
+            raise ValueError("limit must be between 1 and 500.")
+        with self._connect() as db:
+            rows = db.execute(
+                "SELECT run_id,status,question,updated_at FROM runs ORDER BY updated_at DESC LIMIT ?",
+                (limit,),
+            ).fetchall()
+        return [dict(row) for row in rows]
+
     def list_resumable_runs(self) -> list[dict[str, Any]]:
         with self._connect() as db:
             rows = db.execute(
