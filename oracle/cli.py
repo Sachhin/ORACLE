@@ -33,6 +33,16 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--compare-papers", action="store_true", help="Compare extracted claims across distinct papers")
     parser.add_argument("--review-evidence", action="store_true",
                         help="Ask Gemini for quote-grounded support/refute/contextual suggestions; requires human review")
+    parser.add_argument("--experiment-action", choices=["simulate", "perform", "evaluate"],
+                        help="Record a simulation, a real performed experiment, or its evaluation")
+    parser.add_argument("--experiment-run", help="Research run ID containing the experiment")
+    parser.add_argument("--experiment-id", help="Experiment ID to update")
+    parser.add_argument("--simulation-engine", default="", help="Name/version of the simulation engine")
+    parser.add_argument("--simulation-limitations", default="", help="Limitations of the simulation")
+    parser.add_argument("--execution-method", default="", help="Method/protocol used for the real experiment")
+    parser.add_argument("--operator", default="", help="Person or lab recording the real experiment")
+    parser.add_argument("--experiment-results", default="", help="Recorded experiment or simulation results")
+    parser.add_argument("--evaluation-note", default="", help="Human evaluation note")
     portfolio_group = parser.add_mutually_exclusive_group()
     portfolio_group.add_argument("--portfolio", action="store_true",
                                  help="List saved research runs and their heuristic knowledge-gap scores")
@@ -46,6 +56,40 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> None:
     args = build_parser().parse_args()
     store = ResearchStore(args.db)
+    if args.experiment_action:
+        if not args.experiment_run or not args.experiment_id:
+            raise SystemExit("--experiment-action requires --experiment-run and --experiment-id.")
+        run = store.load_run(args.experiment_run)
+        if run is None:
+            raise SystemExit(f"Research run not found: {args.experiment_run}")
+        from .experiment_manager import ExperimentManager
+        manager = ExperimentManager()
+        if args.experiment_action == "simulate":
+            if not args.simulation_engine or not args.experiment_results or not args.simulation_limitations:
+                raise SystemExit("simulate requires --simulation-engine, --experiment-results, and --simulation-limitations.")
+            experiment = manager.record_simulation(
+                run, args.experiment_id, args.simulation_engine,
+                args.experiment_results, args.simulation_limitations,
+            )
+        elif args.experiment_action == "perform":
+            if not args.execution_method or not args.operator or not args.experiment_results:
+                raise SystemExit("perform requires --execution-method, --operator, and --experiment-results.")
+            experiment = manager.record_performed(
+                run, args.experiment_id, args.execution_method, args.operator,
+                args.experiment_results,
+            )
+        else:
+            if not args.evaluation_note:
+                raise SystemExit("evaluate requires --evaluation-note.")
+            experiment = manager.mark_evaluated(run, args.experiment_id, args.evaluation_note)
+        store.save_run(run)
+        payload = {"run_id": run.run_id, "experiment": experiment.__dict__}
+        if args.json:
+            print(json.dumps(payload, indent=2, ensure_ascii=False))
+        else:
+            print(f"Experiment {experiment.experiment_id}: {experiment.status.value} ({experiment.execution_kind})")
+            print(experiment.limitations)
+        return
     if args.portfolio or args.assess_gaps or args.related_to is not None:
         from dataclasses import asdict
         from .portfolio import ResearchPortfolio
@@ -150,7 +194,9 @@ def main() -> None:
     print(f"Status: {run.status.value} | Mode: {run.mode.value} | Cycles: {run.current_cycle}/{run.max_cycles}")
     print(f"Claims: {len(run.claims)} | Evidence: {len(run.evidence)} | Links: {len(run.evidence_claim_links)}")
     print(f"Hypothesis groups: {len(run.hypothesis_groups)} | Hypotheses: {len(run.hypotheses)}")
-    print(f"Experiments: {len(run.experiments)} (proposed, not performed)")
+    experiment_counts = {status.value: sum(1 for item in run.experiments if item.status == status)
+                         for status in __import__("oracle.models", fromlist=["ExperimentStatus"]).ExperimentStatus}
+    print("Experiments: " + " | ".join(f"{name}: {count}" for name, count in experiment_counts.items()))
     print("\nFindings and limitations:")
     for finding in run.findings:
         print(f"- {finding}")
