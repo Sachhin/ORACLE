@@ -67,7 +67,6 @@ jobs:
 
   gse176261-validation-cohort:
     name: GSE176261 same-study validation cohort
-    needs: gse176260-reference
     runs-on: ubuntu-latest
     container:
       image: bioconductor/bioconductor_docker:RELEASE_3_22
@@ -127,7 +126,6 @@ jobs:
 
   gse64099-independent-dataset:
     name: GSE64099 independent Smchd1 GEO experiment
-    needs: gse176260-reference
     runs-on: ubuntu-latest
     container:
       image: bioconductor/bioconductor_docker:RELEASE_3_22
