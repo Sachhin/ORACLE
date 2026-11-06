@@ -109,23 +109,7 @@ jobs:
         if: always()
         run: |
           if [ -f validation-artifacts/gse176261-reference-report.json ]; then
-            python - <<'PY'
-          import json, os
-          from pathlib import Path
-          report = json.loads(Path("validation-artifacts/gse176261-reference-report.json").read_text())
-          e, w = report["expression_matrix_metrics"], report["precision_weight_metrics"]
-          lines = [
-              "### GSE176261 same-study validation cohort",
-              f"- Status: **{report['status']}**",
-              f"- Expression RMSE: {e['rmse']} (limit {report['acceptance_thresholds']['expression_rmse_max']})",
-              f"- Expression Pearson r: {e['pearson_r']}",
-              f"- Voom weights RMSE: {w['rmse']} (limit {report['acceptance_thresholds']['weights_rmse_max']})",
-              f"- Voom weights Pearson r: {w['pearson_r']}",
-              "- This is a numerical comparison result; FAIL_NUMERICAL_TOLERANCE remains a failure and is not re-labelled as PASS."
-          ]
-          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as out:
-              out.write("\n".join(lines) + "\n")
-          PY
+            Rscript -e 'r <- jsonlite::fromJSON("validation-artifacts/gse176261-reference-report.json"); e <- r$expression_matrix_metrics; w <- r$precision_weight_metrics; lines <- c("### GSE176261 same-study validation cohort", paste0("- Status: **", r$status, "**"), paste0("- Expression RMSE: ", e$rmse, " (limit ", r$acceptance_thresholds$expression_rmse_max, ")"), paste0("- Expression Pearson r: ", e$pearson_r), paste0("- Voom weights RMSE: ", w$rmse, " (limit ", r$acceptance_thresholds$weights_rmse_max, ")"), paste0("- Voom weights Pearson r: ", w$pearson_r), "- FAIL_NUMERICAL_TOLERANCE remains a failure; it is not re-labelled as PASS."); write(lines, file=Sys.getenv("GITHUB_STEP_SUMMARY"), append=TRUE)'
           else
             echo "GSE176261 report was not produced; inspect the comparison step logs." >> "$GITHUB_STEP_SUMMARY"
           fi
