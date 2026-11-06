@@ -30,8 +30,8 @@ class GEOReferenceTests(unittest.TestCase):
         self.assertGreater(mnar["masked_values"], 0)
     def test_downstream_imputation_bias_is_reproducible_for_mnar(self):
         matrix = Path(self.tmp.name) / "four-sample.tsv"
-        matrix.write_text("gene\\tC1\\tC2\\tT1\\tT2\\n" + "".join(
-            f"g{i}\\t{i*10+2}\\t{i*8+3}\\t{i*12+1}\\t{i*13+2}\\n" for i in range(1, 61)
+        matrix.write_text("gene\tC1\tC2\tT1\tT2\n" + "".join(
+            f"g{i}\t{i*10+2}\t{i*8+3}\t{i*12+1}\t{i*13+2}\n" for i in range(1, 61)
         ), encoding="utf-8")
         labels = {"C1":"control", "C2":"control", "T1":"treated", "T2":"treated"}
         a = evaluate_imputation_downstream_bias(
