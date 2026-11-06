@@ -75,7 +75,7 @@ class PXD000279MixtureBenchmarkTests(unittest.TestCase):
             with path.open("w", newline="", encoding="utf-8") as handle:
                 writer = csv.writer(handle, delimiter="\t")
                 writer.writerow(["Fasta headers", *[f"LFQ intensity sample{i}" for i in range(6)]])
-            with self.assertRaisesRegex(ValueError, "Could not identify three Ecoli10 and three Ecoli30"):
+            with self.assertRaisesRegex(ValueError, "published PXD000279 LFQ columns 89:94"):
                 benchmark_pxd000279(path)
 
 
