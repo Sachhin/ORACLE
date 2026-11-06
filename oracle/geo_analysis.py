@@ -22,6 +22,7 @@ class GEOAnalysisReport:
     files_examined: int = 0
     files_analyzed: int = 0
     files_skipped: int = 0
+    samples_flagged: int = 0
     warnings: list[str] = field(default_factory=list)
 
 
@@ -30,6 +31,8 @@ class _Accumulator:
         self.count = 0
         self.missing = 0
         self.total = 0.0
+        self.mean_value = 0.0
+        self.m2 = 0.0
         self.minimum: float | None = None
         self.maximum: float | None = None
 
@@ -39,12 +42,19 @@ class _Accumulator:
             return
         self.count += 1
         self.total += value
+        delta = value - self.mean_value
+        self.mean_value += delta / self.count
+        self.m2 += delta * (value - self.mean_value)
         self.minimum = value if self.minimum is None else min(self.minimum, value)
         self.maximum = value if self.maximum is None else max(self.maximum, value)
 
     @property
     def mean(self) -> float | None:
         return self.total / self.count if self.count else None
+
+    @property
+    def sample_variance(self) -> float | None:
+        return self.m2 / (self.count - 1) if self.count > 1 else (0.0 if self.count == 1 else None)
 
 
 class GEOExpressionAnalyzer:
@@ -57,14 +67,18 @@ class GEOExpressionAnalyzer:
 
     def __init__(self, max_uncompressed_bytes: int = 100_000_000,
                  max_rows: int = 100_000, max_samples: int = 5_000,
-                 max_cells: int = 2_000_000):
+                 max_cells: int = 2_000_000,
+                 max_missing_fraction: float = 0.20):
         if (max_uncompressed_bytes < 1024 or max_rows < 1
                 or max_samples < 1 or max_cells < 1):
             raise ValueError("GEO analysis limits must be positive.")
         self.max_uncompressed_bytes = max_uncompressed_bytes
         self.max_rows = max_rows
         self.max_samples = max_samples
+        if not 0.0 <= max_missing_fraction <= 1.0:
+            raise ValueError("max_missing_fraction must be between 0 and 1.")
         self.max_cells = max_cells
+        self.max_missing_fraction = max_missing_fraction
 
     @classmethod
     def _supported(cls, filename: str) -> bool:
@@ -155,6 +169,13 @@ class GEOExpressionAnalyzer:
             "mean": item.mean,
             "minimum": item.minimum,
             "maximum": item.maximum,
+            "sample_variance": item.sample_variance,
+            "missing_fraction": item.missing / feature_rows if feature_rows else 1.0,
+            "qc_flags": (
+                (["high_missingness"] if feature_rows and item.missing / feature_rows > self.max_missing_fraction else [])
+                + (["no_numeric_values"] if item.count == 0 else [])
+                + (["constant_values"] if item.count > 1 and item.sample_variance == 0 else [])
+            ),
         } for index, item in enumerate(accumulators)]
         return (summaries, feature_rows, global_stats.count, global_stats.missing,
                 float(global_stats.mean), float(global_stats.minimum),
@@ -206,11 +227,13 @@ class GEOExpressionAnalyzer:
                     sample_summaries=samples,
                 )
                 run.dataset_analyses.append(analysis)
+                report.samples_flagged += sum(bool(item["qc_flags"]) for item in samples)
                 summary = (
                     f"Descriptive matrix parse of {dataset_file.filename}: {rows} feature rows, "
                     f"{len(samples)} sample columns, {numeric} finite numeric cells, "
                     f"{missing} missing/non-numeric cells; range {minimum:g} to {maximum:g}, "
-                    f"mean {mean:g}. No normalization or inferential test was performed."
+                    f"mean {mean:g}. Sample QC flagged {sum(bool(item['qc_flags']) for item in samples)} "
+                    f"of {len(samples)} columns. No samples were removed; no normalization or inferential test was performed."
                 )
                 evidence = Evidence(
                     claim=summary,
@@ -232,6 +255,6 @@ class GEOExpressionAnalyzer:
                 report.warnings.append(f"{dataset_file.filename}: {exc}")
         run.findings.append(
             f"GEO matrix analysis: {report.files_analyzed} supported text matrices parsed; "
-            f"{report.files_skipped} files skipped or unavailable. Descriptive only."
+            f"{report.files_skipped} files skipped or unavailable; {report.samples_flagged} sample columns flagged by descriptive QC. No samples were removed."
         )
         return report
