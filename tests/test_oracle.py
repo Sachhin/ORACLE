@@ -1170,7 +1170,7 @@ class OracleTests(unittest.TestCase):
                 encoding="utf-8",
             )
             return SimpleNamespace(returncode=0, stdout="4.4.0\t1.42.0", stderr="")
-        with patch("oracle.geo_deseq2.shutil.which", return_value="/usr/bin/Rscript"), \\
+        with patch("oracle.geo_deseq2.shutil.which", return_value="/usr/bin/Rscript"), \
              patch("oracle.geo_deseq2.subprocess.run", side_effect=fake_run):
             result = GEOCountAnalyzer().analyze(
                 matrix, groups, "control", "treated", covariates=covariates,
