@@ -663,5 +663,74 @@ class OracleTests(unittest.TestCase):
         self.assertFalse(OpenAccessFullTextClient.license_allowed("CC BY-ND 4.0"))
         self.assertFalse(OpenAccessFullTextClient.license_allowed("unknown"))
 
+
+    def test_geo_supplementary_file_discovery_uses_ncbi_accession_layout(self):
+        from oracle.geo_data import GEOSupplementaryClient
+        from oracle.models import SourceRecord
+
+        self.assertTrue(GEOSupplementaryClient.series_directory("GSE123456").endswith(
+            "/geo/series/GSE123nnn/GSE123456/suppl/"
+        ))
+        self.assertTrue(GEOSupplementaryClient.series_directory("GSE1000").endswith(
+            "/geo/series/GSE1nnn/GSE1000/suppl/"
+        ))
+        html = """
+        <html><body>
+        <a href="../">Parent</a>
+        <a href="GSE123456_RAW.tar">GSE123456_RAW.tar</a>
+        <a href="GSE123456_series_matrix.txt.gz">matrix</a>
+        <a href="subdirectory/">subdirectory</a>
+        <a href="https://example.org/unsafe.tar">unsafe</a>
+        </body></html>
+        """
+        files = GEOSupplementaryClient.parse_listing(
+            html, GEOSupplementaryClient.series_directory("GSE123456")
+        )
+        self.assertEqual([name for name, _ in files], [
+            "GSE123456_RAW.tar", "GSE123456_series_matrix.txt.gz"
+        ])
+
+        run = ResearchRun("GEO discovery")
+        source = SourceRecord(title="GEO study", source_id="geo-1", dataset_accession="GSE123456")
+        run.sources.append(source)
+        client = GEOSupplementaryClient()
+        client._fetch_listing = lambda url: html
+        report = client.discover(run)
+        self.assertEqual(report.files_discovered, 2)
+        self.assertEqual(len(run.dataset_files), 2)
+        self.assertTrue(all(item.status == "discovered" for item in run.dataset_files))
+
+    def test_geo_download_is_size_capped_and_checksum_recorded(self):
+        from io import BytesIO
+        from unittest.mock import patch
+        from oracle.geo_data import GEOSupplementaryClient
+        from oracle.models import DatasetFileRecord
+
+        run = ResearchRun("GEO bounded download")
+        item = DatasetFileRecord(
+            accession="GSE123456", source_id="geo-1", filename="matrix.txt.gz",
+            url="https://ftp.ncbi.nlm.nih.gov/geo/series/GSE123nnn/GSE123456/suppl/matrix.txt.gz",
+        )
+        run.dataset_files.append(item)
+
+        class FakeResponse(BytesIO):
+            headers = {"Content-Length": "12"}
+            def __enter__(self): return self
+            def __exit__(self, *args): self.close()
+
+        with tempfile.TemporaryDirectory() as directory:
+            with patch("oracle.geo_data.urlopen", return_value=FakeResponse(b"sample-data!")):
+                report = GEOSupplementaryClient().download(
+                    run, output_dir=directory, max_file_bytes=1_000_000
+                )
+            self.assertEqual(report.files_downloaded, 1)
+            self.assertEqual(item.status, "downloaded")
+            self.assertEqual(item.size_bytes, 12)
+            self.assertTrue(item.sha256)
+            self.assertTrue(Path(item.local_path).exists())
+            self.store.save_run(run)
+            loaded = self.store.load_run(run.run_id)
+            self.assertEqual(loaded.dataset_files[0].sha256, item.sha256)
+
 if __name__ == "__main__":
     unittest.main()
