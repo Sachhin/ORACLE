@@ -901,5 +901,32 @@ class OracleTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             kb.review_source_quality(run, source.source_id, 0.8, "")
 
+
+    def test_crossref_citation_network_persists_first_degree_references(self):
+        from oracle.citation_network import CrossrefCitationClient
+        from oracle.models import SourceRecord
+
+        run = ResearchRun("Citation network")
+        source = SourceRecord(
+            title="Primary paper", source_id="citation-source",
+            doi="10.1000/primary",
+        )
+        run.sources.append(source)
+        client = CrossrefCitationClient()
+        client._get_json = lambda doi: {"message": {"reference": [
+            {"DOI": "10.1000/ref-a", "article-title": "Referenced paper A", "author": "A Author", "year": "2020"},
+            {"unstructured": "An older source without DOI"},
+            {"DOI": "10.1000/ref-a", "article-title": "Referenced paper A", "year": "2020"},
+        ]}}
+        report = client.discover(run)
+        self.assertEqual(report.sources_examined, 1)
+        self.assertEqual(report.links_created, 2)
+        self.assertEqual(report.references_without_doi, 1)
+        self.store.save_run(run)
+        loaded = self.store.load_run(run.run_id)
+        self.assertEqual(len(loaded.citation_links), 2)
+        self.assertEqual(loaded.citation_links[0].source_id, source.source_id)
+        self.assertEqual(loaded.citation_links[0].target_doi, "10.1000/ref-a")
+
 if __name__ == "__main__":
     unittest.main()
