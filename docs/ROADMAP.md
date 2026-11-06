@@ -42,7 +42,9 @@ Status reflects code currently present on the main branch. Checked items are imp
 - [x] Preserve GEO sample accessions, titles, and characteristics for later explicitly defined group comparisons
 - [x] Explicit GEO quantile normalization for continuous microarray-like matrices and CPM/log2-CPM transforms for integer raw counts (separate output with checksums)
 - [x] TMM effective-library-size CPM/log2-CPM adapter with deterministic tests and factor provenance; optional same-matrix edgeR factor comparison CLI added (live edgeR 4.10.7 comparison now runs in CI with a numerical tolerance assertion)
-- [x] Optional limma-voom adapter with explicit two-group raw-count design, R/edgeR/limma version provenance, checksum, and mocked-subprocess tests (trusted reference-output comparison remains pending)
+- [x] Optional limma-voom adapter with explicit two-group raw-count design, R/edgeR/limma version provenance, checksum, and mocked-subprocess tests
+- [x] Live adapter parity test against a separately executed limma/edgeR reference script on a fixed 300-feature count matrix (same Bioconductor implementation; checks serialization/reproducibility, not independent algorithm accuracy)
+- [ ] Independent limma-voom implementation/reference comparison on external real datasets
 - [x] Optional Affymetrix CEL RMA adapter for explicit affy/oligo package families, with input checksums, software provenance, bounded execution, and mocked contract tests (real CEL/reference validation and platform annotation remain pending)
 - [x] Explicit row-median imputation for continuous matrices with a separate SHA-256 missingness mask and recorded imputation values; reproducible MCAR/MAR/MNAR masking and synthetic downstream Welch/BH sensitivity diagnostics added (real labelled-data bias evaluation remains pending)
 - [x] Count-aware DESeq2 raw-count analysis with explicit categorical batch/covariate designs, rank-deficiency checks, and default median-of-ratios size-factor normalization
@@ -58,7 +60,7 @@ Status reflects code currently present on the main branch. Checked items are imp
 - [x] Deterministic GEO normalization adapters with input/output checksums and same-runtime byte-identical rerun check
 - [x] Cross-Python-version golden-byte normalization check exercised by the Python 3.10–3.14 CI matrix (does not replace an independent implementation comparison)
 - [x] Independent edgeR TMM factor comparison against `edgeR::calcNormFactors` on the same raw-count matrix (live numerical tolerance assertion in CI)
-- [ ] Trusted limma-voom reference-output comparison and real Affymetrix CEL/RMA comparison against a platform-matched reference (adapters execute, but these independent reference comparisons remain pending)
+- [ ] External trusted limma-voom reference-output comparison and real Affymetrix CEL/RMA comparison against platform-matched reference data (the in-repo parity test does not count as an independent reference)
 
 ## Milestone 5 — Evaluation and scientific validation
 - [x] Cross-domain golden-question integrity benchmark for the deterministic baseline
