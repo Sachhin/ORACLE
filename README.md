@@ -87,6 +87,20 @@ List saved research runs and compare their recorded coverage:
 
 The gap score is a transparent record-coverage heuristic based on source-backed evidence, claim review links, hypothesis evidence links, unresolved contradiction candidates, and task completion. It is not a probability, evidence quality score, or scientific completeness guarantee. Related-run search uses lexical token overlap only; it does not claim semantic similarity or discovery of a scientific connection.
 
+### Research task lifecycle
+
+Inspect tasks, acceptance criteria, and evidence links:
+
+    python -m oracle --show-tasks RUN_ID
+
+Start a task, block it with a reason, retry it within the attempt budget, or complete it only with source-backed evidence:
+
+    python -m oracle --task-action start --task-run RUN_ID --task-id TASK_ID
+    python -m oracle --task-action complete --task-run RUN_ID --task-id TASK_ID --task-evidence-ids EVIDENCE_ID --task-note "Checked the source and recorded the result."
+    python -m oracle --task-action block --task-run RUN_ID --task-id TASK_ID --task-note "No accessible source found."
+
+Model inferences cannot satisfy the source-backed completion requirement. The default task retry budget is three attempts.
+
 ### Experiment lifecycle
 
 Experiments are proposals until an explicit record is made. Record a simulation (never a physical experiment):
