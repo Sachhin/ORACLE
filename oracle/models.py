@@ -149,6 +149,24 @@ class ContradictionCandidate:
 
 
 @dataclass
+class EvidenceComparison:
+    claim_a_id: str
+    claim_b_id: str
+    evidence_a_id: str
+    evidence_b_id: str
+    source_a_id: str
+    source_b_id: str
+    relation: str
+    rationale: str
+    quote_a: str
+    quote_b: str
+    model: str
+    status: str = "pending_review"
+    comparison_id: str = field(default_factory=lambda: new_id("cmp"))
+    created_at: str = field(default_factory=utc_now)
+
+
+@dataclass
 class Hypothesis:
     statement: str
     rationale: str
@@ -220,6 +238,7 @@ class ResearchRun:
     claims: list[Claim] = field(default_factory=list)
     claim_revisions: list[ClaimRevision] = field(default_factory=list)
     evidence_claim_links: list[EvidenceClaimLink] = field(default_factory=list)
+    evidence_comparisons: list[EvidenceComparison] = field(default_factory=list)
     contradiction_candidates: list[ContradictionCandidate] = field(default_factory=list)
     hypotheses: list[Hypothesis] = field(default_factory=list)
     hypothesis_groups: list[HypothesisGroup] = field(default_factory=list)
