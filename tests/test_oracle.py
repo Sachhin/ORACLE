@@ -962,6 +962,7 @@ class OracleTests(unittest.TestCase):
             report = GEOExpressionAnalyzer().analyze(run)
             self.assertEqual(report.files_analyzed, 1)
             self.assertEqual(report.files_skipped, 0)
+            self.assertEqual(report.samples_flagged, 1)
             analysis = run.dataset_analyses[0]
             self.assertEqual(analysis.feature_rows, 2)
             self.assertEqual(analysis.sample_count, 2)
@@ -971,6 +972,10 @@ class OracleTests(unittest.TestCase):
             self.assertEqual(analysis.minimum, 1.0)
             self.assertEqual(analysis.maximum, 3.0)
             self.assertEqual(analysis.sample_summaries[0]["sample"], "GSM_A")
+            self.assertAlmostEqual(analysis.sample_summaries[0]["sample_variance"], 2.0)
+            self.assertEqual(analysis.sample_summaries[0]["missing_fraction"], 0.0)
+            self.assertEqual(analysis.sample_summaries[0]["qc_flags"], [])
+            self.assertIn("high_missingness", analysis.sample_summaries[1]["qc_flags"])
             evidence = next(item for item in run.evidence if item.evidence_id == analysis.evidence_id)
             self.assertEqual(evidence.kind, EvidenceKind.DATASET)
             self.assertEqual(evidence.source_id, source.source_id)
@@ -1021,5 +1026,21 @@ class OracleTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 analyzer._read_text(path)
 
-if __name__ == "__main__":
+
+    def test_geo_sample_qc_flags_constant_and_empty_columns_without_removing_them(self):
+        from oracle.geo_analysis import GEOExpressionAnalyzer
+        analyzer = GEOExpressionAnalyzer()
+        summaries, rows, numeric, missing, mean, minimum, maximum = analyzer._parse(
+            "ID_REF\\tGSM_CONSTANT\\tGSM_EMPTY\\n"
+            "g1\\t5\\tNA\\n"
+            "g2\\t5\\tNA\\n"
+        )
+        self.assertEqual(rows, 2)
+        self.assertEqual(numeric, 2)
+        self.assertEqual(missing, 2)
+        self.assertIn("constant_values", summaries[0]["qc_flags"])
+        self.assertIn("no_numeric_values", summaries[1]["qc_flags"])
+        self.assertIn("high_missingness", summaries[1]["qc_flags"])
+        self.assertEqual(len(summaries), 2)
+\nif __name__ == "__main__":
     unittest.main()
