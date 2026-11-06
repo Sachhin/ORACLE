@@ -49,7 +49,7 @@ Status reflects code currently present on the main branch. Checked items are imp
 - [x] Bounded incoming citation discovery for DOI-backed works via OpenAlex, with persisted source-linked citation records
 - [x] DOI-resolved directed citation graph ranking with degree counts and bounded PageRank
 - [x] Bounded multi-hop citation traversal with incoming/outgoing direction, shortest paths, and depth/node limits
-- [ ] Broader citation-network discovery beyond DOI-resolved sources already present in a run
+- [x] Bounded multi-hop incoming citation discovery via OpenAlex, adding DOI-backed metadata-only external nodes (outgoing external-reference expansion remains pending)
 - [x] Explicit experiment lifecycle recording for proposed, simulated, performed, and evaluated states with execution provenance
 - [x] Domain-specific proposed protocol templates for plant, molecular, cell, and computational biology
 - [x] Deterministic GEO normalization adapters with input/output checksums and same-runtime byte-identical rerun check
