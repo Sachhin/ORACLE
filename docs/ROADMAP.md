@@ -43,7 +43,8 @@ Status reflects code currently present on the main branch; checked items are imp
 - [ ] Domain-specific experiment protocols and reproducible analysis adapters
 
 ## Milestone 5 — Evaluation and scientific validation
-- [ ] Golden research-question benchmark set
+- [x] Cross-domain golden-question integrity benchmark for the deterministic baseline
+- [ ] Human-scored scientific answer-quality benchmark set
 - [ ] Benchmarked evidence attribution, entailment, contradiction, and hallucination evaluations (model review suggestions are implemented but not validated as accurate)
 - [x] Reproducibility and regression suite across Python 3.10–3.14 CI matrix
 - [ ] Human review gates for high-impact claims and real experiments
