@@ -56,6 +56,7 @@ class OracleOrchestrator:
         self.geo_download_enabled = geo_download_enabled or geo_analysis_enabled
         self.geo_max_file_bytes = geo_max_file_bytes
         self.citation_network_enabled = citation_network_enabled
+        self.incoming_citation_network_enabled = incoming_citation_network_enabled
         self.task_manager = TaskManager(max_attempts=max_task_attempts, max_tasks=max_tasks)
         self.gemini_model = gemini_model
         # Every agent implements run(context) -> AgentResult. Deterministic
@@ -215,7 +216,8 @@ class OracleOrchestrator:
         """Optionally retrieve source-backed literature before the reasoning cycle."""
         if (not self.literature_enabled and not self.extract_literature_claims
                 and not self.full_text_enabled and not self.geo_files_enabled
-                and not self.geo_analysis_enabled and not self.citation_network_enabled):
+                and not self.geo_analysis_enabled and not self.citation_network_enabled
+                and not self.incoming_citation_network_enabled):
             return
         if self.literature_enabled and not run.sources:
             from .literature import LiteratureClient
@@ -262,6 +264,10 @@ class OracleOrchestrator:
             from .citation_network import CrossrefCitationClient
             citation_report = CrossrefCitationClient(mailto=self.literature_mailto).discover(run)
             self._event(run, "citation_network_discovered", citation_report.__dict__)
+        if self.incoming_citation_network_enabled:
+            from .incoming_citations import OpenAlexIncomingCitationClient
+            incoming_report = OpenAlexIncomingCitationClient(mailto=self.literature_mailto).discover(run)
+            self._event(run, "incoming_citation_network_discovered", incoming_report.__dict__)
         if self.extract_literature_claims:
             from .llm import GeminiClaimExtractor
             extractor = GeminiClaimExtractor(model=self.gemini_model)
