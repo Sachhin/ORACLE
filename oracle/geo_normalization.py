@@ -27,7 +27,7 @@ def _table_text(text: str) -> str:
                        and not line.lstrip().startswith(("!", "#")))
 
 
-def _read_matrix(path: Path, max_cells: int) -> tuple[list[str], list[str], list[list[float]], str]:
+def _read_matrix(path: Path, max_cells: int, allow_missing: bool = False) -> tuple[list[str], list[str], list[list[float | None]], str]:
     opener = gzip.open if path.name.lower().endswith(".gz") else open
     with opener(path, "rt", encoding="utf-8-sig", errors="strict", newline="") as handle:
         text = handle.read(100_000_001)
@@ -57,6 +57,9 @@ def _read_matrix(path: Path, max_cells: int) -> tuple[list[str], list[str], list
         seen.add(feature)
         values = []
         for sample, raw in zip(samples, row[1:]):
+            if allow_missing and raw.strip().lower() in {"", "na", "nan", "null", "n/a", "."}:
+                values.append(None)
+                continue
             try:
                 value = float(raw)
             except (TypeError, ValueError) as exc:
@@ -116,7 +119,19 @@ def normalize_geo_matrix(
     destination = Path(output_path)
     if source.resolve() == destination.resolve():
         raise ValueError("Output path must differ from input; the raw matrix is preserved.")
-    features, samples, matrix, _ = _read_matrix(source, max_cells)
+    features, samples, matrix, _ = _read_matrix(source, max_cells, allow_missing=(method == "quantile-row-median"))
+    missing_mask = [[value is None for value in row] for row in matrix]
+    missing_count = sum(sum(row) for row in missing_mask)
+    imputation_values = {}
+    if method == "quantile-row-median":
+        for index, row in enumerate(matrix):
+            observed = sorted(value for value in row if value is not None)
+            if not observed:
+                raise ValueError(f"Feature {features[index]} has no observed values; cannot median-impute.")
+            middle = len(observed) // 2
+            median = observed[middle] if len(observed) % 2 else (observed[middle-1] + observed[middle]) / 2
+            imputation_values[features[index]] = median
+            matrix[index] = [median if value is None else value for value in row]
     totals = [sum(row[column] for row in matrix) for column in range(len(samples))]
     if method in {"cpm", "log2-cpm"}:
         for row_index, row in enumerate(matrix):
@@ -145,6 +160,17 @@ def normalize_geo_matrix(
         for feature, row in zip(features, normalized):
             writer.writerow([feature, *(format(value, ".12g") for value in row)])
     input_hash = hashlib.sha256(source.read_bytes()).hexdigest()
+    missing_mask_path = None
+    missing_mask_hash = None
+    if method == "quantile-row-median":
+        mask_destination = Path(str(destination) + ".missing-mask.tsv")
+        with mask_destination.open("w", encoding="utf-8", newline="") as mask_handle:
+            mask_writer = csv.writer(mask_handle, delimiter="\\t", lineterminator="\\n")
+            mask_writer.writerow(["feature", *samples])
+            for feature, row in zip(features, missing_mask):
+                mask_writer.writerow([feature, *[int(value) for value in row]])
+        missing_mask_path = str(mask_destination)
+        missing_mask_hash = hashlib.sha256(mask_destination.read_bytes()).hexdigest()
     output_hash = hashlib.sha256(destination.read_bytes()).hexdigest()
     return {
         "method": method,
@@ -153,11 +179,15 @@ def normalize_geo_matrix(
         "input_sha256": input_hash,
         "output_sha256": output_hash,
         "features": len(features),
+        "missing_cells": missing_count,
+        "missing_mask_path": missing_mask_path,
+        "missing_mask_sha256": missing_mask_hash,
+        "row_median_imputation_values": imputation_values if method == "quantile-row-median" else None,
         "samples": len(samples),
         "sample_library_sizes": dict(zip(samples, totals)),
         "prior_count": prior_count if method == "log2-cpm" else None,
         "limitations": (
-            "Quantile normalization assumes comparable sample distributions and is intended for "
+            "Row-median imputation is explicit and emits a hashed missingness mask; it can bias distributions and is not a substitute for a missing-data model. Quantile normalization assumes comparable sample distributions and is intended for "
             "continuous microarray-like measurements; do not apply it blindly to raw RNA-seq counts. "
             "CPM/log2-CPM is a library-size transform only, not TMM, variance-stabilizing "
             "transformation, DESeq2, or a differential-expression test. Confirm platform, assay, "
