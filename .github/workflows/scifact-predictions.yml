@@ -58,7 +58,7 @@ jobs:
           test -n "$claims" && test -n "$corpus"
           echo "CLAIMS_PATH=$claims" >> "$GITHUB_ENV"
           echo "CORPUS_PATH=$corpus" >> "$GITHUB_ENV"
-      - name: Generate frozen ORACLE predictions
+      - name: Generate frozen ORACLE predictions\n        timeout-minutes: 100
         shell: bash
         run: |
           set -euo pipefail
