@@ -1,6 +1,12 @@
 name: ORACLE SciFact prediction benchmark
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/scifact-predictions.yml"
+      - "oracle/scifact_predict.py"
+      - "oracle/scifact_benchmark.py"
   workflow_dispatch:
     inputs:
       split:
