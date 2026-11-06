@@ -10,6 +10,8 @@ import csv
 import gzip
 import hashlib
 import math
+import platform
+import tempfile
 from pathlib import Path
 
 
@@ -162,4 +164,42 @@ def normalize_geo_matrix(
             "background correction, probe annotation, and study design before interpretation. "
             "Input data are never overwritten."
         ),
+    }
+
+
+
+def verify_geo_normalization_rerun(
+    input_path: str | Path,
+    output_path: str | Path,
+    method: str,
+    prior_count: float = 0.5,
+    max_cells: int = 2_000_000,
+) -> dict:
+    """Run the same deterministic transform twice and compare byte-level outputs.
+
+    This verifies same-runtime repeatability only; it is not an independent
+    implementation, cross-platform reproducibility study, or scientific validation.
+    """
+    destination = Path(output_path)
+    first = normalize_geo_matrix(
+        input_path, destination, method, prior_count=prior_count, max_cells=max_cells,
+    )
+    with tempfile.TemporaryDirectory(prefix="oracle-geo-rerun-") as temporary:
+        second_path = Path(temporary) / "repeat.tsv"
+        second = normalize_geo_matrix(
+            input_path, second_path, method, prior_count=prior_count, max_cells=max_cells,
+        )
+    identical = first["output_sha256"] == second["output_sha256"]
+    return {
+        "method": method,
+        "input_sha256": first["input_sha256"],
+        "first_output_sha256": first["output_sha256"],
+        "repeat_output_sha256": second["output_sha256"],
+        "byte_identical": identical,
+        "python_version": platform.python_version(),
+        "verification_scope": (
+            "Same-runtime deterministic rerun only. This does not establish independent "
+            "implementation agreement, cross-platform reproducibility, or biological validity."
+        ),
+        "output_path": str(destination),
     }
