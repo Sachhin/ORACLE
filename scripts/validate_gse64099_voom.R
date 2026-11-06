@@ -66,10 +66,14 @@ out_dir <- dirname(report_path)
 dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
 E_path <- file.path(out_dir, "gse64099_voom_E.tsv.gz")
 W_path <- file.path(out_dir, "gse64099_voom_weights.tsv.gz")
-utils::write.table(cbind(GeneID = rownames(v$E), v$E), gzfile(E_path),
-                   sep = "\t", quote = FALSE, row.names = FALSE)
-utils::write.table(cbind(GeneID = rownames(v$weights), v$weights), gzfile(W_path),
-                   sep = "\t", quote = FALSE, row.names = FALSE)
+e_con <- gzfile(E_path, open = "wt")
+utils::write.table(cbind(GeneID = rownames(v$E), v$E), e_con,
+                   sep = "\\t", quote = FALSE, row.names = FALSE)
+close(e_con)
+w_con <- gzfile(W_path, open = "wt")
+utils::write.table(cbind(GeneID = rownames(v$weights), v$weights), w_con,
+                   sep = "\\t", quote = FALSE, row.names = FALSE)
+close(w_con)
 
 report <- list(
   status = if (top10_recall >= 0.8 && direction_agreement >= 0.9 &&
