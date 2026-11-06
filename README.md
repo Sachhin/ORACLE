@@ -37,6 +37,43 @@ python -m unittest discover -s tests -v
 
 For Termux, run these commands inside a Python virtual environment. The automated matrix verifies Python 3.10–3.14, and the package-install smoke test invokes the installed `oracle` command from outside the source directory so it cannot accidentally import the checkout instead of the installed package.
 
+### Fast install from the current validation branch
+
+Until PR #53 is merged, install the tested work-in-progress branch directly:
+
+```bash
+git clone --single-branch --branch fix/gse176261-full-cohort-tmm https://github.com/Sachhin/ORACLE.git
+cd ORACLE
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install .
+oracle --help
+python -m unittest discover -s tests -v
+```
+
+On Android Termux, install `python`, `git`, and `clang` from Termux first; then use the same commands. The core package has no third-party runtime dependencies. R/Bioconductor analyses are optional and require a separate R + edgeR + limma installation.
+
+Run a first offline research cycle:
+
+```bash
+oracle "What are the mechanisms of cellular senescence?" --cycles 1 --json
+```
+
+Run literature-backed research (uses public scholarly APIs):
+
+```bash
+oracle "What are the mechanisms of cellular senescence?" --research-literature --cycles 2 --json
+```
+
+To opt in to Gemini agents, set your API key in the shell and explicitly select the provider:
+
+```bash
+export GEMINI_API_KEY="YOUR_GEMINI_API_KEY"
+oracle "What are the mechanisms of cellular senescence?" --agent-provider gemini --gemini-model gemini-2.5-flash --cycles 2 --json
+```
+
+The deterministic offline mode is a usable research workflow, but it is not an LLM and does not claim autonomous scientific discovery. Gemini output is inference and remains subject to source review.
+
 ### Optional Gemini research agents
 
 The normal run remains deterministic and offline. To explicitly opt in to Gemini-backed planning, research synthesis, exploration, competing hypothesis generation, skeptic review, experiment proposal, provisional evidence-integrity auditing, literature-conditioned novelty triage, and source-linked cross-domain connection proposals:
