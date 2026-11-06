@@ -9,6 +9,7 @@ import csv
 import gzip
 import hashlib
 import io
+import re
 from pathlib import Path
 from typing import Mapping
 
@@ -74,14 +75,11 @@ def merge_sample_count_files(
                 raise ValueError(f"{name}: empty feature identifier on line {line_number}.")
             if feature in counts:
                 raise ValueError(f"{name}: duplicate feature identifier {feature!r}.")
-            try:
-                count = int(count_raw)
-            except ValueError as exc:
+            if not re.fullmatch(r"\\d+", count_raw):
                 raise ValueError(
-                    f"{name}: count for {feature!r} is not an integer: {count_raw!r}."
-                ) from exc
-            if count < 0 or str(count) != count_raw and count_raw not in {f"+{count}", f"{count}.0"}:
-                raise ValueError(f"{name}: count for {feature!r} must be a non-negative integer.")
+                    f"{name}: count for {feature!r} must be a non-negative integer: {count_raw!r}."
+                )
+            count = int(count_raw)
             counts[feature] = count
             if len(counts) > max_features:
                 raise ValueError(f"{name}: file exceeds {max_features} features.")
