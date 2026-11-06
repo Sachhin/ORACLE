@@ -10,7 +10,7 @@ The offline research foundation remains usable without credentials. Optional net
 
 ## Quick start
 
-Requires Python 3.10+ and no third-party dependencies.
+Requires Python 3.10+ and no third-party dependencies. CI verifies Python 3.10–3.14, including the Python 3.14 runtime used in some Termux setups.
 
 ```bash
 python -m oracle "How does a fertilized egg develop into a whole organism?"
