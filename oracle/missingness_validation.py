@@ -278,8 +278,8 @@ def main() -> None:
     parser.add_argument("--observed", required=True, help="Observed assay TSV with real missing cells")
     parser.add_argument("--orthogonal", required=True, help="Paired orthogonal assay TSV (e.g. DIA)")
     parser.add_argument("--imputed", required=True, help="ORACLE imputed TSV; observed cells must remain unchanged")
-    parser.add_argument("--labels", required=True, help="TSV with sample_id and independent outcome labels")
-    parser.add_argument("--outcome-column", required=True, help="Column in labels TSV defining the two biological groups")
+    parser.add_argument("--labels", default="", help="Optional TSV with sample_id and independent outcome labels")
+    parser.add_argument("--outcome-column", default="", help="Column in labels TSV defining the two biological groups")
     parser.add_argument("--top-k", type=int, default=20)
     args = parser.parse_args()
     report = evaluate_orthogonal_missingness(
