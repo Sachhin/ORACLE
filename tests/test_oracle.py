@@ -831,5 +831,40 @@ class OracleTests(unittest.TestCase):
                 run, hypothesis.hypothesis_id, "supported", "Insufficient evidence.",
             )
 
+
+    def test_gemini_provider_retries_transient_errors_but_stops_on_quota(self):
+        import json
+        from io import BytesIO
+        from unittest.mock import patch
+        from urllib.error import HTTPError
+        from oracle.model_agents import GeminiAgentError, GeminiJSONProvider
+
+        class FakeResponse:
+            headers = {}
+            def __enter__(self): return self
+            def __exit__(self, *args): return False
+            def read(self, size=-1):
+                body = {"candidates": [{"content": {"parts": [{"text": json.dumps({"ok": True})}]}}]}
+                return json.dumps(body).encode()
+
+        transient = HTTPError("https://example.invalid", 503, "Unavailable", {}, BytesIO(b"temporary"))
+        with patch("oracle.model_agents.urlopen", side_effect=[transient, FakeResponse()]) as mocked:
+            with patch("oracle.model_agents.time.sleep"):
+                provider = GeminiJSONProvider(api_key="test-secret", max_retries=1)
+                self.assertEqual(provider.generate_json("test prompt"), {"ok": True})
+                self.assertEqual(mocked.call_count, 2)
+                request = mocked.call_args_list[0].args[0]
+                self.assertNotIn("test-secret", request.full_url)
+                self.assertEqual(request.get_header("X-goog-api-key"), "test-secret")
+
+        quota = HTTPError("https://example.invalid", 429, "Too Many Requests", {}, BytesIO(b"quota exceeded"))
+        with patch("oracle.model_agents.urlopen", side_effect=quota) as mocked:
+            with patch("oracle.model_agents.time.sleep") as sleeper:
+                provider = GeminiJSONProvider(api_key="test-secret", max_retries=2)
+                with self.assertRaises(GeminiAgentError):
+                    provider.generate_json("test prompt")
+                self.assertEqual(mocked.call_count, 1)
+                sleeper.assert_not_called()
+
 if __name__ == "__main__":
     unittest.main()
