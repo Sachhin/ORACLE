@@ -73,6 +73,7 @@ class SourceRecord:
     source_id: str = field(default_factory=lambda: new_id("src"))
     doi: str = ""
     pmid: str = ""
+    pmcid: str = ""
     authors: str = ""
     journal: str = ""
     abstract: str = ""
