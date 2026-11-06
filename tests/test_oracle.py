@@ -1067,5 +1067,45 @@ class OracleTests(unittest.TestCase):
             "treatment": "treated", "genotype": "mutant",
         })
 
+
+    def test_geo_welch_contrast_uses_explicit_groups_and_bh_correction(self):
+        from oracle.geo_statistics import GEOContrastAnalyzer
+        matrix = Path(self.tmp.name) / "matrix.tsv"
+        matrix.write_text(
+            "ID_REF\\tC1\\tC2\\tC3\\tT1\\tT2\\tT3\\n"
+            "gene_up\\t1.0\\t1.1\\t0.9\\t2.0\\t2.1\\t1.9\\n"
+            "gene_same\\t1.0\\t1.1\\t0.9\\t1.0\\t1.1\\t0.9\\n",
+            encoding="utf-8",
+        )
+        groups = {
+            "C1": "control", "C2": "control", "C3": "control",
+            "T1": "treated", "T2": "treated", "T3": "treated",
+        }
+        result = GEOContrastAnalyzer().analyze(
+            matrix, groups, "control", "treated", "log2_continuous",
+        )
+        self.assertEqual(result["features_tested"], 2)
+        self.assertEqual(result["method"], "Welch two-sample t-test; Benjamini-Hochberg FDR")
+        up = next(item for item in result["results"] if item["feature"] == "gene_up")
+        same = next(item for item in result["results"] if item["feature"] == "gene_same")
+        self.assertAlmostEqual(up["log2_mean_difference_b_minus_a"], 1.0)
+        self.assertLess(up["p_value_adjusted_bh"], 0.05)
+        self.assertAlmostEqual(same["p_value"], 1.0)
+        self.assertEqual(result["sample_groups"]["control"], ["C1", "C2", "C3"])
+
+    def test_geo_contrast_rejects_raw_counts_and_incomplete_group_design(self):
+        from oracle.geo_statistics import GEOContrastAnalyzer
+        matrix = Path(self.tmp.name) / "matrix.tsv"
+        matrix.write_text(
+            "ID_REF\\tC1\\tC2\\tT1\\tT2\\ngene\\t10\\t11\\t20\\t21\\n",
+            encoding="utf-8",
+        )
+        groups = {"C1": "control", "C2": "control", "T1": "treated", "T2": "treated"}
+        analyzer = GEOContrastAnalyzer()
+        with self.assertRaisesRegex(ValueError, "log2_continuous"):
+            analyzer.analyze(matrix, groups, "control", "treated", "raw_counts")
+        with self.assertRaisesRegex(ValueError, "cover matrix samples exactly"):
+            analyzer.analyze(matrix, {"C1": "control"}, "control", "treated", "log2_continuous")
+
 if __name__ == "__main__":
     unittest.main()
