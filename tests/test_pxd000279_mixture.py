@@ -68,6 +68,7 @@ class PXD000279MixtureBenchmarkTests(unittest.TestCase):
             self.assertEqual(report["sample_columns"]["Ecoli30"], columns[:3])
             self.assertEqual(report["sample_columns"]["Ecoli10"], columns[3:])
             self.assertIn("published DEqMS", report["sample_group_assignment_method"])
+            self.assertIn("H=Ecoli30", report["sample_group_assignment_method"])
             self.assertEqual(report["skipped_rows"]["decoy_or_contaminant_or_site_only"], 1)
             self.assertAlmostEqual(
                 report["species_results"]["ecoli"]["observed_only"]["median_log2_fold_change"],
