@@ -45,10 +45,10 @@ Status reflects code currently present on the main branch. Checked items are imp
 - [x] Optional limma-voom adapter with explicit two-group raw-count design, R/edgeR/limma version provenance, checksum, and mocked-subprocess tests
 - [x] Live adapter parity test against a separately executed limma/edgeR reference script on a fixed 300-feature count matrix (same Bioconductor implementation; checks serialization/reproducibility, not independent algorithm accuracy)
 - [x] Provenance-checked external reference comparison tooling for expression matrices and differential-expression tables (MAE/RMSE/correlation and DE call concordance; external reference datasets/results still pending)
-- [x] Independent real-dataset limma-voom validation: GSE176260 exact submitter E/weights comparison PASS; GSE64099 independent GEO experiment published DE-table comparison PASS (top-10 recall 1.00, logFC RMSE 0.0021, direction agreement 1.00, FDR counts exact); GSE176261 same-study validation cohort still requires numerical tolerance resolution
+- [x] Independent real-dataset limma-voom validation executed and frozen in Actions run 42233635227: GSE176260 submitter E/weights comparison PASS; GSE64099 independent GEO experiment published DE-table comparison PASS; GSE176261 comparison executed but expression RMSE 0.0580 exceeds the pre-set 0.0500 tolerance (weights RMSE 0.0471), preserved as FAIL_NUMERICAL_TOLERANCE
 - [x] Optional Affymetrix CEL RMA adapter for explicit affy/oligo package families, with input checksums, software/platform provenance, exact sample-identity validation, expected-platform guard, bounded execution, and mocked contract tests; live GEO GPL96 CEL run passed for GSM1003058/GSM1003059 (hgu133a, 22,283 features; trusted platform-matched reference comparison and probe annotation remain pending)
 - [x] Explicit row-median imputation for continuous matrices with a separate SHA-256 missingness mask and recorded imputation values; reproducible MCAR/MAR/MNAR masking, synthetic downstream Welch/BH sensitivity diagnostics, and observed-cell holdout comparison of row/column/global median reconstruction added
-- [x] Paired orthogonal-assay missingness evaluator: PXD047528 paired processed DDA/DIA matrices frozen and reconstruction-only baseline scored on 8,859 genuine DDA-missing cells with DIA observations; clinical labels/outcome concordance remain pending because 15 processed sample columns do not yet map to the 13 clinical participants in the paper)
+- [x] Paired orthogonal-assay missingness evaluator: PXD047528 processed DDA/DIA tables verified paired at 15 shared sample aliases and frozen; reconstruction-only baseline scored on 8,859 genuine DDA-missing cells with DIA observations; clinical labels/outcome concordance remain pending because the 15 processed aliases do not map to the 13 clinical participants in the original paper
 - [ ] Validation against genuinely missing values with known ground truth and independent biological outcome labels (empirical results remain pending)
 - [x] Count-aware DESeq2 raw-count analysis with explicit categorical batch/covariate designs, rank-deficiency checks, and default median-of-ratios size-factor normalization
 - [x] Optional DESeq2 adapter for explicitly mapped raw integer-count two-group designs (external R runtime; CI subprocess mocked)
@@ -64,7 +64,7 @@ Status reflects code currently present on the main branch. Checked items are imp
 - [x] Cross-Python-version golden-byte normalization check exercised by the Python 3.10–3.14 CI matrix (does not replace an independent implementation comparison)
 - [x] Independent edgeR TMM factor comparison against `edgeR::calcNormFactors` on the same raw-count matrix (live numerical tolerance assertion in CI)
 - [x] External-reference comparison CLI with provenance enforcement, file hashes, feature overlap checks, expression-matrix metrics, and DE call concordance
-- [x] External trusted limma-voom comparisons against published GSE176260 expression/weight matrices and independent GSE64099 published DE results; [ ] GSE176261 same-study cohort tolerance resolution and real Affymetrix CEL/RMA comparison remain
+- [x] External trusted limma-voom comparisons against published GSE176260 expression/weight matrices, same-study GSE176261 expression/weight matrices (tolerance failure retained), and independent GSE64099 published DE results; [ ] investigate GSE176261 expression discrepancy and complete real Affymetrix CEL/RMA comparison
 
 ## Milestone 5 — Evaluation and scientific validation
 - [x] Cross-domain golden-question integrity benchmark for the deterministic baseline
@@ -73,7 +73,7 @@ Status reflects code currently present on the main branch. Checked items are imp
 - [x] Machine-validated benchmark ingestion requirements for frozen source packets, two independent reviewers, adjudication, and paired baseline/candidate scores
 - [ ] Curated expert-scored scientific answer benchmark set with multiple reviewers and adjudicated labels (rubric, starter questions, and adjudication protocol exist; real labels remain pending)
 - [x] Evidence benchmark requires two named human annotations per case, records reviewer agreement, and validates adjudication on disagreement
-- [x] External SciFact labelled train/dev evaluator plus BM25 retrieval-grounded Gemini prediction generator, strict evidence/sentence validation, and frozen provenance; live predictions/report pending a GEMINI_API_KEY Actions secret and manual workflow dispatch
+- [x] External SciFact labelled train/dev evaluator plus BM25 retrieval-grounded Gemini prediction generator, strict evidence/sentence validation, frozen provenance, and workflow; [ ] live predictions/report require GEMINI_API_KEY Actions secret and manual workflow dispatch (no live predictions or metrics are claimed yet)
 - [ ] Empirical evidence attribution, entailment, contradiction, and hallucination benchmark results (frozen ORACLE predictions and expert adjudication remain pending)
 - [x] Reproducibility and regression suite across Python 3.10–3.14 CI matrix
 - [x] High-impact claim review requires independent source groups, reviewer identity, and rationale
