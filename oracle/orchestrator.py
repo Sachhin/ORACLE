@@ -24,6 +24,7 @@ class OracleOrchestrator:
                  literature_mailto: str = "",
                  extract_literature_claims: bool = False,
                  compare_literature_papers: bool = False,
+                 review_literature_evidence: bool = False,
                  gemini_model: str = "gemini-2.5-flash") -> None:
         if not 1 <= max_no_progress_cycles <= 10:
             raise ValueError("max_no_progress_cycles must be between 1 and 10.")
@@ -39,6 +40,7 @@ class OracleOrchestrator:
         self.literature_mailto = literature_mailto
         self.extract_literature_claims = extract_literature_claims
         self.compare_literature_papers = compare_literature_papers
+        self.review_literature_evidence = review_literature_evidence
         self.gemini_model = gemini_model
         # Every agent implements run(context) -> AgentResult. Deterministic
         # agents remain the default; an optional suite can replace selected agents.
@@ -195,6 +197,10 @@ class OracleOrchestrator:
             from .comparison import CrossPaperComparator
             comparison = CrossPaperComparator(model=self.gemini_model).compare(run)
             self._event(run, "literature_papers_compared", comparison.__dict__)
+        if self.review_literature_evidence:
+            from .evidence_review import GeminiEvidenceReviewer
+            review = GeminiEvidenceReviewer(model=self.gemini_model).review(run)
+            self._event(run, "literature_evidence_reviewed", review.__dict__)
 
     def _execute(self, run: ResearchRun) -> ResearchRun:
         checkpoint = deepcopy(run)
