@@ -1,0 +1,165 @@
+"""Explicit, reproducible GEO matrix normalization helpers.
+
+Quantile normalization is intended for continuous microarray-like matrices.
+CPM/log2-CPM is a library-size transform for raw integer counts and is not
+an inferential RNA-seq model; use DESeq2 for count-aware differential testing.
+"""
+from __future__ import annotations
+
+import csv
+import gzip
+import hashlib
+import math
+from pathlib import Path
+
+
+def _table_text(text: str) -> str:
+    lines = text.splitlines()
+    begin = next((i for i, line in enumerate(lines)
+                  if line.strip().lower() == "!series_matrix_table_begin"), None)
+    if begin is not None:
+        end = next((i for i in range(begin + 1, len(lines))
+                    if lines[i].strip().lower() == "!series_matrix_table_end"), len(lines))
+        return "\\n".join(lines[begin + 1:end])
+    return "\\n".join(line for line in lines if line.strip()
+                       and not line.lstrip().startswith(("!", "#")))
+
+
+def _read_matrix(path: Path, max_cells: int) -> tuple[list[str], list[str], list[list[float]], str]:
+    opener = gzip.open if path.name.lower().endswith(".gz") else open
+    with opener(path, "rt", encoding="utf-8-sig", errors="strict", newline="") as handle:
+        text = handle.read(100_000_001)
+    if len(text.encode("utf-8")) > 100_000_000:
+        raise ValueError("Input matrix exceeds 100 MB uncompressed limit.")
+    table = _table_text(text)
+    if not table.strip():
+        raise ValueError("No tabular expression matrix was found.")
+    first = table.splitlines()[0]
+    delimiter = "\\t" if first.count("\\t") >= first.count(",") else ","
+    reader = csv.reader(table.splitlines(), delimiter=delimiter)
+    header = next(reader, [])
+    samples = [value.strip() for value in header[1:]]
+    if not samples or any(not value for value in samples) or len(set(samples)) != len(samples):
+        raise ValueError("Matrix must have unique non-empty sample columns.")
+    features, matrix, seen = [], [], set()
+    for line_number, row in enumerate(reader, start=2):
+        if not row or not any(value.strip() for value in row):
+            continue
+        if row[0].strip().lower() in {"id_ref", "feature_id", "gene_id"}:
+            continue
+        if len(row) != len(samples) + 1:
+            raise ValueError(f"Malformed matrix row {line_number}: expected {len(samples)+1} columns.")
+        feature = row[0].strip()
+        if not feature or feature in seen:
+            raise ValueError(f"Empty or duplicate feature identifier on row {line_number}.")
+        seen.add(feature)
+        values = []
+        for sample, raw in zip(samples, row[1:]):
+            try:
+                value = float(raw)
+            except (TypeError, ValueError) as exc:
+                raise ValueError(f"Missing/non-numeric value for {feature}/{sample}.") from exc
+            if not math.isfinite(value):
+                raise ValueError(f"Non-finite value for {feature}/{sample}.")
+            values.append(value)
+        features.append(feature)
+        matrix.append(values)
+        if len(features) * len(samples) > max_cells:
+            raise ValueError(f"Matrix exceeds the {max_cells}-cell normalization limit.")
+    if not matrix:
+        raise ValueError("Matrix contains no feature rows.")
+    return features, samples, matrix, delimiter
+
+
+def _quantile_normalize(matrix: list[list[float]]) -> list[list[float]]:
+    sample_count = len(matrix[0])
+    feature_count = len(matrix)
+    sorted_columns = []
+    for column in range(sample_count):
+        sorted_columns.append(sorted(matrix[row][column] for row in range(feature_count)))
+    target = [
+        sum(sorted_columns[column][rank] for column in range(sample_count)) / sample_count
+        for rank in range(feature_count)
+    ]
+    normalized = [[0.0] * sample_count for _ in range(feature_count)]
+    for column in range(sample_count):
+        ordered = sorted((matrix[row][column], row) for row in range(feature_count))
+        index = 0
+        while index < feature_count:
+            end = index + 1
+            while end < feature_count and ordered[end][0] == ordered[index][0]:
+                end += 1
+            tied_value = sum(target[index:end]) / (end - index)
+            for _, row_index in ordered[index:end]:
+                normalized[row_index][column] = tied_value
+            index = end
+    return normalized
+
+
+def normalize_geo_matrix(
+    input_path: str | Path,
+    output_path: str | Path,
+    method: str,
+    prior_count: float = 0.5,
+    max_cells: int = 2_000_000,
+) -> dict:
+    """Normalize a rectangular GEO matrix and write a new TSV plus provenance report."""
+    if method not in {"quantile", "cpm", "log2-cpm"}:
+        raise ValueError("method must be quantile, cpm, or log2-cpm.")
+    if not math.isfinite(prior_count) or prior_count <= 0:
+        raise ValueError("prior_count must be a finite positive number.")
+    if max_cells < 1:
+        raise ValueError("max_cells must be positive.")
+    source = Path(input_path)
+    destination = Path(output_path)
+    if source.resolve() == destination.resolve():
+        raise ValueError("Output path must differ from input; the raw matrix is preserved.")
+    features, samples, matrix, _ = _read_matrix(source, max_cells)
+    totals = [sum(row[column] for row in matrix) for column in range(len(samples))]
+    if method in {"cpm", "log2-cpm"}:
+        for row_index, row in enumerate(matrix):
+            for column, value in enumerate(row):
+                if value < 0 or not value.is_integer():
+                    raise ValueError(
+                        f"{method} requires non-negative integer raw counts; invalid "
+                        f"value for {features[row_index]}/{samples[column]}."
+                    )
+        if any(total <= 0 for total in totals):
+            raise ValueError("Every sample must have a positive library size.")
+        normalized = []
+        for row in matrix:
+            values = []
+            for column, value in enumerate(row):
+                cpm = value / totals[column] * 1_000_000.0
+                values.append(math.log2(cpm + prior_count) if method == "log2-cpm" else cpm)
+            normalized.append(values)
+    else:
+        normalized = _quantile_normalize(matrix)
+
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    with destination.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.writer(handle, delimiter="\\t", lineterminator="\\n")
+        writer.writerow(["feature", *samples])
+        for feature, row in zip(features, normalized):
+            writer.writerow([feature, *(format(value, ".12g") for value in row)])
+    input_hash = hashlib.sha256(source.read_bytes()).hexdigest()
+    output_hash = hashlib.sha256(destination.read_bytes()).hexdigest()
+    return {
+        "method": method,
+        "input_path": str(source),
+        "output_path": str(destination),
+        "input_sha256": input_hash,
+        "output_sha256": output_hash,
+        "features": len(features),
+        "samples": len(samples),
+        "sample_library_sizes": dict(zip(samples, totals)),
+        "prior_count": prior_count if method == "log2-cpm" else None,
+        "limitations": (
+            "Quantile normalization assumes comparable sample distributions and is intended for "
+            "continuous microarray-like measurements; do not apply it blindly to raw RNA-seq counts. "
+            "CPM/log2-CPM is a library-size transform only, not TMM, variance-stabilizing "
+            "transformation, DESeq2, or a differential-expression test. Confirm platform, assay, "
+            "background correction, probe annotation, and study design before interpretation. "
+            "Input data are never overwritten."
+        ),
+    }
