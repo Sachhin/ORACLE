@@ -34,7 +34,7 @@ The Gemini agent suite uses the same `run(context) -> result` contract as the de
 
 ## Scientific integrity
 
-ORACLE distinguishes source-backed evidence, inference, hypotheses, proposed experiments, simulated experiments, and experiments actually performed. A simulation is never represented as a real-world experiment. Unknowns and conflicting evidence remain explicit.
+ORACLE distinguishes source-backed evidence, inference, hypotheses, proposed experiments, simulated experiments, and experiments actually performed. A simulation is never represented as a real-world experiment. Experiment records have explicit lifecycle operations: proposed → simulated OR performed → evaluated. Execution kind and provenance remain stored even after evaluation. Unknowns and conflicting evidence remain explicit.
 
 ## Architecture
 
@@ -83,6 +83,22 @@ List saved research runs and compare their recorded coverage:
     python -m oracle --related-to "cell fate signaling"
 
 The gap score is a transparent record-coverage heuristic based on source-backed evidence, claim review links, hypothesis evidence links, unresolved contradiction candidates, and task completion. It is not a probability, evidence quality score, or scientific completeness guarantee. Related-run search uses lexical token overlap only; it does not claim semantic similarity or discovery of a scientific connection.
+
+### Experiment lifecycle
+
+Experiments are proposals until an explicit record is made. Record a simulation (never a physical experiment):
+
+    python -m oracle --experiment-action simulate --experiment-run RUN_ID --experiment-id EXP_ID --simulation-engine "Python simulator v1" --experiment-results "Synthetic output ..." --simulation-limitations "Simplified model; no biological measurements."
+
+Record a real experiment only when it was actually performed:
+
+    python -m oracle --experiment-action perform --experiment-run RUN_ID --experiment-id EXP_ID --execution-method "qPCR, three biological replicates" --operator "Lab operator" --experiment-results "Recorded measurements ..."
+
+Then record a human evaluation:
+
+    python -m oracle --experiment-action evaluate --experiment-run RUN_ID --experiment-id EXP_ID --evaluation-note "Compared observations with preregistered predictions."
+
+The execution kind remains preserved after evaluation. ORACLE does not execute physical experiments or invent results.
 
 ## Current limitations
 

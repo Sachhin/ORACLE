@@ -130,8 +130,23 @@ class OracleOrchestrator:
                 warnings.append("Evidence references a source absent from the run's provenance store.")
                 break
         for experiment in run.experiments:
-            if experiment.status.value == "performed" and not experiment.results.strip():
-                warnings.append("An experiment is marked performed without recorded results.")
+            if experiment.status.value == "simulated" and (
+                experiment.execution_kind != "simulated" or not experiment.simulation_engine.strip()
+                or not experiment.results.strip()
+            ):
+                warnings.append("A simulated experiment lacks simulation provenance or results.")
+                break
+            if experiment.status.value == "performed" and (
+                experiment.execution_kind != "performed" or not experiment.execution_method.strip()
+                or not experiment.operator.strip() or not experiment.results.strip()
+            ):
+                warnings.append("A performed experiment lacks execution provenance or results.")
+                break
+            if experiment.status.value == "evaluated" and (
+                experiment.execution_kind not in {"simulated", "performed"}
+                or not experiment.evaluation_note.strip()
+            ):
+                warnings.append("An evaluated experiment lacks its execution kind or evaluation note.")
                 break
         for candidate in run.evidence_review_candidates:
             evidence = next((item for item in run.evidence if item.evidence_id == candidate.evidence_id), None)

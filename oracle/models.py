@@ -227,6 +227,12 @@ class Experiment:
     limitations: str = ""
     experiment_id: str = field(default_factory=lambda: new_id("exp"))
     created_at: str = field(default_factory=utc_now)
+    execution_kind: str = "proposed"
+    simulation_engine: str = ""
+    execution_method: str = ""
+    operator: str = ""
+    executed_at: str = ""
+    evaluation_note: str = ""
 
 
 @dataclass
