@@ -133,6 +133,13 @@ class OracleOrchestrator:
             if experiment.status.value == "performed" and not experiment.results.strip():
                 warnings.append("An experiment is marked performed without recorded results.")
                 break
+        for candidate in run.evidence_review_candidates:
+            evidence = next((item for item in run.evidence if item.evidence_id == candidate.evidence_id), None)
+            claim = next((item for item in run.claims if item.claim_id == candidate.claim_id), None)
+            if (evidence is None or claim is None or not candidate.source_quote
+                    or candidate.source_quote not in evidence.claim):
+                warnings.append("Evidence review candidate has invalid claim/evidence provenance.")
+                break
         return warnings
 
     def run(self, question: str, mode: ResearchMode = ResearchMode.BOTH,
