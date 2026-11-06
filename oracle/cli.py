@@ -101,6 +101,12 @@ def build_parser() -> argparse.ArgumentParser:
                                  help="Show persisted cross-run claim links; optionally filter by run ID")
     portfolio_group.add_argument("--rank-citation-graph", metavar="RUN_ID",
                                  help="Rank source records in a DOI-resolved citation graph")
+    portfolio_group.add_argument("--traverse-citation-graph", metavar="RUN_ID",
+                                 help="Trace bounded multi-hop citation paths within a saved run")
+    parser.add_argument("--citation-start-source", default="",
+                        help="Source ID from which citation traversal starts")
+    parser.add_argument("--citation-direction", choices=["outgoing", "incoming", "both"], default="both")
+    parser.add_argument("--citation-depth", type=int, default=3)
     portfolio_group.add_argument("--show-answer-reviews", metavar="RUN_ID",
                                  help="Show human-scored answer reviews and rubric averages")
     portfolio_group.add_argument("--show-deseq2", metavar="RUN_ID",
@@ -735,7 +741,7 @@ def main() -> None:
     if (args.portfolio or args.assess_gaps or args.related_to is not None or args.show_reviews
             or args.show_tasks or args.show_hypotheses or args.show_sources or args.show_connections
             or args.cross_run_candidates or args.show_cross_run_links is not None
-            or args.rank_citation_graph or args.show_answer_reviews):
+            or args.rank_citation_graph or args.traverse_citation_graph or args.show_answer_reviews):
         from dataclasses import asdict
         from .portfolio import ResearchPortfolio
         portfolio = ResearchPortfolio(store)
@@ -765,6 +771,29 @@ def main() -> None:
                     print(f"  Note: {item['reviewer_note']}")
                 print("Average scores: " + json.dumps(report["summary"]["dimension_averages"]))
                 print("Limitations: " + report["summary"]["limitations"])
+            return
+        if args.traverse_citation_graph:
+            if not args.citation_start_source:
+                raise SystemExit("--traverse-citation-graph requires --citation-start-source.")
+            run = store.load_run(args.traverse_citation_graph)
+            if run is None:
+                raise SystemExit(f"Research run not found: {args.traverse_citation_graph}")
+            from .citation_graph import traverse_citation_graph
+            report = traverse_citation_graph(
+                run, args.citation_start_source, direction=args.citation_direction,
+                max_depth=args.citation_depth, limit=args.limit,
+            )
+            if args.json:
+                print(json.dumps(report, indent=2, ensure_ascii=False))
+            else:
+                print(f"Citation traversal from {report['start_title']} ({report['start_source_id']})")
+                print(f"Direction: {report['direction']} | Depth limit: {report['max_depth']} | "
+                      f"Reached: {report['nodes_reached']}")
+                for item in report["results"]:
+                    print(f"- depth {item['depth']} | {item['source_id']} | {item['title']} | DOI {item['doi'] or 'unknown'}")
+                    print("  Path: " + " -> ".join(item["path_source_ids"]))
+                print(f"Unresolved citation records: {report['unresolved_citation_records']}")
+                print("Limitations: " + report["limitations"])
             return
         if args.rank_citation_graph:
             run = store.load_run(args.rank_citation_graph)
