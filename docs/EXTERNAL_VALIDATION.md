@@ -101,27 +101,33 @@ JSON report artifact has been inspected.
 
 ## External limma-voom numerical runs (2026-11-06)
 
-Two real external datasets have passed numerical checks in the ORACLE
-validation branch:
+The final pinned Bioconductor 3.22 / R 4.5.2 workflow completed all three
+jobs successfully in GitHub Actions run
+[42233635227](https://github.com/Sachhin/ORACLE/actions/runs/42233635227).
+The run uploaded three frozen evidence artifacts with input hashes.
 
-- **GSE176260 discovery cohort** (138 samples, 11,111 features): recomputed
-  expression matrix versus submitter-published GEO expression matrix had
-  RMSE 4.31e-15, MAE 2.68e-15, and Pearson r 1.0000. Recomputed voom weights
-  versus submitter-published weights had RMSE 0.0478 and Pearson r 0.9998.
-  This is a direct full-matrix reference comparison.
-- **GSE64099 Smchd1 knockout versus wild type** (7 samples; 12,303 features
-  after the published CPM filter): the reproduced top ten stable GeneID
-  results had recall 1.00, logFC RMSE 0.0021, and direction agreement 1.00;
-  the recomputed FDR<0.05 and FDR<0.01 counts exactly matched the published
-  values (12 and 1). This is an independent dataset comparison against the
-  published DE table, not a submitter-published E/weights matrix.
+- **GSE176260 discovery cohort — PASS** (138 samples, 11,111 features):
+  expression matrix versus submitter-published GEO matrix: RMSE 4.31e-15,
+  MAE 2.68e-15, Pearson r 1.0000. Voom weights: RMSE 0.0478,
+  Pearson r 0.9998.
+- **GSE176261 validation cohort — FAIL_NUMERICAL_TOLERANCE** (53 samples,
+  11,111 features): expression RMSE 0.0580 versus pre-set maximum 0.0500,
+  MAE 0.0512, Pearson r 0.9999. Voom weights RMSE 0.0471,
+  Pearson r 0.9997. The CI job succeeds because it correctly preserves and
+  uploads the diagnostic report; the dataset comparison itself remains a
+  tolerance failure. It belongs to the same publication as GSE176260 and is
+  not an independent study.
+- **GSE64099 — PASS, independent experiment** (7 samples, 12,303 features
+  after the published CPM filter): top-10 stable GeneID recall 1.00,
+  logFC RMSE 0.0021, direction agreement 1.00, and FDR<0.05 / FDR<0.01
+  significant-gene counts exactly reproduced (12 / 1). This is a published
+  differential-expression table comparison, not a submitter-published
+  full E/weights matrix comparison.
 
-The GSE176261 validation cohort belongs to the same publication as GSE176260,
-so it is not counted as an independent study. Its first numerical run gave
-expression RMSE 0.0580 (pre-set maximum 0.0500), Pearson r 0.9999, and weight
-RMSE 0.0471; the expression comparison therefore did **not** pass the
-pre-set tolerance. This result must not be relabelled as a pass by relaxing
-the threshold after seeing the data. Further investigation is pending.
+The numerical checks are complete and frozen. The unresolved GSE176261
+expression discrepancy must be investigated without relaxing thresholds.
+These reproducibility checks do not establish biological correctness,
+generalization to all RNA-seq workflows, or model superiority.
 
 ## What this tooling does not claim
 
