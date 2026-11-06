@@ -75,7 +75,7 @@ def merge_sample_count_files(
                 raise ValueError(f"{name}: empty feature identifier on line {line_number}.")
             if feature in counts:
                 raise ValueError(f"{name}: duplicate feature identifier {feature!r}.")
-            if not re.fullmatch(r"\\d+", count_raw):
+            if not re.fullmatch(r"\d+", count_raw):
                 raise ValueError(
                     f"{name}: count for {feature!r} must be a non-negative integer: {count_raw!r}."
                 )
