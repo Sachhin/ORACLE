@@ -136,6 +136,43 @@ metrics <- function(actual, reference) {
 e_metrics <- metrics(voom_result$E, reference_e)
 w_metrics <- metrics(voom_result$weights, reference_w)
 
+# Preserve recomputed matrices and sample-level residual diagnostics. The
+# pooled RMSE alone cannot distinguish a global offset from a subset of
+# samples or genes driving the discrepancy.
+out_dir <- dirname(report_path)
+dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
+write_matrix_gz <- function(x, path) {
+  con <- gzfile(path, open = "wt")
+  on.exit(close(con), add = TRUE)
+  utils::write.table(cbind(feature_id = rownames(x), x), con,
+                     sep = "\t", quote = FALSE, row.names = FALSE)
+}
+write_matrix_gz(voom_result$E, file.path(out_dir, "gse176261_recomputed_E.tsv.gz"))
+write_matrix_gz(voom_result$weights, file.path(out_dir, "gse176261_recomputed_weights.tsv.gz"))
+
+sample_diagnostics <- lapply(seq_len(ncol(voom_result$E)), function(j) {
+  delta <- voom_result$E[, j] - reference_e[, j]
+  c(
+    sample_alias = colnames(voom_result$E)[j],
+    geo_accession = as.character(selected$geo_accession[j]),
+    phenotype = as.character(sample_data$phenotype[j]),
+    gender = as.character(sample_data$gender[j]),
+    library_size = as.character(dge$samples$lib.size[j]),
+    norm_factor = as.character(dge$samples$norm.factors[j]),
+    mean_signed_error = as.character(mean(delta)),
+    centered_error_sd = as.character(sd(delta - mean(delta))),
+    max_abs_centered_error = as.character(max(abs(delta - mean(delta)))),
+    mae = as.character(mean(abs(delta))),
+    rmse = as.character(sqrt(mean(delta^2))),
+    pearson_r = as.character(suppressWarnings(cor(voom_result$E[, j], reference_e[, j])))
+  )
+})
+sample_diagnostics <- as.data.frame(do.call(rbind, sample_diagnostics), stringsAsFactors = FALSE)
+utils::write.table(sample_diagnostics,
+                   file.path(out_dir, "gse176261_sample_diagnostics.tsv"),
+                   sep = "\t", quote = FALSE, row.names = FALSE)
+
+
 report <- list(
   status = "COMPLETED_EXTERNAL_REFERENCE_COMPARISON",
   dataset_accession = "GSE176261",
@@ -162,7 +199,27 @@ report <- list(
     reference_weights = digest::digest(file = reference_w_path, algo = "sha256")
   ),
   expression_matrix_metrics = as.list(e_metrics),
+  expression_residual_structure = list(
+    interpretation = paste(
+      "Per-sample residuals are decomposed into a sample-wide additive offset",
+      "and gene-specific residual variation. Near-zero centered residual SD",
+      "indicates a sample-wise offset rather than gene-specific disagreement."
+    ),
+    max_per_sample_centered_error_sd = max(as.numeric(sample_diagnostics$centered_error_sd)),
+    median_per_sample_centered_error_sd = median(as.numeric(sample_diagnostics$centered_error_sd)),
+    max_abs_centered_error_max = max(as.numeric(sample_diagnostics$max_abs_centered_error))
+  ),
   precision_weight_metrics = as.list(w_metrics),
+  design_columns = colnames(design),
+  normalization = list(
+    method = "edgeR TMM",
+    effective_library_sizes = as.list(setNames(as.numeric(dge$samples$lib.size * dge$samples$norm.factors), colnames(counts))),
+    library_sizes = as.list(setNames(as.numeric(dge$samples$lib.size), colnames(counts))),
+    norm_factors = as.list(setNames(as.numeric(dge$samples$norm.factors), colnames(counts)))
+  ),
+  sample_diagnostics_file = "gse176261_sample_diagnostics.tsv",
+  recomputed_expression_file = "gse176261_recomputed_E.tsv.gz",
+  recomputed_weights_file = "gse176261_recomputed_weights.tsv.gz",
   acceptance_thresholds = list(expression_rmse_max = 0.05, expression_pearson_min = 0.999,
                                weights_rmse_max = 0.10, weights_pearson_min = 0.99),
   limitations = paste(
