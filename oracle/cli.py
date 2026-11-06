@@ -124,11 +124,38 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--replication-analysis-id", default="", help="Source DESeq2 analysis ID")
     parser.add_argument("--replication-feature", default="", help="Exact gene/feature identifier to compare")
     parser.add_argument("--replication-fdr", type=float, default=0.05, help="Adjusted p-value threshold for the directional consistency screen")
+    parser.add_argument("--benchmark-results", default="", help="DESeq2 result JSON/TSV to score against a curated known-positive set")
+    parser.add_argument("--benchmark-manifest", default="", help="JSON manifest with dataset_accession, HTTPS reference, and known_positive_features")
+    parser.add_argument("--benchmark-fdr", type=float, default=0.05, help="Adjusted p-value threshold for benchmark hit selection")
+    parser.add_argument("--benchmark-abs-log2fc", type=float, default=0.0, help="Minimum absolute log2 fold change for benchmark hit selection")
     return parser
 
 
 def main() -> None:
     args = build_parser().parse_args()
+    if args.benchmark_results or args.benchmark_manifest:
+        if not args.benchmark_results or not args.benchmark_manifest:
+            raise SystemExit("--benchmark-results and --benchmark-manifest must be supplied together.")
+        from .benchmark import run_benchmark
+        try:
+            report = run_benchmark(
+                args.benchmark_results, args.benchmark_manifest,
+                fdr_threshold=args.benchmark_fdr,
+                absolute_log2fc_threshold=args.benchmark_abs_log2fc,
+            )
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            raise SystemExit(f"Benchmark failed: {exc}") from exc
+        if args.json:
+            print(json.dumps(report, indent=2, ensure_ascii=False))
+        else:
+            print(f"Benchmark: {report['benchmark_type']} | Dataset: {report['dataset_accession']}")
+            print(f"Known-positive recovery: {report['recovered_count']}/{report['truth_set_size']} "
+                  f"(recall={report['known_positive_recall']})")
+            print(f"Curated-set overlap precision: {report['curated_set_overlap_precision']}")
+            print(f"Missed tested positives: {report['missed_count']} | Unmatched hits: {report['unmatched_hit_count']} "
+                  f"| Untested positives: {report['untested_truth_count']}")
+            print("Interpretation: " + report["interpretation"])
+        return
     if args.geo_deseq2:
         if not args.geo_group_a or not args.geo_group_b or not args.geo_group:
             raise SystemExit("--geo-deseq2 requires --geo-group for every sample, --geo-group-a, and --geo-group-b.")
