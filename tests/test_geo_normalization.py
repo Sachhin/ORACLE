@@ -77,6 +77,22 @@ class GEONormalizationTests(unittest.TestCase):
         self.assertEqual(report["first_output_sha256"], report["repeat_output_sha256"])
         self.assertIn("Same-runtime", report["verification_scope"])
 
+
+    def test_quantile_output_matches_cross_python_golden_bytes(self):
+        source = self.write(
+            "golden_matrix.tsv",
+            "ID_REF\\tS1\\tS2\\ng1\\t5\\t4\\ng2\\t2\\t1\\ng3\\t3\\t6\\n",
+        )
+        output = self.root / "golden_normalized.tsv"
+        normalize_geo_matrix(source, output, "quantile")
+        expected = (
+            b"feature\\tS1\\tS2\\n"
+            b"g1\\t5.5\\t3.5\\n"
+            b"g2\\t1.5\\t1.5\\n"
+            b"g3\\t3.5\\t5.5\\n"
+        )
+        self.assertEqual(output.read_bytes(), expected)
+
     def test_rejects_invalid_inputs_and_never_overwrites_raw_file(self):
         source = self.write("raw.tsv", "gene\tA\tB\ng1\t1\t2\n")
         with self.assertRaisesRegex(ValueError, "differ from input"):
