@@ -1,6 +1,11 @@
 name: GSE176261 edgeR version sensitivity audit
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/gse176261-edger-version-sweep.yml"
+      - "scripts/validate_gse176261_voom.R"
   pull_request:
     branches: [main]
     paths:
