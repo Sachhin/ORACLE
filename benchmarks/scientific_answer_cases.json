@@ -1,0 +1,79 @@
+{
+  "benchmark_id": "ORACLE-SCIENCE-ANSWERS-STARTER",
+  "version": "1.0",
+  "status": "starter_question_set_no_gold_answers",
+  "scoring_dimensions": [
+    "factual_accuracy",
+    "evidence_traceability",
+    "uncertainty_calibration",
+    "reasoning_quality",
+    "completeness"
+  ],
+  "score_scale": {
+    "1": "Unacceptable",
+    "2": "Weak",
+    "3": "Mixed",
+    "4": "Strong",
+    "5": "Excellent"
+  },
+  "review_protocol": [
+    "Use the same question and the same source packet when comparing two answers.",
+    "Reviewers should independently check primary sources for material claims.",
+    "Record the source IDs actually checked; do not score fluency as scientific correctness.",
+    "Use at least two reviewers for comparative evaluations where feasible.",
+    "Resolve large reviewer disagreements with a written adjudication note.",
+    "Do not interpret subjective rubric averages as calibrated accuracy or proof of model superiority."
+  ],
+  "cases": [
+    {
+      "case_id": "DEV-001",
+      "domain": "developmental_biology",
+      "question": "How can a single fertilized egg coordinate the emergence of many distinct cell types and organized tissues?",
+      "review_expectations": [
+        "Distinguish maternal contributions, zygotic gene regulation, signaling, cell interactions, and physical organization.",
+        "Avoid implying that one master gene or a fully specified blueprint explains development.",
+        "Identify where mechanisms differ by organism, developmental stage, and tissue."
+      ]
+    },
+    {
+      "case_id": "PLANT-001",
+      "domain": "plant_biology",
+      "question": "How do plants detect and respond to heat stress, and how can experiments distinguish protective acclimation from damage responses?",
+      "review_expectations": [
+        "Separate sensing, signaling, transcriptional response, physiological acclimation, and injury.",
+        "Consider genotype, developmental stage, exposure duration, and environmental confounders.",
+        "Require suitable controls and independent biological replicates."
+      ]
+    },
+    {
+      "case_id": "RNA-001",
+      "domain": "computational_biology",
+      "question": "How should a researcher determine whether an RNA-seq expression difference is biological rather than a batch or processing artifact?",
+      "review_expectations": [
+        "Check sample metadata, design confounding, library quality, normalization, and model assumptions.",
+        "Distinguish raw counts from normalized continuous measurements.",
+        "Discuss independent replication and multiple-testing control."
+      ]
+    },
+    {
+      "case_id": "CAUSAL-001",
+      "domain": "molecular_biology",
+      "question": "What evidence is needed to conclude that perturbing a gene causes a measured cellular phenotype?",
+      "review_expectations": [
+        "Distinguish association from intervention-based evidence.",
+        "Consider perturbation specificity, rescue, orthogonal methods, controls, and off-target effects.",
+        "State limits on generalization across systems."
+      ]
+    },
+    {
+      "case_id": "CONFLICT-001",
+      "domain": "cell_biology",
+      "question": "How should conflicting published results about the same signaling pathway be evaluated?",
+      "review_expectations": [
+        "Compare models, cell types, doses, timing, assays, and source quality.",
+        "Do not resolve contradictions by majority vote or unsupported averaging.",
+        "Identify discriminating experiments and alternative explanations."
+      ]
+    }
+  ]
+}
