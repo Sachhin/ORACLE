@@ -43,6 +43,14 @@ class EvidenceBenchmarkTests(unittest.TestCase):
         self.assertEqual(report["source_attribution_coverage"], .5)
         self.assertEqual(report["quote_coverage"], .5)
         self.assertIsNotNone(report["mean_pairwise_cohen_kappa"])
+    def test_disagreement_requires_explicit_adjudication(self):
+        row = self.case(reviewer_labels={"R1":"supports","R2":"refutes"})
+        with self.assertRaisesRegex(ValueError, "adjudication_note and adjudicator_id"):
+            evaluate_evidence_predictions([row])
+        row["adjudication_note"] = "Original passage is contextual; claim scope is too broad."
+        row["adjudicator_id"] = "senior-reviewer"
+        report = evaluate_evidence_predictions([row])
+        self.assertEqual(report["case_count"], 1)
     def test_reviewer_labels_must_cover_reviewers(self):
         row = self.case(reviewer_labels={"R1":"supports"})
         with self.assertRaisesRegex(ValueError, "every reviewer_id"):
