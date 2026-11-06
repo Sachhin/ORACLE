@@ -103,28 +103,43 @@ def _quantile_normalize(matrix: list[list[float]]) -> list[list[float]]:
 
 
 def _tmm_factors(matrix, totals):
+    """Compute TMM factors with M-value and average-expression trimming."""
     def q(values, p):
-        v = sorted(values); x = (len(v)-1)*p; lo=int(math.floor(x)); hi=int(math.ceil(x))
+        v = sorted(values)
+        x = (len(v)-1)*p
+        lo, hi = int(math.floor(x)), int(math.ceil(x))
         return v[lo] + (v[hi]-v[lo])*(x-lo)
-    upper=[q([r[j]/totals[j]*1e6 for r in matrix], .75) for j in range(len(totals))]
-    ref=min(range(len(totals)), key=lambda j: abs(upper[j]-sum(upper)/len(upper)))
-    factors=[1.0]*len(totals)
+    upper = [q([r[j]/totals[j]*1e6 for r in matrix], .75) for j in range(len(totals))]
+    ref = min(range(len(totals)), key=lambda j: abs(upper[j]-sum(upper)/len(upper)))
+    factors = [1.0]*len(totals)
     for j in range(len(totals)):
-        if j==ref: continue
-        vals=[]
-        for r in matrix:
-            a,b=r[ref],r[j]
-            if a<=0 or b<=0: continue
-            m=math.log2((b/totals[j])/(a/totals[ref]))
-            v=(totals[j]-b)/(totals[j]*b)+(totals[ref]-a)/(totals[ref]*a)
-            if v>0 and math.isfinite(m): vals.append((m,1.0/v))
-        if len(vals)<3: raise ValueError('TMM requires three shared positive-count features.')
-        vals.sort(key=lambda x:x[0]); lo=int(len(vals)*.30); hi=int(math.ceil(len(vals)*.70))
-        kept=vals[lo:hi]
-        if not kept: raise ValueError('TMM trimming removed all features; matrix too small.')
-        factors[j]=2**(sum(m*w for m,w in kept)/sum(w for _,w in kept))
-    gm=math.exp(sum(math.log(x) for x in factors)/len(factors))
+        if j == ref:
+            continue
+        vals = []
+        for row in matrix:
+            ref_count, obs_count = row[ref], row[j]
+            if ref_count <= 0 or obs_count <= 0:
+                continue
+            m = math.log2((obs_count/totals[j])/(ref_count/totals[ref]))
+            av = 0.5*math.log2((obs_count/totals[j])*(ref_count/totals[ref]))
+            variance = ((totals[j]-obs_count)/(totals[j]*obs_count)
+                        + (totals[ref]-ref_count)/(totals[ref]*ref_count))
+            if variance > 0 and math.isfinite(m) and math.isfinite(av):
+                vals.append((m, av, 1.0/variance))
+        if len(vals) < 3:
+            raise ValueError("TMM requires three shared positive-count features.")
+        m_order = sorted(range(len(vals)), key=lambda i: vals[i][0])
+        a_order = sorted(range(len(vals)), key=lambda i: vals[i][1])
+        m_keep = set(m_order[int(len(vals)*.30):int(math.ceil(len(vals)*.70))])
+        a_keep = set(a_order[int(len(vals)*.05):int(math.ceil(len(vals)*.95))])
+        keep = m_keep & a_keep
+        if not keep:
+            raise ValueError("TMM trimming removed all features; matrix too small.")
+        factors[j] = 2**(sum(vals[i][0]*vals[i][2] for i in keep)
+                         / sum(vals[i][2] for i in keep))
+    gm = math.exp(sum(math.log(x) for x in factors)/len(factors))
     return [x/gm for x in factors]
+
 
 def normalize_geo_matrix(
     input_path: str | Path,
