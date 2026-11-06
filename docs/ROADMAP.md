@@ -1,6 +1,6 @@
 # Implementation Roadmap
 
-Status reflects code currently present on the main branch; checked items are implemented and covered by tests, not necessarily scientifically validated. A checked item means implemented and covered by tests; it does not imply scientific validity or live-provider verification.
+Status reflects code currently present on the main branch. Checked items are implemented and covered by tests; they do not imply scientific validity or live-provider verification.
 
 ## Milestone 1 — Offline foundation
 - [x] Domain models and integrity-oriented statuses
