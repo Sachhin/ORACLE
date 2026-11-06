@@ -136,9 +136,9 @@ def evaluate_orthogonal_missingness(
     observed_path: str | Path,
     orthogonal_path: str | Path,
     imputed_path: str | Path,
-    labels_path: str | Path,
+    labels_path: str | Path | None = None,
     *,
-    outcome_column: str,
+    outcome_column: str | None = None,
     top_k: int = 20,
 ) -> dict:
     """Score actual missing DDA cells against paired DIA values and outcome effects."""
