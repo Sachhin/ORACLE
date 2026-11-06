@@ -78,16 +78,21 @@ class AffymetrixRMATests(unittest.TestCase):
                 path = Path(tmp) / name
                 path.write_bytes(name.encode())
                 paths.append(path)
+
             def fake_run(command, **kwargs):
                 output = Path(command[5])
-                output.write_text("feature\ta\tb\nprobe_1\t5.0\t6.0\n", encoding="utf-8")
-                return SimpleNamespace(returncode=0, stdout="R 4.5.0\t1.70.0\thgu133a", stderr="")
+                output.write_text("feature\\ta\\tb\\nprobe_1\\t5.0\\t6.0\\n", encoding="utf-8")
+                return SimpleNamespace(
+                    returncode=0, stdout="R 4.5.0\\t1.70.0\\thgu133a", stderr=""
+                )
+
             destination = Path(tmp) / "out.tsv"
-            with patch("oracle.geo_affymetrix.shutil.which", return_value="/usr/bin/Rscript"), \\
-                 patch("oracle.geo_affymetrix.subprocess.run", side_effect=fake_run):
-                with self.assertRaisesRegex(RuntimeError, "does not match expected platform"):
-                    AffymetrixRMAAnalyzer().analyze(
-                        paths, destination, backend="affy", expected_platform="hgu133plus2")
+            with patch("oracle.geo_affymetrix.shutil.which", return_value="/usr/bin/Rscript"):
+                with patch("oracle.geo_affymetrix.subprocess.run", side_effect=fake_run):
+                    with self.assertRaisesRegex(RuntimeError, "does not match expected platform"):
+                        AffymetrixRMAAnalyzer().analyze(
+                            paths, destination, backend="affy", expected_platform="hgu133plus2"
+                        )
             self.assertFalse(destination.exists())
 
 if __name__ == "__main__":

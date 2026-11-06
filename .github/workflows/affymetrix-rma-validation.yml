@@ -1,0 +1,109 @@
+name: Real GEO Affymetrix RMA validation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/affymetrix-rma-validation.yml"
+      - "oracle/geo_affymetrix.py"
+      - "tests/test_geo_affymetrix.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  real-cel-rma:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out ORACLE
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+
+      - name: Install platform-matched Bioconductor packages
+        run: |
+          Rscript -e 'if (!requireNamespace("BiocManager", quietly=TRUE)) install.packages("BiocManager"); BiocManager::install(c("affy", "hgu133acdf"), ask=FALSE, update=FALSE, Ncpus=2)'
+          Rscript -e 'stopifnot(requireNamespace("affy", quietly=TRUE), requireNamespace("hgu133acdf", quietly=TRUE), requireNamespace("Biobase", quietly=TRUE))'
+
+      - name: Download two real GPL96 CEL samples from GEO
+        run: |
+          python -m oracle --download-geo-samples --gsm GSM1003058 --gsm GSM1003059 --dataset-max-mb 20 --json > data_geo_download.json
+          python - <<'PY'
+          import gzip
+          import json
+          from pathlib import Path
+
+          report = json.loads(Path("data_geo_download.json").read_text())
+          downloaded = [x for x in report["files"] if x["status"] == "downloaded"]
+          if len(downloaded) != 2:
+              raise SystemExit(f"Expected 2 CEL files, got {len(downloaded)}; warnings={report['warnings']}")
+          out = Path("data/affymetrix")
+          out.mkdir(parents=True, exist_ok=True)
+          cel_paths = []
+          for item in downloaded:
+              source = Path(item["local_path"])
+              target = out / (source.name[:-3] if source.name.lower().endswith(".gz") else source.name)
+              with gzip.open(source, "rb") as src, target.open("wb") as dst:
+                  dst.write(src.read())
+              if target.stat().st_size == 0:
+                  raise SystemExit(f"Empty CEL after decompression: {target}")
+              cel_paths.append(str(target))
+          Path("cel_paths.txt").write_text("\n".join(cel_paths) + "\n")
+          print(json.dumps({"cel_paths": cel_paths}, indent=2))
+          PY
+
+      - name: Run real Affymetrix RMA with GPL96 design guard
+        run: |
+          mapfile -t CEL_FILES < cel_paths.txt
+          python -m oracle \
+            --geo-affymetrix-rma "${CEL_FILES[0]}" \
+            --geo-affymetrix-rma "${CEL_FILES[1]}" \
+            --affy-backend affy \
+            --affy-platform hgu133a \
+            --affy-output data/affymetrix/GSE40839_GPL96_RMA.tsv \
+            --json > data/affymetrix/GSE40839_GPL96_RMA_report.json
+          python - <<'PY'
+          import csv
+          import json
+          from pathlib import Path
+
+          report = json.loads(Path("data/affymetrix/GSE40839_GPL96_RMA_report.json").read_text())
+          matrix = Path(report["output_path"])
+          with matrix.open(encoding="utf-8", newline="") as handle:
+              rows = csv.reader(handle, delimiter="\\t")
+              header = next(rows)
+              first = next(rows, None)
+          assert report["platform"].casefold() == "hgu133a", report
+          assert report["samples"] == 2 and report["features"] > 0, report
+          assert header[1:] == ["GSM1003058_C1", "GSM1003059_C2"], header
+          assert first and len(first) == 3, first
+          print(json.dumps({
+              "status": "REAL_CEL_RMA_OK",
+              "platform": report["platform"],
+              "samples": report["samples"],
+              "features": report["features"],
+              "output_sha256": report["output_sha256"],
+              "software": report["software"],
+          }, indent=2))
+          PY
+
+      - name: Upload CEL inputs and RMA output
+        uses: actions/upload-artifact@v4
+        with:
+          name: oracle-real-gpl96-rma-validation
+          path: |
+            data/geo_samples/
+            data/affymetrix/
+            data_geo_download.json
+          if-no-files-found: error
+          retention-days: 14
