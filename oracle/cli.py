@@ -91,6 +91,13 @@ def build_parser() -> argparse.ArgumentParser:
                                  help="Show competing hypotheses and their reviewed evidence links")
     portfolio_group.add_argument("--show-sources", metavar="RUN_ID",
                                  help="Show source provenance and human quality assessments")
+    portfolio_group.add_argument("--show-connections", metavar="RUN_ID",
+                                 help="Show source-linked cross-domain connection proposals")
+    parser.add_argument("--review-connection", metavar="RUN_ID",
+                        help="Record a human review decision for a cross-domain connection")
+    parser.add_argument("--connection-id", default="", help="Cross-domain connection ID")
+    parser.add_argument("--connection-status", choices=["accepted", "rejected", "needs_context"])
+    parser.add_argument("--connection-note", default="", help="Human rationale for the connection review")
     parser.add_argument("--source-action", choices=["review"],
                         help="Record a human reliability assessment for a source")
     parser.add_argument("--source-run", help="Research run containing the source")
@@ -425,6 +432,23 @@ def main() -> None:
             print(f"Candidate {candidate['feature']} marked {candidate['status']}.")
             print("This review does not automatically create or promote a scientific claim.")
         return
+    if args.review_connection:
+        if not args.connection_id or not args.connection_status or not args.connection_note.strip():
+            raise SystemExit("--review-connection requires --connection-id, --connection-status, and --connection-note.")
+        run = store.load_run(args.review_connection)
+        if run is None:
+            raise SystemExit(f"Research run not found: {args.review_connection}")
+        from .knowledge import KnowledgeBase
+        connection = KnowledgeBase().review_cross_domain_connection(
+            run, args.connection_id, args.connection_status, args.connection_note,
+        )
+        store.save_run(run)
+        if args.json:
+            print(json.dumps(connection.__dict__, indent=2, ensure_ascii=False))
+        else:
+            print(f"Connection {connection.connection_id}: {connection.status}")
+            print(f"Human review: {connection.reviewer_note}")
+        return
     if args.source_action:
         if (not args.source_run or not args.source_id or args.source_score is None
                 or not args.source_note.strip()):
@@ -555,7 +579,7 @@ def main() -> None:
             print(experiment.limitations)
         return
     if (args.portfolio or args.assess_gaps or args.related_to is not None or args.show_reviews
-            or args.show_tasks or args.show_hypotheses or args.show_sources):
+            or args.show_tasks or args.show_hypotheses or args.show_sources or args.show_connections):
         from dataclasses import asdict
         from .portfolio import ResearchPortfolio
         portfolio = ResearchPortfolio(store)
@@ -569,6 +593,32 @@ def main() -> None:
                     print(f"- {item['run_id']} | {item['status']} | gap score {item['knowledge_gap_score']}/100")
                     print(f"  {item['question']}")
                     print(f"  Sources: {item['sources']} | Evidence: {item['evidence']} | Claims: {item['claims']} | Hypotheses: {item['hypotheses']}")
+            return
+        if args.show_connections:
+            run = store.load_run(args.show_connections)
+            if run is None:
+                raise SystemExit(f"Research run not found: {args.show_connections}")
+            sources = {item.source_id: item for item in run.sources}
+            items = []
+            for connection in run.cross_domain_connections:
+                items.append({
+                    **connection.__dict__,
+                    "source_titles": [sources[source_id].title for source_id in connection.source_ids
+                                      if source_id in sources],
+                })
+            if args.json:
+                print(json.dumps(items, indent=2, ensure_ascii=False))
+            else:
+                if not items:
+                    print("No cross-domain connection proposals in this run.")
+                for item in items:
+                    print(f"- {item['connection_id']} | {item['status']} | {item['domain_a']} ↔ {item['domain_b']}")
+                    print(f"  {item['statement']}")
+                    print(f"  Rationale: {item['rationale']}")
+                    print(f"  Sources: {', '.join(item['source_titles']) or 'unavailable'}")
+                    print(f"  Testable prediction: {item['testable_prediction']}")
+                    if item['reviewer_note']:
+                        print(f"  Human review: {item['reviewer_note']}")
             return
         if args.show_sources:
             run = store.load_run(args.show_sources)
