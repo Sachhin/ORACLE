@@ -101,6 +101,8 @@ def build_parser() -> argparse.ArgumentParser:
                                  help="Show persisted cross-run claim links; optionally filter by run ID")
     portfolio_group.add_argument("--rank-citation-graph", metavar="RUN_ID",
                                  help="Rank source records in a DOI-resolved citation graph")
+    portfolio_group.add_argument("--show-answer-reviews", metavar="RUN_ID",
+                                 help="Show human-scored answer reviews and rubric averages")
     portfolio_group.add_argument("--show-deseq2", metavar="RUN_ID",
                                  help="Show persisted DESeq2 analyses and provisional candidate findings")
     portfolio_group.add_argument("--show-reviews", metavar="RUN_ID",
@@ -128,6 +130,16 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--connection-id", default="", help="Cross-domain connection ID")
     parser.add_argument("--connection-status", choices=["accepted", "rejected", "needs_context"])
     parser.add_argument("--connection-note", default="", help="Human rationale for the connection review")
+    parser.add_argument("--score-answer", metavar="RUN_ID", help="Record a human rubric review of an answer for a saved run")
+    parser.add_argument("--answer-file", default="", help="UTF-8 file containing the answer text to score")
+    parser.add_argument("--answer-reviewer", default="", help="Human answer reviewer identity")
+    parser.add_argument("--answer-review-note", default="", help="Reviewer rationale and caveats")
+    parser.add_argument("--answer-source-ids", default="", help="Comma-separated source IDs checked during review")
+    parser.add_argument("--score-accuracy", type=int)
+    parser.add_argument("--score-traceability", type=int)
+    parser.add_argument("--score-uncertainty", type=int)
+    parser.add_argument("--score-reasoning", type=int)
+    parser.add_argument("--score-completeness", type=int)
     parser.add_argument("--review-claim", metavar="RUN_ID", help="Human-review a scientific claim in a saved run")
     parser.add_argument("--claim-id", default="", help="Claim ID to review")
     parser.add_argument("--claim-status", choices=["supported", "weakened", "rejected", "open"])
@@ -523,6 +535,31 @@ def main() -> None:
         print(json.dumps(link.__dict__, indent=2, ensure_ascii=False) if args.json
               else f"Cross-run link {link.link_id}: {link.status} (human-reviewed).")
         return
+    if args.score_answer:
+        if not (args.answer_file and args.answer_reviewer.strip() and args.answer_review_note.strip()):
+            raise SystemExit("--score-answer requires --answer-file, --answer-reviewer, and --answer-review-note.")
+        score_values = {
+            "factual_accuracy": args.score_accuracy,
+            "evidence_traceability": args.score_traceability,
+            "uncertainty_calibration": args.score_uncertainty,
+            "reasoning_quality": args.score_reasoning,
+            "completeness": args.score_completeness,
+        }
+        if any(value is None for value in score_values.values()):
+            raise SystemExit("All five scores are required: --score-accuracy, --score-traceability, --score-uncertainty, --score-reasoning, --score-completeness.")
+        try:
+            with open(args.answer_file, "r", encoding="utf-8") as handle:
+                answer_text = handle.read()
+        except OSError as exc:
+            raise SystemExit(f"Cannot read answer file: {exc}") from exc
+        review = store.record_answer_quality_review(
+            args.score_answer, answer_text, args.answer_reviewer, score_values,
+            args.answer_review_note,
+            [item.strip() for item in args.answer_source_ids.split(",") if item.strip()],
+        )
+        print(json.dumps(review, indent=2, ensure_ascii=False) if args.json
+              else f"Human answer review saved: {review['review_id']} | reviewer {review['reviewer']}")
+        return
     if args.review_claim:
         if not args.claim_id or not args.claim_status or not args.claim_reviewer.strip() or not args.claim_note.strip():
             raise SystemExit("--review-claim requires --claim-id, --claim-status, --claim-reviewer, and --claim-note.")
@@ -698,7 +735,7 @@ def main() -> None:
     if (args.portfolio or args.assess_gaps or args.related_to is not None or args.show_reviews
             or args.show_tasks or args.show_hypotheses or args.show_sources or args.show_connections
             or args.cross_run_candidates or args.show_cross_run_links is not None
-            or args.rank_citation_graph):
+            or args.rank_citation_graph or args.show_answer_reviews):
         from dataclasses import asdict
         from .portfolio import ResearchPortfolio
         portfolio = ResearchPortfolio(store)
@@ -712,6 +749,22 @@ def main() -> None:
                     print(f"- {item['run_id']} | {item['status']} | gap score {item['knowledge_gap_score']}/100")
                     print(f"  {item['question']}")
                     print(f"  Sources: {item['sources']} | Evidence: {item['evidence']} | Claims: {item['claims']} | Hypotheses: {item['hypotheses']}")
+            return
+        if args.show_answer_reviews:
+            reviews = store.list_answer_quality_reviews(args.show_answer_reviews)
+            from .answer_benchmark import summarize_answer_reviews
+            report = {"reviews": reviews, "summary": summarize_answer_reviews(reviews)}
+            if args.json:
+                print(json.dumps(report, indent=2, ensure_ascii=False))
+            else:
+                if not reviews:
+                    print("No human-scored answer reviews are stored for this run.")
+                for item in reviews:
+                    print(f"- {item['review_id']} | {item['reviewer']} | {item['created_at']}")
+                    print("  Scores: " + ", ".join(f"{key}={value}" for key, value in item["scores"].items()))
+                    print(f"  Note: {item['reviewer_note']}")
+                print("Average scores: " + json.dumps(report["summary"]["dimension_averages"]))
+                print("Limitations: " + report["summary"]["limitations"])
             return
         if args.rank_citation_graph:
             run = store.load_run(args.rank_citation_graph)
