@@ -258,3 +258,143 @@ def evaluate_imputation_downstream_bias(
         "mean_absolute_log2fc_change": math.fsum(x["mean_absolute_log2fc_change"] for x in summaries)/replicates,
         "limitations": "This is a synthetic sensitivity experiment: the complete input matrix is treated as a reference, not as biological ground truth. It measures row-median imputation effects on a user-defined Welch/BH contrast only. It does not validate the measurement scale, model real missingness, account for batch/covariates, or establish DESeq2/limma behavior. Run on suitable continuous log2 data with a predeclared design; real labelled datasets and alternative imputation methods are still required.",
     }
+
+
+_VOOM_REFERENCE_R = r'''
+args <- commandArgs(trailingOnly=TRUE)
+suppressPackageStartupMessages({
+  library(edgeR)
+  library(limma)
+})
+counts <- read.delim(args[1], row.names=1, check.names=FALSE)
+meta <- read.delim(args[2], row.names=1, check.names=FALSE)
+if (!identical(colnames(counts), rownames(meta))) stop("Sample order mismatch.")
+meta$group <- factor(meta$group, levels=c(args[4], args[5]))
+design <- model.matrix(~0 + group, data=meta)
+colnames(design) <- c("A", "B")
+if (qr(design)$rank < ncol(design)) stop("Rank-deficient design.")
+y <- DGEList(counts=as.matrix(counts))
+keep <- filterByExpr(y, design=design)
+if (!any(keep)) stop("No expressed features remain.")
+y <- y[keep,,keep.lib.sizes=FALSE]
+y <- calcNormFactors(y, method="TMM")
+v <- voom(y, design, plot=FALSE)
+fit <- lmFit(v, design)
+fit <- contrasts.fit(fit, makeContrasts(B-A, levels=design))
+fit <- eBayes(fit)
+tab <- topTable(fit, number=Inf, sort.by="none", adjust.method="BH")
+tab$feature <- rownames(tab)
+tab <- tab[,c("feature","logFC","AveExpr","t","P.Value","adj.P.Val","B")]
+write.table(tab, file=args[3], sep="\\t", quote=FALSE, row.names=FALSE, na="NA")
+cat(as.character(getRversion()), "\\t", as.character(packageVersion("edgeR")),
+    "\\t", as.character(packageVersion("limma")), sep="")
+'''
+
+
+def compare_voom_to_limma_reference(
+    matrix_path: str | Path, group_labels: dict[str, str], *,
+    group_a: str, group_b: str, rscript: str = "Rscript",
+    timeout_seconds: int = 900, tolerance: float = 1e-10,
+) -> dict:
+    """Compare adapter output with a separately executed limma/edgeR reference script.
+
+    This is a reproducibility/serialization parity check using the same trusted
+    Bioconductor implementation, not an independent biological validation.
+    """
+    from .geo_voom import GEOVoomAnalyzer
+    if timeout_seconds < 1 or not math.isfinite(tolerance) or tolerance < 0:
+        raise ValueError("Timeout must be positive and tolerance finite/non-negative.")
+    source = Path(matrix_path)
+    features, samples, matrix, _ = _read_matrix(source, 5_000_000)
+    adapter = GEOVoomAnalyzer().analyze(
+        source, group_labels, group_a, group_b,
+        rscript=rscript, timeout_seconds=timeout_seconds,
+    )
+    if set(group_labels) != set(samples):
+        raise ValueError("Group labels must cover every matrix sample exactly.")
+    exe = shutil.which(rscript)
+    if not exe:
+        raise RuntimeError(f"Cannot find {rscript!r}; limma reference comparison was not run.")
+    with tempfile.TemporaryDirectory(prefix="oracle-voom-reference-") as tmp:
+        root = Path(tmp)
+        counts_path, meta_path = root / "counts.tsv", root / "meta.tsv"
+        script_path, output_path = root / "reference.tsv", root / "reference.R"
+        with counts_path.open("w", encoding="utf-8", newline="") as handle:
+            writer = csv.writer(handle, delimiter="\\t", lineterminator="\\n")
+            writer.writerow(["feature", *samples])
+            for feature, row in zip(features, matrix):
+                if any(value is None or value < 0 or not value.is_integer() for value in row):
+                    raise ValueError("limma-voom reference requires complete non-negative integer counts.")
+                writer.writerow([feature, *[int(value) for value in row]])
+        with meta_path.open("w", encoding="utf-8", newline="") as handle:
+            writer = csv.writer(handle, delimiter="\\t", lineterminator="\\n")
+            writer.writerow(["sample", "group"])
+            for sample in samples:
+                writer.writerow([sample, group_labels[sample]])
+        script_path.write_text(_VOOM_REFERENCE_R, encoding="utf-8")
+        try:
+            run = subprocess.run(
+                [exe, "--vanilla", str(script_path), str(counts_path),
+                 str(meta_path), str(output_path), group_a, group_b],
+                capture_output=True, text=True, timeout=timeout_seconds, check=False,
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise RuntimeError("limma reference comparison timed out.") from exc
+        if run.returncode:
+            raise RuntimeError("limma reference comparison failed: " +
+                               (run.stderr or run.stdout or "R failed")[-3000:])
+        if not output_path.is_file():
+            raise RuntimeError("limma reference script did not write a result.")
+        versions = (run.stdout or "").strip().split("\\t")
+        if len(versions) != 3 or not all(versions):
+            raise RuntimeError("limma reference version provenance is missing.")
+        reference = {}
+        with output_path.open("r", encoding="utf-8", newline="") as handle:
+            for row in csv.DictReader(handle, delimiter="\\t"):
+                feature = row["feature"]
+                if feature in reference:
+                    raise RuntimeError("Reference returned duplicate feature IDs.")
+                reference[feature] = row
+    adapted = {row["feature"]: row for row in adapter["results"]}
+    if set(adapted) != set(reference):
+        raise RuntimeError("Adapter and limma reference returned different filtered feature sets.")
+    columns = {
+        "log2_fold_change": "logFC",
+        "average_log_expression": "AveExpr",
+        "moderated_t": "t",
+        "p_value": "P.Value",
+        "p_value_adjusted_bh": "adj.P.Val",
+        "b_statistic": "B",
+    }
+    differences = {}
+    for output_key, reference_key in columns.items():
+        values = []
+        for feature in sorted(reference):
+            actual = adapted[feature][output_key]
+            raw = reference[feature][reference_key]
+            expected = None if raw in {"", "NA", "NaN"} else float(raw)
+            if actual is None or expected is None:
+                if actual is not None or expected is not None:
+                    raise RuntimeError(f"NA mismatch for {feature}/{output_key}.")
+                continue
+            if not math.isfinite(expected):
+                raise RuntimeError(f"Non-finite reference value for {feature}/{output_key}.")
+            values.append(abs(actual - expected))
+        differences[output_key] = max(values, default=0.0)
+    maximum = max(differences.values(), default=0.0)
+    return {
+        "comparison": "ORACLE GEOVoomAnalyzer vs separately executed edgeR/limma reference",
+        "input_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
+        "reference_software": {"r": versions[0], "edgeR": versions[1], "limma": versions[2]},
+        "features_compared": len(reference),
+        "maximum_absolute_differences": differences,
+        "overall_maximum_absolute_difference": maximum,
+        "tolerance": tolerance,
+        "within_tolerance": maximum <= tolerance,
+        "interpretation": (
+            "This verifies adapter output and serialization parity against a separately "
+            "executed reference script using the same Bioconductor packages and design. "
+            "It is not an independent algorithm implementation, platform-wide validation, "
+            "or evidence of biological correctness."
+        ),
+    }
