@@ -46,7 +46,8 @@ Status reflects code currently present on the main branch. Checked items are imp
 - [x] Live adapter parity test against a separately executed limma/edgeR reference script on a fixed 300-feature count matrix (same Bioconductor implementation; checks serialization/reproducibility, not independent algorithm accuracy)
 - [ ] Independent limma-voom implementation/reference comparison on external real datasets
 - [x] Optional Affymetrix CEL RMA adapter for explicit affy/oligo package families, with input checksums, software provenance, bounded execution, and mocked contract tests (real CEL/reference validation and platform annotation remain pending)
-- [x] Explicit row-median imputation for continuous matrices with a separate SHA-256 missingness mask and recorded imputation values; reproducible MCAR/MAR/MNAR masking and synthetic downstream Welch/BH sensitivity diagnostics added (real labelled-data bias evaluation remains pending)
+- [x] Explicit row-median imputation for continuous matrices with a separate SHA-256 missingness mask and recorded imputation values; reproducible MCAR/MAR/MNAR masking, synthetic downstream Welch/BH sensitivity diagnostics, and observed-cell holdout comparison of row/column/global median reconstruction added
+- [ ] Validation against genuinely missing values with known ground truth and independent biological outcome labels (observed-cell masking remains a proxy, not ground truth)
 - [x] Count-aware DESeq2 raw-count analysis with explicit categorical batch/covariate designs, rank-deficiency checks, and default median-of-ratios size-factor normalization
 - [x] Optional DESeq2 adapter for explicitly mapped raw integer-count two-group designs (external R runtime; CI subprocess mocked)
 - [x] Explicit-design Welch contrasts with BH-FDR for user-declared continuous log2 GEO matrices; raw counts rejected
