@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from .models import (
-    Claim, ClaimRevision, ContradictionCandidate, CrossDomainConnection, Evidence, EvidenceClaimLink, EvidenceComparison,
+    Claim, ClaimRevision, ContradictionCandidate, CrossDomainConnection, CrossRunClaimLink, Evidence, EvidenceClaimLink, EvidenceComparison,
     EvidenceReviewCandidate, DatasetFileRecord, DatasetAnalysisRecord, DifferentialExpressionAnalysisRecord, CitationLink,
     EvidenceKind, EvidenceStance, Experiment, ExperimentStatus, Hypothesis,
     HypothesisGroup, HypothesisStatus, ResearchMode, ResearchRun, ResearchTask,
@@ -79,6 +79,11 @@ class ResearchStore:
                     analysis_id TEXT PRIMARY KEY, run_id TEXT NOT NULL,
                     dataset_accession TEXT NOT NULL, matrix_sha256 TEXT NOT NULL,
                     review_status TEXT NOT NULL, payload TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS cross_run_claim_links (
+                    link_id TEXT PRIMARY KEY, run_a_id TEXT NOT NULL, claim_a_id TEXT NOT NULL,
+                    run_b_id TEXT NOT NULL, claim_b_id TEXT NOT NULL, relation TEXT NOT NULL,
+                    status TEXT NOT NULL, payload TEXT NOT NULL, created_at TEXT NOT NULL
                 );
             """)
             # Upgrade databases created before event idempotency was introduced.
@@ -202,6 +207,95 @@ class ResearchStore:
                 "INSERT OR IGNORE INTO events(run_id,event_type,payload,created_at,event_key) VALUES(?,?,?,?,?)",
                 (run_id, event_type, json.dumps(payload, ensure_ascii=False), utc_now(), event_key),
             )
+
+
+    def create_cross_run_claim_link(
+        self, run_a_id: str, claim_a_id: str, run_b_id: str, claim_b_id: str,
+        relation: str, rationale: str,
+    ) -> CrossRunClaimLink:
+        """Persist a provenance-checked candidate link; never auto-accept it."""
+        allowed = {"same_topic", "supports", "contradicts", "contextualizes"}
+        if relation not in allowed:
+            raise ValueError(f"Relation must be one of: {', '.join(sorted(allowed))}.")
+        if run_a_id == run_b_id:
+            raise ValueError("Cross-run links must connect two different research runs.")
+        if not rationale.strip():
+            raise ValueError("A rationale is required.")
+        run_a, run_b = self.load_run(run_a_id), self.load_run(run_b_id)
+        if run_a is None or run_b is None:
+            raise ValueError("Both research runs must exist.")
+        if not any(x.claim_id == claim_a_id for x in run_a.claims):
+            raise ValueError("Claim A does not belong to run A.")
+        if not any(x.claim_id == claim_b_id for x in run_b.claims):
+            raise ValueError("Claim B does not belong to run B.")
+        def grounded_evidence(run, claim_id):
+            sources = {x.source_id for x in run.sources}
+            evidence = {x.evidence_id: x for x in run.evidence}
+            return sorted({
+                link.evidence_id for link in run.evidence_claim_links
+                if link.claim_id == claim_id and link.evidence_id in evidence
+                and evidence[link.evidence_id].source_id in sources
+                and evidence[link.evidence_id].source_id
+                and evidence[link.evidence_id].kind != EvidenceKind.INFERENCE
+            })
+        evidence_a, evidence_b = grounded_evidence(run_a, claim_a_id), grounded_evidence(run_b, claim_b_id)
+        if not evidence_a or not evidence_b:
+            raise ValueError("Each claim needs linked source-backed evidence.")
+        link = CrossRunClaimLink(run_a_id, claim_a_id, run_b_id, claim_b_id,
+                                 relation, rationale.strip(), evidence_a, evidence_b)
+        with self._connect() as db:
+            db.execute(
+                """INSERT INTO cross_run_claim_links
+                   (link_id,run_a_id,claim_a_id,run_b_id,claim_b_id,relation,status,payload,created_at)
+                   VALUES(?,?,?,?,?,?,?,?,?)""",
+                (link.link_id, run_a_id, claim_a_id, run_b_id, claim_b_id,
+                 relation, link.status, json.dumps(link.__dict__, ensure_ascii=False), link.created_at),
+            )
+        return link
+
+    def list_cross_run_claim_links(self, run_id: str | None = None) -> list[dict[str, Any]]:
+        with self._connect() as db:
+            if run_id:
+                rows = db.execute(
+                    "SELECT payload FROM cross_run_claim_links WHERE run_a_id=? OR run_b_id=? ORDER BY created_at",
+                    (run_id, run_id),
+                ).fetchall()
+            else:
+                rows = db.execute("SELECT payload FROM cross_run_claim_links ORDER BY created_at").fetchall()
+        return [json.loads(row["payload"]) for row in rows]
+
+    def review_cross_run_claim_link(self, link_id: str, status: str,
+                                    reviewer_note: str) -> CrossRunClaimLink:
+        if status not in {"accepted", "rejected", "needs_context"}:
+            raise ValueError("Review status must be accepted, rejected, or needs_context.")
+        if not reviewer_note.strip():
+            raise ValueError("A human review note is required.")
+        with self._connect() as db:
+            row = db.execute("SELECT payload FROM cross_run_claim_links WHERE link_id=?", (link_id,)).fetchone()
+            if row is None:
+                raise ValueError(f"Unknown cross-run claim link: {link_id}")
+            item = CrossRunClaimLink(**json.loads(row["payload"]))
+            if item.status != "pending_review":
+                raise ValueError("Cross-run link has already been reviewed.")
+            run_a, run_b = self.load_run(item.run_a_id), self.load_run(item.run_b_id)
+            if run_a is None or run_b is None:
+                raise ValueError("A linked research run no longer exists.")
+            for run, claim_id, evidence_ids in (
+                (run_a, item.claim_a_id, item.evidence_a_ids),
+                (run_b, item.claim_b_id, item.evidence_b_ids),
+            ):
+                if not any(c.claim_id == claim_id for c in run.claims):
+                    raise ValueError("A linked claim no longer exists.")
+                source_ids = {source.source_id for source in run.sources}
+                valid_ids = {e.evidence_id for e in run.evidence
+                             if e.source_id in source_ids and e.source_id
+                             and e.kind != EvidenceKind.INFERENCE}
+                if not evidence_ids or not set(evidence_ids).issubset(valid_ids):
+                    raise ValueError("Linked source-backed evidence is no longer valid.")
+            item.status, item.reviewer_note, item.reviewed_at = status, reviewer_note.strip(), utc_now()
+            db.execute("UPDATE cross_run_claim_links SET status=?,payload=? WHERE link_id=?",
+                       (item.status, json.dumps(item.__dict__, ensure_ascii=False), link_id))
+        return item
 
     def list_differential_expression_analyses(self, run_id: str) -> list[dict[str, Any]]:
         """Return persisted DE analyses in creation order, including their full result payloads."""
