@@ -3,7 +3,7 @@
 # and compare them with the frozen GEO supplementary reference matrices.
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args) != 4L) {
-  stop("Usage: validate_gse176260_voom.R counts.tsv.gz reference_E.tsv.gz reference_weights.tsv.gz report.json")
+  stop("Usage: validate_gse176261_voom.R counts.tsv.gz reference_E.tsv.gz reference_weights.tsv.gz report.json")
 }
 suppressPackageStartupMessages({
   library(GEOquery)
@@ -65,10 +65,10 @@ keep <- vapply(metadata, function(x) {
 if (!any(keep)) stop("No validation_analysis_sample=Yes samples found in GEO metadata.")
 selected <- pd[keep, , drop = FALSE]
 selected_meta <- metadata[keep]
-# Submitter count matrices use the sample title aliases (for example, short
-# sample codes) as column names, while GEO assigns GSM accessions separately.
-# Match exact title aliases and retain the accession mapping in the report.
-sample_ids <- as.character(selected$title)
+# GEO sample titles append a platform description to the submitter alias
+# (for example, "9A4D98 RNA-seq [discovery cohort]"). Count matrices use only
+# that leading alias. Strip the suffix and require exact one-to-one matching.
+sample_ids <- sub("\\s+RNA-seq.*$", "", as.character(selected$title))
 if (anyNA(sample_ids) || any(!nzchar(sample_ids)) || anyDuplicated(sample_ids)) {
   stop("GEO validation sample titles must be unique non-empty sample aliases.")
 }
