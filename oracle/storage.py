@@ -9,7 +9,7 @@ from typing import Any
 
 from .models import (
     Claim, ClaimRevision, ContradictionCandidate, Evidence, EvidenceClaimLink, EvidenceComparison,
-    EvidenceReviewCandidate, DatasetFileRecord, DatasetAnalysisRecord, CitationLink,
+    EvidenceReviewCandidate, DatasetFileRecord, DatasetAnalysisRecord, DifferentialExpressionAnalysisRecord, CitationLink,
     EvidenceKind, EvidenceStance, Experiment, ExperimentStatus, Hypothesis,
     HypothesisGroup, HypothesisStatus, ResearchMode, ResearchRun, ResearchTask,
     RunStatus, SourceRecord, UncertaintyAssessment, utc_now,
@@ -75,6 +75,11 @@ class ResearchStore:
                     claim_a_id TEXT NOT NULL, claim_b_id TEXT NOT NULL, status TEXT NOT NULL,
                     payload TEXT NOT NULL
                 );
+                CREATE TABLE IF NOT EXISTS differential_expression_analyses (
+                    analysis_id TEXT PRIMARY KEY, run_id TEXT NOT NULL,
+                    dataset_accession TEXT NOT NULL, matrix_sha256 TEXT NOT NULL,
+                    review_status TEXT NOT NULL, payload TEXT NOT NULL
+                );
             """)
             # Upgrade databases created before event idempotency was introduced.
             columns = {row["name"] for row in db.execute("PRAGMA table_info(events)")}
@@ -112,6 +117,19 @@ class ResearchStore:
                 sql = "INSERT INTO contradiction_candidates VALUES(?,?,?,?,?,?) ON CONFLICT(candidate_id) DO UPDATE SET status=excluded.status,payload=excluded.payload"
             if values:
                 db.executemany(sql, values)
+        if run.differential_expression_analyses:
+            db.executemany(
+                """INSERT INTO differential_expression_analyses
+                   (analysis_id,run_id,dataset_accession,matrix_sha256,review_status,payload)
+                   VALUES(?,?,?,?,?,?)
+                   ON CONFLICT(analysis_id) DO UPDATE SET
+                     dataset_accession=excluded.dataset_accession,
+                     matrix_sha256=excluded.matrix_sha256,
+                     review_status=excluded.review_status,payload=excluded.payload""",
+                [(x.analysis_id, run.run_id, x.dataset_accession, x.matrix_sha256,
+                  x.review_status, json.dumps(x.__dict__, ensure_ascii=False))
+                 for x in run.differential_expression_analyses],
+            )
 
     def save_run(self, run: ResearchRun) -> None:
         run.touch()
@@ -158,6 +176,10 @@ class ResearchStore:
             ],
             dataset_files=[DatasetFileRecord(**x) for x in data.get("dataset_files", [])],
             dataset_analyses=[DatasetAnalysisRecord(**x) for x in data.get("dataset_analyses", [])],
+            differential_expression_analyses=[
+                DifferentialExpressionAnalysisRecord(**x)
+                for x in data.get("differential_expression_analyses", [])
+            ],
             citation_links=[CitationLink(**x) for x in data.get("citation_links", [])],
             contradiction_candidates=[ContradictionCandidate(**x) for x in data.get("contradiction_candidates", [])],
             hypotheses=[Hypothesis(**{**x, "status": enum_value(HypothesisStatus, x.get("status", "proposed"))})
@@ -179,6 +201,15 @@ class ResearchStore:
                 "INSERT OR IGNORE INTO events(run_id,event_type,payload,created_at,event_key) VALUES(?,?,?,?,?)",
                 (run_id, event_type, json.dumps(payload, ensure_ascii=False), utc_now(), event_key),
             )
+
+    def list_differential_expression_analyses(self, run_id: str) -> list[dict[str, Any]]:
+        """Return persisted DE analyses in creation order, including their full result payloads."""
+        with self._connect() as db:
+            rows = db.execute(
+                """SELECT payload FROM differential_expression_analyses
+                   WHERE run_id=? ORDER BY rowid""", (run_id,)
+            ).fetchall()
+        return [json.loads(row["payload"]) for row in rows]
 
     def list_events(self, run_id: str) -> list[dict[str, Any]]:
         with self._connect() as db:

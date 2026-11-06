@@ -292,6 +292,29 @@ class DatasetAnalysisRecord:
     evidence_id: str = ""
 
 
+
+
+@dataclass
+class DifferentialExpressionAnalysisRecord:
+    """Persisted, provenance-rich result of a count-aware differential-expression run."""
+    dataset_accession: str
+    source_file: str
+    matrix_sha256: str
+    method: str
+    contrast: dict[str, Any]
+    sample_groups: dict[str, list[str]]
+    sample_count: int
+    features_input: int
+    software: dict[str, str]
+    results: list[dict[str, Any]]
+    limitations: str
+    features_returned: int = 0
+    features_with_adjusted_p_value: int = 0
+    analysis_id: str = field(default_factory=lambda: new_id("dea"))
+    analyzed_at: str = field(default_factory=utc_now)
+    review_status: str = "unreviewed"
+    evidence_ids: list[str] = field(default_factory=list)
+
 @dataclass
 class ResearchTask:
     name: str
@@ -329,6 +352,7 @@ class ResearchRun:
     evidence_review_candidates: list[EvidenceReviewCandidate] = field(default_factory=list)
     dataset_files: list[DatasetFileRecord] = field(default_factory=list)
     dataset_analyses: list[DatasetAnalysisRecord] = field(default_factory=list)
+    differential_expression_analyses: list[DifferentialExpressionAnalysisRecord] = field(default_factory=list)
     citation_links: list[CitationLink] = field(default_factory=list)
     contradiction_candidates: list[ContradictionCandidate] = field(default_factory=list)
     hypotheses: list[Hypothesis] = field(default_factory=list)
