@@ -49,6 +49,31 @@ class OrthogonalMissingnessTests(unittest.TestCase):
             self.assertEqual(report["biological_outcome_concordance"]["effect_direction_agreement"], 1.0)
             self.assertEqual(len(report["provenance"]["observed_assay_sha256"]), 64)
 
+    def test_allows_reconstruction_only_when_clinical_labels_are_not_verified(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            observed, dia, imputed = [root / name for name in
+                ("observed.tsv", "dia.tsv", "imputed.tsv")]
+            header = ["feature", "S1", "S2", "S3", "S4"]
+            self.write_tsv(observed, header, [
+                ["P1", 1, "", 3, 4],
+                ["P2", 4, 5, "", 7],
+            ])
+            self.write_tsv(dia, header, [
+                ["P1", 1.1, 2.1, 3.1, 4.1],
+                ["P2", 4.1, 5.1, 6.1, 7.1],
+            ])
+            self.write_tsv(imputed, header, [
+                ["P1", 1, 2, 3, 4],
+                ["P2", 4, 5, 6, 7],
+            ])
+            report = evaluate_orthogonal_missingness(observed, dia, imputed)
+            self.assertEqual(report["status"], "RECONSTRUCTION_ONLY_LABELS_PENDING")
+            self.assertEqual(report["genuine_missing_cells_scored"], 2)
+            self.assertEqual(report["biological_outcome_concordance"]["status"],
+                             "PENDING_INDEPENDENT_BIOLOGICAL_LABELS")
+            self.assertIsNone(report["provenance"]["outcome_labels_sha256"])
+
     def test_rejects_modified_observed_measurements(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
