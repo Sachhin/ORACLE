@@ -4,8 +4,8 @@
 # Report remains explicit if the pre-registered tolerance is not met.
 # and compare them with the frozen GEO supplementary reference matrices.
 args <- commandArgs(trailingOnly = TRUE)
-if (length(args) != 4L) {
-  stop("Usage: validate_gse176261_voom.R counts.tsv.gz reference_E.tsv.gz reference_weights.tsv.gz report.json")
+if (length(args) != 5L) {
+  stop("Usage: validate_gse176261_voom.R all_samples_counts.tsv.gz validation_counts.tsv.gz reference_E.tsv.gz reference_weights.tsv.gz report.json")
 }
 suppressPackageStartupMessages({
   library(GEOquery)
@@ -14,16 +14,18 @@ suppressPackageStartupMessages({
   library(jsonlite)
 })
 
-counts_path <- args[[1]]
-reference_e_path <- args[[2]]
-reference_w_path <- args[[3]]
-report_path <- args[[4]]
+all_counts_path <- args[[1]]
+counts_path <- args[[2]]
+reference_e_path <- args[[3]]
+reference_w_path <- args[[4]]
+report_path <- args[[5]]
 
 read_matrix <- function(path) {
   x <- read.delim(gzfile(path), row.names = 1, check.names = FALSE,
                   stringsAsFactors = FALSE)
   as.matrix(x)
 }
+all_counts <- read_matrix(all_counts_path)
 counts <- read_matrix(counts_path)
 reference_e <- read_matrix(reference_e_path)
 reference_w <- read_matrix(reference_w_path)
@@ -208,7 +210,7 @@ report <- list(
                   GEOquery = as.character(packageVersion("GEOquery")),
                   edgeR = as.character(packageVersion("edgeR")),
                   limma = as.character(packageVersion("limma"))),
-  all_samples_count = ncol(all_counts),\n  sample_count = ncol(counts),
+  all_samples_count = ncol(all_counts),\n  all_samples_count = ncol(all_counts),\n  sample_count = ncol(counts),
   sample_metadata_columns = names(selected),
   metadata_lib_size_supplied = "lib.size" %in% names(selected),
   metadata_norm_factors_supplied = "norm.factors" %in% names(selected),
@@ -217,7 +219,7 @@ report <- list(
   phenotype_counts = as.list(table(sample_data$phenotype)),
   gender_counts = as.list(table(sample_data$gender)),
   input_sha256 = list(
-    all_samples_counts = digest::digest(file = all_counts_path, algo = "sha256"),\n    validation_counts = digest::digest(file = counts_path, algo = "sha256"),
+    all_samples_counts = digest::digest(file = all_counts_path, algo = "sha256"),\n    validation_all_samples_counts = digest::digest(file = all_counts_path, algo = "sha256"),\n    validation_counts = digest::digest(file = counts_path, algo = "sha256"),
     reference_expression = digest::digest(file = reference_e_path, algo = "sha256"),
     reference_weights = digest::digest(file = reference_w_path, algo = "sha256")
   ),
