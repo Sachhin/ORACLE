@@ -264,6 +264,25 @@ class KnowledgeBase:
         candidate.status, candidate.reviewer_note = status, reviewer_note
         return candidate
 
+    def review_cross_domain_connection(self, run: ResearchRun, connection_id: str,
+                                       status: str, reviewer_note: str):
+        """Record a human decision on a source-linked cross-domain proposal."""
+        if status not in {"accepted", "rejected", "needs_context"}:
+            raise ValueError("Connection status must be accepted, rejected, or needs_context.")
+        if not reviewer_note.strip():
+            raise ValueError("A human review note is required.")
+        connection = next((item for item in run.cross_domain_connections
+                           if item.connection_id == connection_id), None)
+        if connection is None:
+            raise ValueError(f"Unknown cross-domain connection: {connection_id}")
+        source_ids = {source.source_id for source in run.sources}
+        if any(source_id not in source_ids for source_id in connection.source_ids):
+            raise ValueError("Connection references a source absent from the run.")
+        connection.status = status
+        connection.reviewer_note = reviewer_note.strip()
+        connection.reviewed_at = utc_now()
+        return connection
+
     def assess_claim(self, run: ResearchRun, claim_id: str) -> UncertaintyAssessment:
         claim = next((c for c in run.claims if c.claim_id == claim_id), None)
         if claim is None:
