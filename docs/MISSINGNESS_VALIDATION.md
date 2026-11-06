@@ -136,28 +136,35 @@ matching each assay's raw/processed file identifiers to the clinical cohort
 table and documenting any extra samples or exclusions.
 
 The original paper states that DDA runs were used to build a spectral library
-and DIA runs were used for identification and quantification. This supports
-the biological rationale for orthogonal DDA/DIA evaluation, but it does not by
-itself establish that the deposited processed files are paired on identical
-sample IDs or that each DDA-missing peptide has a DIA measurement.
+and DIA runs were used for identification and quantification. The processed
+PEPerMINT matrices are paired by the shared 15 aliases: its loader reads the
+same sample columns from both assay tables and explicitly aligns DIA values
+to DDA peptide/sample keys. The actual reconstruction-only run found 8,859
+DDA-missing cells with a DIA measurement. This establishes processed-table
+pairing and evaluable missing cells, not clinical participant identity.
 
 Sources:
 - PEPerMINT benchmark paper:
   https://academic.oup.com/bioinformatics/article/40/Supplement_2/ii70/7749076
 - PXD047528 ProteomeXchange record:
   https://proteomecentral.proteomexchange.org/cgi/GetDataset?ID=PXD047528-1&test=no
-- Original HIV plasma proteomics paper DOI: 10.1007/S13365-022-01077-0
+- Original HIV plasma proteomics paper:
+  https://pmc.ncbi.nlm.nih.gov/articles/PMC9945916/
 
-Before running, inspect the complete PRIDE file manifest and confirm that it contains
-processed, sample-paired DDA and DIA abundance tables (not just raw mass
-spectrometry files). The currently indexed PRIDE/OmicsDI view exposes 32 files,
-with the first visible entries being raw DDA files; that partial view is not
-proof that the processed matrices are present. Verify the complete manifest,
-downloaded file hashes, one-to-one assay pairing, peptide/protein keys,
-normalization scale, and the 13-versus-15 sample discrepancy. Obtain clinical
-labels from the original study's cohort table and document inclusion/exclusion
-rules. Do not use filenames as phenotype labels. Preserve the original DDA missingness mask; do not convert
-zero abundance to missing or treat unobserved peptides as measured zeros.
+The processed PEPerMINT matrices have been downloaded from Zenodo and hashed;
+the exact shared peptide/sample keys and 15 DDA/DIA sample aliases were checked
+by the preparation script. The PRIDE project page describes 15 submitted
+samples, while the original clinical paper reports 13 participants: 8 HIV
+(5 HAND and 3 cognitively normal) and 5 herpes-virus cases. Its Table 1
+provides clinical categories and demographic descriptors but does not provide
+a crosswalk from those patient records to PEPerMINT's numbered `n_Slot1`
+aliases. The public PRIDE file list includes raw acquisitions, but the
+processed abundance matrices used here come from the PEPerMINT Zenodo archive.
+The clinical crosswalk, and therefore HIV/herpes/HAND labels for the 15
+processed columns, remains unresolved. Do not infer labels from filenames,
+column order, age/sex similarity, or assumed sample counts. Preserve the
+original DDA missingness mask; document the PEPerMINT zero-to-missing
+preprocessing separately from raw clinical interpretation.
 The PEPerMINT article also describes a HeLa/E. coli mixture dataset
 (PXD000279) with known organism spike-in ratios, which may support a separate
 downstream differential-abundance ground-truth check but is not a substitute
