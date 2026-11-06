@@ -223,8 +223,32 @@ GitHub Actions downloads the published archive, runs the evaluator and
 offline tests, then uploads a frozen report and source archive. The first
 live run (2026-11-06, run 42251562908) completed technically but revealed the
 H/L direction error described above; it is not an accepted benchmark result.
-The corrected run must be inspected for the expected positive E. coli effect
-and near-zero human effect before the benchmark can be marked validated. The workflow
+The corrected group direction was independently recomputed from the exact
+same deposited proteinGroups.txt (SHA-256
+d245d4dc5b7ccc1a75eb21d36d89ed3fd1ace01ca858bd8eef9d65e3cc1411ea) using
+the corrected H=Ecoli30, L=Ecoli10 assignment. It yielded 5,019 eligible
+proteins and the same 612/30,114 missing cells (2.03%). Corrected median
+Ecoli30-versus-Ecoli10 effects were +1.2188 (observed-only), +1.2053
+(row-median), and +1.2262 (MinProb), versus the published expected +1.585.
+Human medians were -0.5097, -0.5039, and -0.5491, respectively, versus
+expected 0. Corrected MAE/RMSE were:
+
+| Species | Method | MAE | RMSE |
+|---|---|---:|---:|
+| Human | Observed-only | 0.5559 | 0.6531 |
+| Human | Row-median | 0.5415 | 0.6326 |
+| Human | MinProb | 0.8705 | 1.3616 |
+| E. coli | Observed-only | 0.4624 | 0.5774 |
+| E. coli | Row-median | 0.4716 | 0.5840 |
+| E. coli | MinProb | 0.6123 | 0.9831 |
+
+This corrected calculation verifies the sign and shows that all three
+methods recover a positive E. coli effect, but they under-recover the
+published 3-fold ratio and show a systematic negative human offset. It is a
+scored benchmark, not a PASS claim; investigate normalization/MaxLFQ behavior
+and predeclare any acceptance tolerance before making a validation claim.
+The corrected GitHub Actions artifact still needs to be generated from the
+updated branch and inspected. The workflow
 is defined in `.github/workflows/pxd000279-known-mixture.yml`.
 
 This is a known biological mixture-ratio check under real deposited LFQ
