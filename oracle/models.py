@@ -167,6 +167,20 @@ class EvidenceComparison:
 
 
 @dataclass
+class EvidenceReviewCandidate:
+    claim_id: str
+    evidence_id: str
+    proposed_stance: EvidenceStance
+    rationale: str
+    source_quote: str
+    model: str
+    status: str = "pending_review"
+    reviewer_note: str = ""
+    candidate_id: str = field(default_factory=lambda: new_id("erc"))
+    created_at: str = field(default_factory=utc_now)
+
+
+@dataclass
 class Hypothesis:
     statement: str
     rationale: str
@@ -240,6 +254,7 @@ class ResearchRun:
     claim_revisions: list[ClaimRevision] = field(default_factory=list)
     evidence_claim_links: list[EvidenceClaimLink] = field(default_factory=list)
     evidence_comparisons: list[EvidenceComparison] = field(default_factory=list)
+    evidence_review_candidates: list[EvidenceReviewCandidate] = field(default_factory=list)
     contradiction_candidates: list[ContradictionCandidate] = field(default_factory=list)
     hypotheses: list[Hypothesis] = field(default_factory=list)
     hypothesis_groups: list[HypothesisGroup] = field(default_factory=list)
