@@ -40,7 +40,8 @@ class CrossrefCitationClient:
         self.max_nodes = max_nodes
 
     def _get_json(self, doi: str) -> dict:
-        url = "https://api.crossref.org/works/" + quote(doi, safe="")
+        normalized_doi = str(doi).strip().removeprefix("https://doi.org/").removeprefix("http://doi.org/")
+        url = "https://api.crossref.org/works/" + quote(normalized_doi, safe="")
         request = Request(url, headers={
             "Accept": "application/json",
             "User-Agent": "ORACLE-Citation-Network/2.0 (mailto: " + (self.mailto or "not-provided") + ")",
