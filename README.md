@@ -24,7 +24,7 @@ The normal run remains deterministic and offline. To explicitly opt in to Gemini
     export GEMINI_API_KEY="YOUR_GEMINI_API_KEY"
     python -m oracle "How does a fertilized egg develop?" --agent-provider gemini --gemini-model gemini-2.5-flash --cycles 3
 
-The Gemini agent suite uses the same `run(context) -> result` contract as the deterministic agents. Model-generated research statements are stored only as INFERENCE, never as source evidence. Hypotheses remain provisional and experiment designs remain PROPOSED. The structural auditor and novelty assessor remain conservative deterministic components. The default provider is still `deterministic`; Gemini is never called unless explicitly selected. A provider error fails and checkpoints the run rather than silently pretending that deterministic output came from Gemini.
+The Gemini agent suite uses the same `run(context) -> result` contract as the deterministic agents. Model-generated research statements are stored only as INFERENCE, never as source evidence. Hypotheses remain provisional and experiment designs remain PROPOSED. The structural auditor and novelty assessor remain conservative deterministic components. The default provider is still `deterministic`; Gemini is never called unless explicitly selected. Transient Gemini HTTP/network failures receive a small bounded retry; explicit quota-exhaustion responses stop immediately. Other provider errors fail and checkpoint the run rather than silently pretending that deterministic output came from Gemini.
 
 ## Modes
 
