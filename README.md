@@ -280,3 +280,35 @@ python -m oracle --benchmark-results deseq2-results.json \
 ```
 
 The report distinguishes recovered known positives, missed positives that were tested, positives absent from the tested matrix, and significant hits absent from the curated reference. It records both input SHA-256 checksums and the thresholds. This is a **known-positive recovery/overlap** score, not a complete classifier benchmark: unmatched hits are not automatically biological false positives, because the curated reference may be incomplete. Feature identifiers and contrast direction must be harmonized by the benchmark curator. Do not use placeholder manifests as biological evidence; include a real dataset-specific curation reference and documented truth-set version.
+
+
+### Build a DESeq2 matrix from individual GEO sample count files
+
+Some GEO Series provide one raw-count table per GSM sample rather than one matrix. ORACLE can merge these files only when the user explicitly maps each sample to its file. Feature IDs must match exactly across files; the tool does not infer sample groups or gene annotations.
+
+```bash
+python -m oracle --merge-geo-counts \
+  --geo-sample-file GSM3021223=data/geo/GSE111062/GSM3021223_GL48h1.txt.gz \
+  --geo-sample-file GSM3021224=data/geo/GSE111062/GSM3021224_GL48h2.txt.gz \
+  --geo-sample-file GSM3021235=data/geo/GSE111062/GSM3021235_HL48h1.txt.gz \
+  --geo-sample-file GSM3021236=data/geo/GSE111062/GSM3021236_HL48h2.txt.gz \
+  --count-feature-column 0 --count-value-column -1 \
+  --count-output data/geo/GSE111062/HL48h_vs_GL48h_counts.tsv --json
+```
+
+**Important:** The example sample set is the 48-hour high-light (HL) versus growth-light (GL) contrast from GSE111062, with two samples per condition. GEO identifies this as a 7-day-old whole-seedling Arabidopsis high-light time course and describes duplicate samples at each time point. Inspect the downloaded files before running the command: confirm the actual feature/count column positions and use `--count-feature-column`, `--count-value-column`, and `--count-delimiter` to match them. The defaults above are illustrative, not a verified assertion about every GEO file layout. Confirm biological replicate status and exact sample metadata before analysis.
+
+Then run DESeq2 with explicit group labels:
+
+```bash
+python -m oracle --geo-deseq2 data/geo/GSE111062/HL48h_vs_GL48h_counts.tsv \
+  --geo-accession GSE111062 \
+  --geo-group GSM3021223=GL --geo-group GSM3021224=GL \
+  --geo-group GSM3021235=HL --geo-group GSM3021236=HL \
+  --geo-group-a GL --geo-group-b HL --json
+```
+
+GEO record: https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE111062  
+Study paper: https://pmc.ncbi.nlm.nih.gov/articles/PMC7030938/
+
+The published paper and GEO record establish the study context and deposited data, but the paper's overall high-light findings are **not** a curated truth set for this exact 48-hour contrast. Do not score this contrast against an aggregate DEG count or an unrelated gene list. A benchmark manifest must use a documented, contrast-matched reference gene set before known-positive recovery metrics can be interpreted.
