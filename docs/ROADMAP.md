@@ -34,7 +34,7 @@ Status reflects code currently present on the main branch; checked items are imp
 - [x] Common run(context) -> result contract with optional Gemini suite for planner, researcher, explorer, hypothesis, skeptic, and experiment agents
 - [ ] Provider-backed auditor and literature-grounded novelty assessment
 - [ ] Adaptive model routing with quota-aware retries and fallback policy (Gemini request timeout is implemented)
-- [ ] Legal open-access full-text retrieval with licence checks
+- [x] Bounded Europe PMC open-access full-text retrieval with strict Creative Commons licence checks
 - [ ] GEO supplementary/raw data discovery and safe dataset ingestion
 - [ ] Citation-network exploration and source-level quality assessment
 - [x] Explicit experiment lifecycle recording for proposed, simulated, performed, and evaluated states with execution provenance
