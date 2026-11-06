@@ -32,6 +32,7 @@ class OracleOrchestrator:
                  geo_analysis_enabled: bool = False,
                  geo_max_file_bytes: int = 50_000_000,
                  citation_network_enabled: bool = False,
+                 incoming_citation_network_enabled: bool = False,
                  max_tasks: int = 50,
                  max_task_attempts: int = 3,
                  gemini_model: str = "gemini-2.5-flash") -> None:
