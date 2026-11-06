@@ -134,6 +134,8 @@ jobs:
         run: |
           Rscript -e 'if (!requireNamespace("BiocManager", quietly=TRUE)) install.packages("BiocManager"); BiocManager::install(c("GEOquery","affy","hgu133acdf"), ask=FALSE, update=FALSE, Ncpus=2)'
           Rscript -e 'stopifnot(requireNamespace("GEOquery", quietly=TRUE), requireNamespace("affy", quietly=TRUE), requireNamespace("hgu133acdf", quietly=TRUE))'
+      - name: Test the numerical GEO RMA comparator
+        run: python -m unittest discover -s tests -p 'test_affymetrix_rma_reference.py' -v
       - name: Download all GSE12837 raw CEL files
         run: |
           set -euo pipefail
