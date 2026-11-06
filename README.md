@@ -251,10 +251,16 @@ python -m oracle --normalize-geo-matrix matrix.txt.gz --normalization-method qua
 # Raw integer RNA-seq counts: exploratory library-size transform
 python -m oracle --normalize-geo-matrix counts.tsv --normalization-method log2-cpm --normalization-output counts.log2cpm.tsv
 
+# TMM effective-library-size adjusted CPM/log2-CPM (compare with edgeR before production use)
+python -m oracle --normalize-geo-matrix counts.tsv --normalization-method tmm-log2-cpm --normalization-output counts.tmm-log2cpm.tsv
+
+# Explicit row-median imputation for continuous matrices; emits a separate hashed missingness mask
+python -m oracle --normalize-geo-matrix matrix_with_NA.tsv --normalization-method quantile-row-median --normalization-output matrix.imputed-quantile.tsv
+
 # Repeat the same transform in the same runtime and compare output checksums
 python -m oracle --normalize-geo-matrix matrix.txt.gz --normalization-method quantile --normalization-output matrix.check.tsv --verify-normalization
 ```
-Supported methods: quantile normalization for continuous microarray-like measurements; CPM and log2-CPM for non-negative integer raw counts. The input is never overwritten. The report records input/output SHA-256, sample library sizes, and limitations. The optional rerun check compares byte-identical outputs in the same Python runtime; it is not an independent cross-platform validation. Quantile normalization should not be blindly applied to raw RNA-seq counts. CPM/log2-CPM is not TMM, DESeq2, or a differential-expression test; use the DESeq2 adapter for count-aware inference and verify assay/platform assumptions before interpretation.
+Supported methods: quantile normalization for continuous microarray-like measurements; CPM/log2-CPM and TMM-adjusted CPM/log2-CPM for non-negative integer raw counts; explicit row-median imputation followed by quantile normalization for continuous matrices with missing cells. The input is never overwritten. The report records input/output SHA-256, sample library sizes, and limitations. The optional rerun check compares byte-identical outputs in the same Python runtime; it is not an independent cross-platform validation. Quantile normalization should not be blindly applied to raw RNA-seq counts. CPM/log2-CPM is not DESeq2 or a differential-expression test. TMM is an ORACLE implementation of trimmed M-value effective-library-size scaling and has not yet been independently validated against edgeR reference outputs; do not use it as a production substitute until that comparison is completed. Row-median imputation emits a per-cell missingness mask and imputation values, but may bias distributions; it is an explicit exploratory option, not a missing-data model. Use DESeq2 for count-aware inference and verify assay/platform assumptions before interpretation.
 
 ### Raw-count RNA-seq differential expression (optional DESeq2 backend)
 
