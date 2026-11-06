@@ -120,6 +120,31 @@ jobs:
             validation-artifacts/GSE176261_Voom_weights_batch2_validationsamples.txt.gz \
             validation-artifacts/gse176261-reference-report.json
 
+      - name: Summarize GSE176261 numerical result without masking tolerance failures
+        if: always()
+        run: |
+          if [ -f validation-artifacts/gse176261-reference-report.json ]; then
+            python - <<'PY'
+          import json, os
+          from pathlib import Path
+          report = json.loads(Path("validation-artifacts/gse176261-reference-report.json").read_text())
+          e, w = report["expression_matrix_metrics"], report["precision_weight_metrics"]
+          lines = [
+              "### GSE176261 same-study validation cohort",
+              f"- Status: **{report['status']}**",
+              f"- Expression RMSE: {e['rmse']} (limit {report['acceptance_thresholds']['expression_rmse_max']})",
+              f"- Expression Pearson r: {e['pearson_r']}",
+              f"- Voom weights RMSE: {w['rmse']} (limit {report['acceptance_thresholds']['weights_rmse_max']})",
+              f"- Voom weights Pearson r: {w['pearson_r']}",
+              "- This is a numerical comparison result; FAIL_NUMERICAL_TOLERANCE remains a failure and is not re-labelled as PASS."
+          ]
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as out:
+              out.write("\n".join(lines) + "\n")
+          PY
+          else
+            echo "GSE176261 report was not produced; inspect the comparison step logs." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Upload same-study validation-cohort evidence
         if: always()
         uses: actions/upload-artifact@v4
