@@ -28,7 +28,7 @@ jobs:
       - name: Install missing Bioconductor and CRAN binaries, then verify runtime
         run: |
           Rscript -e 'stopifnot(getRversion() == "4.5.2", as.character(BiocManager::version()) == "3.22")'
-          Rscript -e 'if (!requireNamespace("GEOquery", quietly=TRUE)) BiocManager::install("GEOquery", ask=FALSE, update=FALSE)'
+          Rscript -e 'BiocManager::install(c("GEOquery", "edgeR", "limma"), ask=FALSE, update=FALSE)'
           Rscript -e 'if (!requireNamespace("digest", quietly=TRUE)) install.packages("digest"); if (!requireNamespace("jsonlite", quietly=TRUE)) install.packages("jsonlite")'
           Rscript -e 'stopifnot(requireNamespace("GEOquery"), requireNamespace("edgeR"), requireNamespace("limma"), requireNamespace("digest"), requireNamespace("jsonlite"))'
           Rscript -e 'cat("R", getRversion(), "Bioconductor", BiocManager::version(), "GEOquery", packageVersion("GEOquery"), "edgeR", packageVersion("edgeR"), "limma", packageVersion("limma"), "\\n")'
@@ -79,7 +79,7 @@ jobs:
       - name: Install missing Bioconductor and CRAN binaries, then verify runtime
         run: |
           Rscript -e 'stopifnot(getRversion() == "4.5.2", as.character(BiocManager::version()) == "3.22")'
-          Rscript -e 'if (!requireNamespace("GEOquery", quietly=TRUE)) BiocManager::install("GEOquery", ask=FALSE, update=FALSE)'
+          Rscript -e 'BiocManager::install(c("GEOquery", "edgeR", "limma"), ask=FALSE, update=FALSE)'
           Rscript -e 'if (!requireNamespace("digest", quietly=TRUE)) install.packages("digest"); if (!requireNamespace("jsonlite", quietly=TRUE)) install.packages("jsonlite")'
           Rscript -e 'stopifnot(requireNamespace("GEOquery"), requireNamespace("edgeR"), requireNamespace("limma"), requireNamespace("digest"), requireNamespace("jsonlite"))'
           Rscript -e 'cat("R", getRversion(), "Bioconductor", BiocManager::version(), "GEOquery", packageVersion("GEOquery"), "edgeR", packageVersion("edgeR"), "limma", packageVersion("limma"), "\\n")'
@@ -137,9 +137,10 @@ jobs:
       - name: Check out ORACLE
         uses: actions/checkout@v4
 
-      - name: Install missing CRAN binaries and verify runtime
+      - name: Install missing Bioconductor and CRAN binaries, then verify runtime
         run: |
           Rscript -e 'stopifnot(getRversion() == "4.5.2", as.character(BiocManager::version()) == "3.22")'
+          Rscript -e 'BiocManager::install(c("edgeR", "limma"), ask=FALSE, update=FALSE)'
           Rscript -e 'if (!requireNamespace("digest", quietly=TRUE)) install.packages("digest"); if (!requireNamespace("jsonlite", quietly=TRUE)) install.packages("jsonlite")'
           Rscript -e 'stopifnot(requireNamespace("edgeR"), requireNamespace("limma"), requireNamespace("digest"), requireNamespace("jsonlite"))'
           Rscript -e 'cat("R", getRversion(), "Bioconductor", BiocManager::version(), "edgeR", packageVersion("edgeR"), "limma", packageVersion("limma"), "\\n")'
