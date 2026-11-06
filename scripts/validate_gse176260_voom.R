@@ -67,7 +67,16 @@ selected <- pd[keep, , drop = FALSE]
 selected_meta <- metadata[keep]
 sample_ids <- as.character(selected$geo_accession)
 if (!setequal(sample_ids, colnames(counts)) || length(sample_ids) != ncol(counts)) {
-  stop("GEO discovery sample IDs do not exactly match the published count matrix.")
+  counts_only <- setdiff(colnames(counts), sample_ids)
+  metadata_only <- setdiff(sample_ids, colnames(counts))
+  discovery_values <- vapply(metadata, get_field, character(1), key = "discovery_analysis_sample")
+  stop(paste0(
+    "GEO discovery sample IDs do not exactly match the published count matrix. ",
+    "count_columns=", ncol(counts), "; discovery_metadata_samples=", length(sample_ids),
+    "; counts_only_first20=", paste(head(counts_only, 20), collapse = ","),
+    "; metadata_only_first20=", paste(head(metadata_only, 20), collapse = ","),
+    "; discovery_metadata_values=", paste(names(table(discovery_values)), as.integer(table(discovery_values)), collapse = ";")
+  ))
 }
 selected <- selected[match(colnames(counts), selected$geo_accession), , drop = FALSE]
 selected_meta <- selected_meta[match(colnames(counts), sample_ids)]
