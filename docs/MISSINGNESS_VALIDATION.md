@@ -92,6 +92,28 @@ Also, the original study used DDA to build the spectral library and DIA for
 identification/quantification; DIA is an orthogonal reference for this
 imputation benchmark, not error-free absolute truth.
 
+## Empirical PXD047528 run (2026-11-06)
+
+The GitHub Actions run [42229479296](https://github.com/Sachhin/ORACLE/actions/runs/42229479296)
+successfully downloaded the processed peptide matrices from the PEPerMINT
+Zenodo archive, prepared the paired assay tables, and completed reconstruction-
+only scoring. The frozen artifact reports:
+
+- 15 shared sample aliases and 2,170 shared peptide features.
+- 13,043 DDA missing cells; 8,859 have a non-missing DIA value (67.92% coverage).
+- 18,768 paired observed cells used for per-feature DIA-to-DDA offset alignment.
+- Row-median baseline on the 8,859 evaluable cells: MAE 1.1382, RMSE 1.4675,
+  Pearson r 0.2503, mean signed error +1.0669.
+
+This is an actual baseline result on deposited processed matrices, not an
+ORACLE-learned imputer result and not a claim of imputation superiority. The
+large positive signed bias and modest correlation are warnings that the
+row-median baseline is weak on this dataset. Biological-outcome concordance
+was not calculated. The artifact contains the input/output SHA-256 hashes and
+blank 15-row sample map. Clinical labels remain blocked until the 15-to-13
+sample discrepancy and DDA/DIA-to-patient mapping are resolved from source
+records.
+
 ## Candidate public data
 
 PEPerMINT (Bioinformatics, 2024; DOI 10.1093/bioinformatics/btae389)
