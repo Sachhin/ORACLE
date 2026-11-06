@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from .models import (
-    Claim, ClaimRevision, ContradictionCandidate, Evidence, EvidenceClaimLink, EvidenceComparison,
+    Claim, ClaimRevision, ContradictionCandidate, CrossDomainConnection, Evidence, EvidenceClaimLink, EvidenceComparison,
     EvidenceReviewCandidate, DatasetFileRecord, DatasetAnalysisRecord, DifferentialExpressionAnalysisRecord, CitationLink,
     EvidenceKind, EvidenceStance, Experiment, ExperimentStatus, Hypothesis,
     HypothesisGroup, HypothesisStatus, ResearchMode, ResearchRun, ResearchTask,
@@ -181,6 +181,7 @@ class ResearchStore:
                 for x in data.get("differential_expression_analyses", [])
             ],
             citation_links=[CitationLink(**x) for x in data.get("citation_links", [])],
+            cross_domain_connections=[CrossDomainConnection(**x) for x in data.get("cross_domain_connections", [])],
             contradiction_candidates=[ContradictionCandidate(**x) for x in data.get("contradiction_candidates", [])],
             hypotheses=[Hypothesis(**{**x, "status": enum_value(HypothesisStatus, x.get("status", "proposed"))})
                         for x in data.get("hypotheses", [])],
