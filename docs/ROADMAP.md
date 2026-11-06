@@ -40,7 +40,8 @@ Status reflects code currently present on the main branch. Checked items are imp
 - [x] Bounded descriptive parsing of downloaded GEO TSV/CSV expression matrices with checksums, per-sample summaries, and source-linked dataset records
 - [x] Per-sample missingness/variance quality-control flags that preserve all original samples and never silently filter
 - [x] Preserve GEO sample accessions, titles, and characteristics for later explicitly defined group comparisons
-- [ ] GEO matrix normalization, quality-control diagnostics, differential-expression statistics, and reproducible domain adapters
+- [ ] GEO matrix normalization and count-aware RNA-seq differential-expression adapters
+- [x] Explicit-design Welch contrasts with BH-FDR for user-declared continuous log2 GEO matrices; raw counts rejected
 - [x] Bounded first-degree reference discovery from DOI-backed Crossref works
 - [ ] Incoming citation discovery, graph ranking, and broader citation-network exploration
 - [x] Explicit experiment lifecycle recording for proposed, simulated, performed, and evaluated states with execution provenance
