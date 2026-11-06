@@ -45,6 +45,8 @@ def build_parser() -> argparse.ArgumentParser:
                         help="quantile for continuous microarray-like data; cpm/log2-cpm for raw integer counts")
     parser.add_argument("--normalization-output", default="",
                         help="Required output TSV path; raw input is never overwritten")
+    parser.add_argument("--verify-normalization", action="store_true",
+                        help="Repeat the normalization in the same runtime and compare output SHA-256")
     parser.add_argument("--normalization-prior-count", type=float, default=0.5,
                         help="Positive log2-CPM prior count (default 0.5)")
     parser.add_argument("--geo-deseq2", metavar="MATRIX_PATH",
@@ -216,12 +218,18 @@ def main() -> None:
     if args.normalize_geo_matrix:
         if not args.normalization_method or not args.normalization_output:
             raise SystemExit("--normalize-geo-matrix requires --normalization-method and --normalization-output.")
-        from .geo_normalization import normalize_geo_matrix
+        from .geo_normalization import normalize_geo_matrix, verify_geo_normalization_rerun
         try:
-            report = normalize_geo_matrix(
-                args.normalize_geo_matrix, args.normalization_output,
-                args.normalization_method, prior_count=args.normalization_prior_count,
-            )
+            if args.verify_normalization:
+                report = verify_geo_normalization_rerun(
+                    args.normalize_geo_matrix, args.normalization_output,
+                    args.normalization_method, prior_count=args.normalization_prior_count,
+                )
+            else:
+                report = normalize_geo_matrix(
+                    args.normalize_geo_matrix, args.normalization_output,
+                    args.normalization_method, prior_count=args.normalization_prior_count,
+                )
         except (OSError, ValueError, RuntimeError) as exc:
             raise SystemExit(f"GEO matrix normalization failed: {exc}") from exc
         print(json.dumps(report, indent=2, ensure_ascii=False))
