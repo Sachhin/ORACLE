@@ -1,7 +1,7 @@
 """Citation graph ranking tests."""
 import unittest
 
-from oracle.citation_graph import rank_citation_graph
+from oracle.citation_graph import rank_citation_graph, traverse_citation_graph
 from oracle.models import CitationLink, ResearchRun, SourceRecord
 
 
@@ -35,6 +35,46 @@ class CitationGraphTests(unittest.TestCase):
         self.assertEqual(report["nodes"], 1)
         self.assertEqual(report["resolved_edges"], 0)
         self.assertEqual(report["unresolved_citation_records"], 1)
+
+
+
+    def test_bounded_multihop_traversal_follows_citation_direction(self):
+        run = ResearchRun("Multi-hop citation graph")
+        run.sources.extend([
+            SourceRecord("Paper A", doi="10.1000/a", source_id="a"),
+            SourceRecord("Paper B", doi="https://doi.org/10.1000/b", source_id="b"),
+            SourceRecord("Paper C", doi="10.1000/c", source_id="c"),
+            SourceRecord("Paper D", doi="10.1000/d", source_id="d"),
+        ])
+        run.citation_links.extend([
+            CitationLink("a", "10.1000/b", relation="references"),
+            CitationLink("b", "10.1000/c", relation="references"),
+            CitationLink("d", "10.1000/a", relation="references"),
+        ])
+        outgoing = traverse_citation_graph(run, "a", direction="outgoing", max_depth=2)
+        self.assertEqual([item["source_id"] for item in outgoing["results"]], ["b", "c"])
+        self.assertEqual(outgoing["results"][1]["path_source_ids"], ["a", "b", "c"])
+        incoming = traverse_citation_graph(run, "a", direction="incoming", max_depth=2)
+        self.assertEqual([item["source_id"] for item in incoming["results"]], ["d"])
+        self.assertEqual(incoming["results"][0]["depth"], 1)
+
+    def test_multihop_traversal_limits_depth_and_validates_start(self):
+        run = ResearchRun("Traversal limits")
+        run.sources.extend([
+            SourceRecord("A", doi="10.1000/a", source_id="a"),
+            SourceRecord("B", doi="10.1000/b", source_id="b"),
+            SourceRecord("C", doi="10.1000/c", source_id="c"),
+        ])
+        run.citation_links.extend([
+            CitationLink("a", "10.1000/b"),
+            CitationLink("b", "10.1000/c"),
+        ])
+        report = traverse_citation_graph(run, "a", direction="outgoing", max_depth=1)
+        self.assertEqual([item["source_id"] for item in report["results"]], ["b"])
+        with self.assertRaisesRegex(ValueError, "Start source not found"):
+            traverse_citation_graph(run, "missing")
+        with self.assertRaisesRegex(ValueError, "max_depth"):
+            traverse_citation_graph(run, "a", max_depth=7)
 
     def test_ranking_parameters_are_validated(self):
         with self.assertRaises(ValueError):
