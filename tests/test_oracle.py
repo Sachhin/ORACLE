@@ -1031,9 +1031,9 @@ class OracleTests(unittest.TestCase):
         from oracle.geo_analysis import GEOExpressionAnalyzer
         analyzer = GEOExpressionAnalyzer()
         summaries, rows, numeric, missing, mean, minimum, maximum = analyzer._parse(
-            "ID_REF\\tGSM_CONSTANT\\tGSM_EMPTY\\n"
-            "g1\\t5\\tNA\\n"
-            "g2\\t5\\tNA\\n"
+            "ID_REF\tGSM_CONSTANT\tGSM_EMPTY\n"
+            "g1\t5\tNA\n"
+            "g2\t5\tNA\n"
         )
         self.assertEqual(rows, 2)
         self.assertEqual(numeric, 2)
