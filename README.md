@@ -81,7 +81,8 @@ Run deterministic MCAR, MAR, or MNAR masking stress tests for row-median imputat
 
 ```bash
 python -m oracle --imputation-benchmark complete-matrix.tsv \
-  --imputation-missing-fraction 0.1 --imputation-replicates 50 --imputation-seed 1729 \\\n  --imputation-mechanism MNAR
+  --imputation-missing-fraction 0.1 --imputation-replicates 50 --imputation-seed 1729 \
+  --imputation-mechanism MNAR
 ```
 
 MCAR uses random masking, MAR depends on an observed sample-position covariate, and MNAR preferentially masks low values. These synthetic sensitivity tests do not identify a dataset’s actual missingness mechanism or establish downstream statistical bias.
