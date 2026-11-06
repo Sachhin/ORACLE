@@ -73,7 +73,7 @@ Status reflects code currently present on the main branch. Checked items are imp
 - [x] Machine-validated benchmark ingestion requirements for frozen source packets, two independent reviewers, adjudication, and paired baseline/candidate scores
 - [ ] Curated expert-scored scientific answer benchmark set with multiple reviewers and adjudicated labels (rubric, starter questions, and adjudication protocol exist; real labels remain pending)
 - [x] Evidence benchmark requires two named human annotations per case, records reviewer agreement, and validates adjudication on disagreement
-- [x] External SciFact labelled train/dev evaluator plus BM25 retrieval-grounded Gemini prediction generator, strict evidence/sentence validation, frozen provenance, and workflow; [ ] live predictions/report require GEMINI_API_KEY Actions secret and manual workflow dispatch (no live predictions or metrics are claimed yet)
+- [x] External SciFact labelled train/dev evaluator plus BM25 retrieval-grounded Gemini prediction generator, strict evidence/sentence validation, frozen provenance, and push/manual-dispatch workflow; [ ] live predictions/report remain blocked because the 2026-11-06 Actions pilot confirmed GEMINI_API_KEY is not configured (no live predictions or metrics are claimed)
 - [ ] Empirical evidence attribution, entailment, contradiction, and hallucination benchmark results (frozen ORACLE predictions and expert adjudication remain pending)
 - [x] Reproducibility and regression suite across Python 3.10–3.14 CI matrix
 - [x] High-impact claim review requires independent source groups, reviewer identity, and rationale
