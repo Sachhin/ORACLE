@@ -134,6 +134,8 @@ report <- list(
   ),
   expression_matrix_metrics = as.list(e_metrics),
   precision_weight_metrics = as.list(w_metrics),
+  acceptance_thresholds = list(expression_rmse_max = 0.05, expression_pearson_min = 0.999,
+                               weights_rmse_max = 0.10, weights_pearson_min = 0.99),
   limitations = paste(
     "This is an external real-dataset reproducibility comparison against",
     "submitter-published GEO voom outputs. It validates numerical agreement",
@@ -141,7 +143,13 @@ report <- list(
     "it does not establish general biological correctness or model superiority."
   )
 )
+pass <- is.finite(e_metrics[["rmse"]]) && is.finite(e_metrics[["pearson_r"]]) &&
+  is.finite(w_metrics[["rmse"]]) && is.finite(w_metrics[["pearson_r"]]) &&
+  e_metrics[["rmse"]] <= 0.05 && e_metrics[["pearson_r"]] >= 0.999 &&
+  w_metrics[["rmse"]] <= 0.10 && w_metrics[["pearson_r"]] >= 0.99
+report$status <- if (pass) "PASS" else "FAIL_NUMERICAL_TOLERANCE"
 jsonlite::write_json(report, report_path, auto_unbox = TRUE, pretty = TRUE, na = "null")
 cat(jsonlite::toJSON(report[c("status", "sample_count", "feature_count",
-    "expression_matrix_metrics", "precision_weight_metrics")],
+    "expression_matrix_metrics", "precision_weight_metrics", "acceptance_thresholds")],
     auto_unbox = TRUE, pretty = TRUE))
+if (!pass) stop("Published GEO voom reference comparison did not meet numerical tolerances.")
