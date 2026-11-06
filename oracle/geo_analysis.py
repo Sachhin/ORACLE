@@ -11,6 +11,7 @@ import gzip
 import hashlib
 import io
 import math
+import shlex
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -114,6 +115,33 @@ class GEOExpressionAnalyzer:
                 and not line.lstrip().startswith(("!", "#"))]
         return "\n".join(data)
 
+    @staticmethod
+    def _sample_metadata(text: str, sample_count: int) -> list[dict]:
+        """Read per-sample GEO characteristics without inferring experimental groups."""
+        metadata = [{} for _ in range(sample_count)]
+        for line in text.splitlines():
+            if not line.startswith("!Sample_") or "=" not in line:
+                continue
+            field, _, raw_values = line.partition("=")
+            try:
+                values = shlex.split(raw_values.strip())
+            except ValueError:
+                continue
+            if len(values) != sample_count:
+                continue
+            field = field[len("!Sample_"):].strip()
+            for index, value in enumerate(values):
+                if field.startswith("characteristics_"):
+                    if ":" not in value:
+                        continue
+                    key, _, characteristic = value.partition(":")
+                    key = key.strip().lower()
+                    if key:
+                        metadata[index].setdefault("characteristics", {})[key] = characteristic.strip()
+                else:
+                    metadata[index][field] = value
+        return metadata
+
     @classmethod
     def _number(cls, raw: str) -> float | None:
         value = raw.strip()
@@ -141,6 +169,7 @@ class GEOExpressionAnalyzer:
         sample_names = [name.strip() or f"sample_{i+1}" for i, name in enumerate(header[1:])]
         if len(sample_names) > self.max_samples:
             raise ValueError(f"Matrix has {len(sample_names)} samples; limit is {self.max_samples}.")
+        sample_metadata = self._sample_metadata(text, len(sample_names))
         accumulators = [_Accumulator() for _ in sample_names]
         global_stats = _Accumulator()
         feature_rows = 0
@@ -164,6 +193,7 @@ class GEOExpressionAnalyzer:
             raise ValueError("No numeric expression cells were found in the matrix.")
         summaries = [{
             "sample": sample_names[index],
+            "metadata": sample_metadata[index],
             "numeric_cells": item.count,
             "missing_cells": item.missing,
             "mean": item.mean,
