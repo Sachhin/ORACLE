@@ -312,30 +312,47 @@ class GEOSupplementaryClient:
         temporary = target.with_name(target.name + ".part")
         digest = hashlib.sha256()
         written = 0
-        try:
-            request = Request(url, headers={"User-Agent": "ORACLE-GEO-Series-Downloader/1.0"})
-            with urlopen(request, timeout=self.timeout) as response:
-                length = response.headers.get("Content-Length")
-                if length and int(length) > max_file_bytes:
-                    raise RuntimeError(
-                        f"Archive size {length} exceeds the {max_file_bytes}-byte cap."
-                    )
-                with temporary.open("wb") as output:
-                    while True:
-                        chunk = response.read(1024 * 1024)
-                        if not chunk:
-                            break
-                        written += len(chunk)
-                        if written > max_file_bytes:
-                            raise RuntimeError(
-                                f"Archive exceeded the {max_file_bytes}-byte cap."
-                            )
-                        digest.update(chunk)
-                        output.write(chunk)
-            temporary.replace(target)
-        except Exception:
-            temporary.unlink(missing_ok=True)
-            raise
+        import time
+        download_url = url + ("&" if "?" in url else "?") + "tool=geoquery"
+        last_error = None
+        for attempt in range(3):
+            digest = hashlib.sha256()
+            written = 0
+            try:
+                request = Request(download_url, headers={
+                    "User-Agent": "ORACLE-GEO-Series-Downloader/1.0",
+                    "Accept": "application/octet-stream",
+                })
+                with urlopen(request, timeout=max(self.timeout, 120)) as response:
+                    length = response.headers.get("Content-Length")
+                    if length and int(length) > max_file_bytes:
+                        raise RuntimeError(
+                            f"Archive size {length} exceeds the {max_file_bytes}-byte cap."
+                        )
+                    with temporary.open("wb") as output:
+                        while True:
+                            chunk = response.read(1024 * 1024)
+                            if not chunk:
+                                break
+                            written += len(chunk)
+                            if written > max_file_bytes:
+                                raise RuntimeError(
+                                    f"Archive exceeded the {max_file_bytes}-byte cap."
+                                )
+                            digest.update(chunk)
+                            output.write(chunk)
+                temporary.replace(target)
+                last_error = None
+                break
+            except Exception as exc:
+                temporary.unlink(missing_ok=True)
+                last_error = exc
+                if attempt < 2:
+                    time.sleep(2 ** attempt)
+        if last_error is not None:
+            raise RuntimeError(
+                f"Could not download {filename} from NCBI after 3 attempts: {last_error}"
+            ) from last_error
         return {
             "accession": accession, "filename": filename,
             "url": url, "local_path": str(target),
