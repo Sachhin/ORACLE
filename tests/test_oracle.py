@@ -1191,5 +1191,39 @@ class OracleTests(unittest.TestCase):
             with self.assertRaisesRegex(DESeq2UnavailableError, "BiocManager"):
                 GEOCountAnalyzer().analyze(matrix, groups, "control", "treated")
 
+
+    def test_differential_expression_analysis_persists_with_run_and_provenance(self):
+        from oracle.models import DifferentialExpressionAnalysisRecord
+        run = ResearchRun(question="Does treatment alter gene expression?")
+        record = DifferentialExpressionAnalysisRecord(
+            dataset_accession="GSE12345",
+            source_file="counts.tsv",
+            matrix_sha256="a" * 64,
+            method="DESeq2 negative-binomial GLM; Wald test",
+            contrast={"group_a": "control", "group_b": "treated", "direction": "treated vs control"},
+            sample_groups={"control": ["C1", "C2"], "treated": ["T1", "T2"]},
+            sample_count=4,
+            features_input=2,
+            software={"r": "4.4.0", "deseq2": "1.42.0"},
+            results=[{"feature": "geneA", "log2_fold_change": 1.5, "p_value_adjusted_bh": 0.01}],
+            limitations="Simple two-group association only.",
+            features_returned=1,
+            features_with_adjusted_p_value=1,
+        )
+        run.differential_expression_analyses.append(record)
+        self.store.save_run(run)
+
+        loaded = self.store.load_run(run.run_id)
+        self.assertEqual(len(loaded.differential_expression_analyses), 1)
+        restored = loaded.differential_expression_analyses[0]
+        self.assertEqual(restored.analysis_id, record.analysis_id)
+        self.assertEqual(restored.dataset_accession, "GSE12345")
+        self.assertEqual(restored.matrix_sha256, "a" * 64)
+        self.assertEqual(restored.results[0]["feature"], "geneA")
+        self.assertEqual(restored.review_status, "unreviewed")
+        indexed = self.store.list_differential_expression_analyses(run.run_id)
+        self.assertEqual(indexed[0]["analysis_id"], record.analysis_id)
+        self.assertEqual(self.store.list_events(run.run_id), [])
+
 if __name__ == "__main__":
     unittest.main()
