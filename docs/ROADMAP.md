@@ -38,6 +38,7 @@ Status reflects code currently present on the main branch. Checked items are imp
 - [x] Bounded Europe PMC open-access full-text retrieval with strict Creative Commons licence checks
 - [x] GEO Series supplementary file discovery and size-capped download with SHA-256 checksums
 - [x] Bounded descriptive parsing of downloaded GEO TSV/CSV expression matrices with checksums, per-sample summaries, and source-linked dataset records
+- [x] Per-sample missingness/variance quality-control flags that preserve all original samples and never silently filter
 - [ ] GEO matrix normalization, quality-control diagnostics, differential-expression statistics, and reproducible domain adapters
 - [x] Bounded first-degree reference discovery from DOI-backed Crossref works
 - [ ] Incoming citation discovery, graph ranking, and broader citation-network exploration
