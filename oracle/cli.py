@@ -64,6 +64,14 @@ def build_parser() -> argparse.ArgumentParser:
                                  help="Show task status, criteria, and evidence links for a run")
     portfolio_group.add_argument("--show-hypotheses", metavar="RUN_ID",
                                  help="Show competing hypotheses and their reviewed evidence links")
+    portfolio_group.add_argument("--show-sources", metavar="RUN_ID",
+                                 help="Show source provenance and human quality assessments")
+    parser.add_argument("--source-action", choices=["review"],
+                        help="Record a human reliability assessment for a source")
+    parser.add_argument("--source-run", help="Research run containing the source")
+    parser.add_argument("--source-id", help="Source ID to review")
+    parser.add_argument("--source-score", type=float, help="Human-assessed source reliability (0..1)")
+    parser.add_argument("--source-note", default="", help="Rationale for source-quality assessment")
     parser.add_argument("--hypothesis-action", choices=["link", "review"],
                         help="Link source evidence to a hypothesis or record a human status judgement")
     parser.add_argument("--hypothesis-run", help="Research run containing the hypothesis")
@@ -92,6 +100,24 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> None:
     args = build_parser().parse_args()
     store = ResearchStore(args.db)
+    if args.source_action:
+        if (not args.source_run or not args.source_id or args.source_score is None
+                or not args.source_note.strip()):
+            raise SystemExit("--source-action review requires --source-run, --source-id, --source-score, and --source-note.")
+        run = store.load_run(args.source_run)
+        if run is None:
+            raise SystemExit(f"Research run not found: {args.source_run}")
+        from .knowledge import KnowledgeBase
+        source = KnowledgeBase().review_source_quality(
+            run, args.source_id, args.source_score, args.source_note,
+        )
+        store.save_run(run)
+        if args.json:
+            print(json.dumps(source.__dict__, indent=2, ensure_ascii=False))
+        else:
+            print(f"Source {source.source_id}: reliability {source.reliability_score:.2f}")
+            print(f"Rationale: {source.reliability_rationale}")
+        return
     if args.hypothesis_action:
         if not args.hypothesis_run or not args.hypothesis_id or not args.hypothesis_note.strip():
             raise SystemExit("--hypothesis-action requires --hypothesis-run, --hypothesis-id, and --hypothesis-note.")
@@ -204,7 +230,7 @@ def main() -> None:
             print(experiment.limitations)
         return
     if (args.portfolio or args.assess_gaps or args.related_to is not None or args.show_reviews
-            or args.show_tasks or args.show_hypotheses):
+            or args.show_tasks or args.show_hypotheses or args.show_sources):
         from dataclasses import asdict
         from .portfolio import ResearchPortfolio
         portfolio = ResearchPortfolio(store)
@@ -218,6 +244,23 @@ def main() -> None:
                     print(f"- {item['run_id']} | {item['status']} | gap score {item['knowledge_gap_score']}/100")
                     print(f"  {item['question']}")
                     print(f"  Sources: {item['sources']} | Evidence: {item['evidence']} | Claims: {item['claims']} | Hypotheses: {item['hypotheses']}")
+            return
+        if args.show_sources:
+            run = store.load_run(args.show_sources)
+            if run is None:
+                raise SystemExit(f"Research run not found: {args.show_sources}")
+            items = [source.__dict__ for source in run.sources]
+            if args.json:
+                print(json.dumps(items, indent=2, ensure_ascii=False))
+            else:
+                if not items:
+                    print("No sources in this run.")
+                for item in items:
+                    print(f"- {item['source_id']} | reliability {item['reliability_score']:.2f}")
+                    print(f"  {item['title']}")
+                    print(f"  DOI/PMID/PMCID: {item['doi'] or '-'} / {item['pmid'] or '-'} / {item['pmcid'] or '-'}")
+                    print(f"  URL: {item['url']}")
+                    print(f"  Assessment: {item['reliability_rationale']}")
             return
         if args.show_hypotheses:
             run = store.load_run(args.show_hypotheses)
