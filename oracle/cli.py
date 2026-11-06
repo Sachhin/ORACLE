@@ -62,6 +62,16 @@ def build_parser() -> argparse.ArgumentParser:
                                  help="Show pending and completed evidence-review candidates in a run")
     portfolio_group.add_argument("--show-tasks", metavar="RUN_ID",
                                  help="Show task status, criteria, and evidence links for a run")
+    portfolio_group.add_argument("--show-hypotheses", metavar="RUN_ID",
+                                 help="Show competing hypotheses and their reviewed evidence links")
+    parser.add_argument("--hypothesis-action", choices=["link", "review"],
+                        help="Link source evidence to a hypothesis or record a human status judgement")
+    parser.add_argument("--hypothesis-run", help="Research run containing the hypothesis")
+    parser.add_argument("--hypothesis-id", help="Hypothesis ID to update")
+    parser.add_argument("--hypothesis-evidence-id", help="Source-backed evidence ID to link")
+    parser.add_argument("--hypothesis-stance", choices=["supports", "refutes"])
+    parser.add_argument("--hypothesis-status", choices=["supported", "weakened", "rejected", "open"])
+    parser.add_argument("--hypothesis-note", default="", help="Human review rationale")
     parser.add_argument("--task-action", choices=["start", "complete", "block", "retry"],
                         help="Update a research task lifecycle state")
     parser.add_argument("--task-run", help="Research run containing the task")
@@ -82,6 +92,37 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> None:
     args = build_parser().parse_args()
     store = ResearchStore(args.db)
+    if args.hypothesis_action:
+        if not args.hypothesis_run or not args.hypothesis_id or not args.hypothesis_note.strip():
+            raise SystemExit("--hypothesis-action requires --hypothesis-run, --hypothesis-id, and --hypothesis-note.")
+        run = store.load_run(args.hypothesis_run)
+        if run is None:
+            raise SystemExit(f"Research run not found: {args.hypothesis_run}")
+        from .knowledge import KnowledgeBase
+        from .models import EvidenceStance
+        kb = KnowledgeBase()
+        if args.hypothesis_action == "link":
+            if not args.hypothesis_evidence_id or not args.hypothesis_stance:
+                raise SystemExit("hypothesis link requires --hypothesis-evidence-id and --hypothesis-stance.")
+            hypothesis = kb.link_hypothesis_evidence(
+                run, args.hypothesis_id, args.hypothesis_evidence_id,
+                EvidenceStance(args.hypothesis_stance), args.hypothesis_note,
+            )
+        else:
+            if not args.hypothesis_status:
+                raise SystemExit("hypothesis review requires --hypothesis-status.")
+            hypothesis = kb.review_hypothesis(
+                run, args.hypothesis_id, args.hypothesis_status, args.hypothesis_note,
+            )
+        store.save_run(run)
+        if args.json:
+            print(json.dumps(hypothesis.__dict__, indent=2, ensure_ascii=False))
+        else:
+            print(f"Hypothesis {hypothesis.hypothesis_id}: {hypothesis.status.value}")
+            print(f"Supporting evidence: {', '.join(hypothesis.supporting_evidence_ids) or 'none'}")
+            print(f"Opposing evidence: {', '.join(hypothesis.opposing_evidence_ids) or 'none'}")
+            print(f"Review note: {hypothesis.reviewer_note}")
+        return
     if args.task_action:
         if not args.task_run or not args.task_id:
             raise SystemExit("--task-action requires --task-run and --task-id.")
@@ -162,7 +203,8 @@ def main() -> None:
             print(f"Experiment {experiment.experiment_id}: {experiment.status.value} ({experiment.execution_kind})")
             print(experiment.limitations)
         return
-    if args.portfolio or args.assess_gaps or args.related_to is not None or args.show_reviews or args.show_tasks:
+    if (args.portfolio or args.assess_gaps or args.related_to is not None or args.show_reviews
+            or args.show_tasks or args.show_hypotheses):
         from dataclasses import asdict
         from .portfolio import ResearchPortfolio
         portfolio = ResearchPortfolio(store)
@@ -176,6 +218,26 @@ def main() -> None:
                     print(f"- {item['run_id']} | {item['status']} | gap score {item['knowledge_gap_score']}/100")
                     print(f"  {item['question']}")
                     print(f"  Sources: {item['sources']} | Evidence: {item['evidence']} | Claims: {item['claims']} | Hypotheses: {item['hypotheses']}")
+            return
+        if args.show_hypotheses:
+            run = store.load_run(args.show_hypotheses)
+            if run is None:
+                raise SystemExit(f"Research run not found: {args.show_hypotheses}")
+            items = [item.__dict__ for item in run.hypotheses]
+            if args.json:
+                print(json.dumps(items, indent=2, ensure_ascii=False))
+            else:
+                if not items:
+                    print("No hypotheses in this run.")
+                for item in items:
+                    status = item["status"].value if hasattr(item["status"], "value") else item["status"]
+                    print(f"- {item['hypothesis_id']} | {status}")
+                    print(f"  {item['statement']}")
+                    print(f"  Supporting evidence: {', '.join(item['supporting_evidence_ids']) or 'none'}")
+                    print(f"  Opposing evidence: {', '.join(item['opposing_evidence_ids']) or 'none'}")
+                    print(f"  Predictions: {'; '.join(item['predictions'])}")
+                    if item['reviewer_note']:
+                        print(f"  Review: {item['reviewer_note']}")
             return
         if args.show_tasks:
             run = store.load_run(args.show_tasks)

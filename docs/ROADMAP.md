@@ -12,7 +12,7 @@ Status reflects code currently present on the main branch; checked items are imp
 
 ## Milestone 2 — Research intelligence
 - [x] Evidence graph with claim-to-source relationships
-- [x] Hypothesis ledger and support/opposition link model
+- [x] Hypothesis ledger, source-backed support/opposition links, and human-gated status transitions
 - [x] Explicit uncertainty assessments and contradiction review candidates
 - [x] Provenance, claim revisions, and dependence-aware evidence accounting
 - [x] Literature retrieval from Europe PMC, Crossref, and NCBI GEO metadata

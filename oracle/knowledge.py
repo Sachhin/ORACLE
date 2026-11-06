@@ -5,8 +5,8 @@ import re
 
 from .models import (
     Claim, ClaimRevision, ContradictionCandidate, EvidenceClaimLink, EvidenceReviewCandidate,
-    EvidenceKind, EvidenceStance, Hypothesis, HypothesisGroup, ResearchRun, SourceRecord,
-    UncertaintyAssessment,
+    EvidenceKind, EvidenceStance, Hypothesis, HypothesisGroup, HypothesisStatus, ResearchRun,
+    SourceRecord, UncertaintyAssessment, utc_now, utc_now,
 )
 
 
@@ -137,6 +137,61 @@ class KnowledgeBase:
         candidate.status = status
         candidate.reviewer_note = reviewer_note.strip()
         return candidate
+
+    def link_hypothesis_evidence(
+        self, run: ResearchRun, hypothesis_id: str, evidence_id: str,
+        stance: EvidenceStance, reviewer_note: str,
+    ) -> Hypothesis:
+        """Attach source-backed evidence to a hypothesis after explicit review."""
+        hypothesis = next((item for item in run.hypotheses
+                           if item.hypothesis_id == hypothesis_id), None)
+        evidence = next((item for item in run.evidence
+                         if item.evidence_id == evidence_id), None)
+        if hypothesis is None or evidence is None:
+            raise ValueError("Hypothesis evidence link must reference existing records.")
+        if stance not in {EvidenceStance.SUPPORTS, EvidenceStance.REFUTES}:
+            raise ValueError("Hypothesis evidence must be classified as supports or refutes.")
+        if (evidence.kind == EvidenceKind.INFERENCE or not evidence.source_id
+                or not any(source.source_id == evidence.source_id for source in run.sources)):
+            raise ValueError("Only source-backed evidence can be linked to a hypothesis.")
+        if not reviewer_note.strip():
+            raise ValueError("A human review note is required for hypothesis evidence links.")
+        target = (hypothesis.supporting_evidence_ids if stance == EvidenceStance.SUPPORTS
+                  else hypothesis.opposing_evidence_ids)
+        opposite = (hypothesis.opposing_evidence_ids if stance == EvidenceStance.SUPPORTS
+                    else hypothesis.supporting_evidence_ids)
+        if evidence_id in opposite:
+            raise ValueError("The same evidence record cannot support and refute one hypothesis.")
+        if evidence_id not in target:
+            target.append(evidence_id)
+        hypothesis.status = HypothesisStatus.UNDER_REVIEW
+        hypothesis.reviewer_note = reviewer_note.strip()
+        hypothesis.reviewed_at = utc_now()
+        return hypothesis
+
+    def review_hypothesis(
+        self, run: ResearchRun, hypothesis_id: str, status: str, reviewer_note: str,
+    ) -> Hypothesis:
+        """Record a human hypothesis judgement; never infer status automatically."""
+        allowed = {
+            "supported", "weakened", "rejected", "open",
+        }
+        if status not in allowed:
+            raise ValueError("Hypothesis status must be supported, weakened, rejected, or open.")
+        if not reviewer_note.strip():
+            raise ValueError("A human review note is required.")
+        hypothesis = next((item for item in run.hypotheses
+                           if item.hypothesis_id == hypothesis_id), None)
+        if hypothesis is None:
+            raise ValueError(f"Unknown hypothesis: {hypothesis_id}")
+        if status == "supported" and not hypothesis.supporting_evidence_ids:
+            raise ValueError("A supported judgement requires linked supporting evidence.")
+        if status in {"weakened", "rejected"} and not hypothesis.opposing_evidence_ids:
+            raise ValueError("A weakened/rejected judgement requires linked opposing evidence.")
+        hypothesis.status = HypothesisStatus(status)
+        hypothesis.reviewer_note = reviewer_note.strip()
+        hypothesis.reviewed_at = utc_now()
+        return hypothesis
 
     def add_hypothesis(self, run: ResearchRun, hypothesis: Hypothesis,
                        group_id: str | None = None) -> HypothesisGroup:

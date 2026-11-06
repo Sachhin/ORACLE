@@ -87,6 +87,19 @@ List saved research runs and compare their recorded coverage:
 
 The gap score is a transparent record-coverage heuristic based on source-backed evidence, claim review links, hypothesis evidence links, unresolved contradiction candidates, and task completion. It is not a probability, evidence quality score, or scientific completeness guarantee. Related-run search uses lexical token overlap only; it does not claim semantic similarity or discovery of a scientific connection.
 
+### Hypothesis evidence review
+
+Inspect competing hypotheses and their source links:
+
+    python -m oracle --show-hypotheses RUN_ID
+
+Link independently reviewed source evidence, then record a human status decision:
+
+    python -m oracle --hypothesis-action link --hypothesis-run RUN_ID --hypothesis-id HYP_ID --hypothesis-evidence-id EVIDENCE_ID --hypothesis-stance supports --hypothesis-note "Checked the source context."
+    python -m oracle --hypothesis-action review --hypothesis-run RUN_ID --hypothesis-id HYP_ID --hypothesis-status supported --hypothesis-note "Relevant source records support the predicted outcome."
+
+The system never promotes a hypothesis automatically. Supported, weakened, or rejected requires corresponding reviewed source evidence and a human note.
+
 ### Research task lifecycle
 
 Inspect tasks, acceptance criteria, and evidence links:
