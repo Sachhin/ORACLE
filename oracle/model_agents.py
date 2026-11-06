@@ -99,6 +99,96 @@ class GeminiJSONProvider:
         return result
 
 
+
+class OpenAICompatibleJSONProvider:
+    """OpenAI Chat Completions-compatible provider (Groq/OpenRouter)."""
+
+    def __init__(self, api_key: str, model: str, base_url: str, timeout: float = 45.0):
+        self.api_key = api_key.strip()
+        self.model = model.strip()
+        self.base_url = base_url.rstrip("/")
+        self.timeout = float(timeout)
+        if not self.api_key:
+            raise ValueError("Provider API key is required.")
+        if not self.model or len(self.model) > 200:
+            raise ValueError("A valid provider model name is required.")
+        if self.base_url not in {
+            "https://api.groq.com/openai/v1",
+            "https://openrouter.ai/api/v1",
+        }:
+            raise ValueError("Provider base URL is not on the allowlist.")
+
+    def generate_json(self, prompt: str) -> dict:
+        url = self.base_url + "/chat/completions"
+        body = {
+            "model": self.model,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0.2,
+            "response_format": {"type": "json_object"},
+        }
+        headers = {
+            "Content-Type": "application/json", "Accept": "application/json",
+            "Authorization": "Bearer " + self.api_key,
+        }
+        if "openrouter.ai" in self.base_url:
+            headers["X-Title"] = "ORACLE scientific research"
+        request = Request(url, data=json.dumps(body).encode("utf-8"),
+                          method="POST", headers=headers)
+        try:
+            with urlopen(request, timeout=self.timeout) as response:
+                payload = json.loads(response.read(2_000_000).decode("utf-8"))
+        except HTTPError as exc:
+            detail = exc.read(2000).decode("utf-8", "replace")
+            raise GeminiAgentError(f"OpenAI-compatible provider HTTP {exc.code}: {detail[:1000]}") from exc
+        except (URLError, TimeoutError) as exc:
+            raise GeminiAgentError(f"OpenAI-compatible provider request failed: {exc}") from exc
+        except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+            raise GeminiAgentError(f"Provider returned malformed response JSON: {exc}") from exc
+        try:
+            content = payload["choices"][0]["message"]["content"]
+            result = json.loads(content)
+        except (KeyError, IndexError, TypeError, json.JSONDecodeError) as exc:
+            raise GeminiAgentError("Provider returned no valid JSON chat-completion object.") from exc
+        if not isinstance(result, dict):
+            raise GeminiAgentError("Provider response must be a JSON object.")
+        return result
+
+
+class ProviderRouter:
+    """Ordered failover router; only transient/quota failures advance to another provider."""
+
+    def __init__(self, providers):
+        self.providers = list(providers)
+        if not self.providers:
+            raise ValueError("At least one configured model provider is required.")
+        self.last_provider = None
+        self.model = self.providers[0].model
+
+    @staticmethod
+    def _retryable(error: Exception) -> bool:
+        message = str(error).casefold()
+        return any(marker in message for marker in (
+            "http 408", "http 409", "http 425", "http 429",
+            "http 500", "http 502", "http 503", "http 504",
+            "quota", "rate limit", "timed out", "timeout",
+            "connection", "temporarily unavailable", "request failed",
+        ))
+
+    def generate_json(self, prompt: str) -> dict:
+        failures = []
+        for index, provider in enumerate(self.providers):
+            try:
+                result = provider.generate_json(prompt)
+                self.last_provider = provider
+                self.model = provider.model
+                return result
+            except GeminiAgentError as exc:
+                failures.append(f"{provider.model}: {exc}")
+                if index == len(self.providers) - 1 or not self._retryable(exc):
+                    break
+        raise GeminiAgentError("All eligible provider attempts failed: " + " | ".join(failures))
+
+
 class _GeminiAgent:
     name = "gemini_agent"
 
@@ -433,8 +523,36 @@ class GeminiAgentSuite:
     """Drop-in Gemini-backed agent collection; all judgements remain provisional."""
 
     def __init__(self, api_key: str | None = None,
-                 model: str = "gemini-2.5-flash", timeout: float = 45.0):
-        provider = GeminiJSONProvider(api_key=api_key, model=model, timeout=timeout)
+                 model: str = "gemini-2.5-flash", timeout: float = 45.0,
+                 routing: str = "single"):
+        if routing not in {"single", "fallback"}:
+            raise ValueError("routing must be 'single' or 'fallback'.")
+        if routing == "single":
+            provider = GeminiJSONProvider(api_key=api_key, model=model, timeout=timeout)
+        else:
+            providers = []
+            gemini_key = (api_key or os.environ.get("GEMINI_API_KEY", "")).strip()
+            if gemini_key:
+                providers.append(GeminiJSONProvider(api_key=gemini_key, model=model, timeout=timeout))
+            groq_key = os.environ.get("GROQ_API_KEY", "").strip()
+            groq_model = os.environ.get("ORACLE_GROQ_MODEL", "").strip()
+            if groq_key and groq_model:
+                providers.append(OpenAICompatibleJSONProvider(
+                    groq_key, groq_model, "https://api.groq.com/openai/v1", timeout,
+                ))
+            router_key = os.environ.get("OPENROUTER_API_KEY", "").strip()
+            router_model = os.environ.get("ORACLE_OPENROUTER_MODEL", "").strip()
+            if router_key and router_model:
+                providers.append(OpenAICompatibleJSONProvider(
+                    router_key, router_model, "https://openrouter.ai/api/v1", timeout,
+                ))
+            if not providers:
+                raise ValueError(
+                    "No providers configured. Set GEMINI_API_KEY, or configure "
+                    "GROQ_API_KEY + ORACLE_GROQ_MODEL / OPENROUTER_API_KEY + ORACLE_OPENROUTER_MODEL."
+                )
+            provider = ProviderRouter(providers)
+        self.provider = provider
         self.planner = GeminiPlannerAgent(provider)
         self.researcher = GeminiResearcherAgent(provider)
         self.explorer = GeminiExplorerAgent(provider)
