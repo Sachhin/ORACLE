@@ -93,7 +93,7 @@ python -m oracle.external_validation de \
   --provenance-json reference-provenance.json --output de-comparison.json
 ```
 
-See [docs/EXTERNAL_VALIDATION.md](docs/EXTERNAL_VALIDATION.md) for required provenance, file formats, metrics, and interpretation limits. The comparator is implemented and tested; trusted external reference files must still be supplied before empirical reference validation can be claimed.
+See [docs/EXTERNAL_VALIDATION.md](docs/EXTERNAL_VALIDATION.md) for required provenance, file formats, metrics, and interpretation limits. The comparator has now been exercised against published real GEO references: GSE176260 expression/voom weights, GSE176261 same-study validation cohort (PASS after full-cohort TMM factors on Bioconductor 3.13 and 3.22), and the independent GSE64099 differential-expression results. These validate the named workflows/datasets, not every platform or study.
 
 ## Paired model evaluation
 
@@ -132,7 +132,7 @@ python -m oracle --imputation-de-bias complete-log2-matrix.tsv \
   --imputation-replicates 50
 ```
 
-This is still a synthetic masking sensitivity test: the complete matrix is the reference, not biological ground truth. It does not establish real-world downstream bias, validate a measurement scale, or replace covariate-aware DESeq2/limma analysis.
+This is still a synthetic masking sensitivity test: the complete matrix is the reference, not biological ground truth. For real missingness evaluation, see [docs/MISSINGNESS_VALIDATION.md](docs/MISSINGNESS_VALIDATION.md): PXD047528 provides paired DDA-missing/DIA-observed cells, while PXD000279 supplies known HeLa/E. coli mixture ratios for downstream effect recovery under deposited LFQ missingness. These are complementary benchmarks and neither proves universal imputation superiority. Synthetic masking does not establish real-world downstream bias, validate a measurement scale, or replace covariate-aware DESeq2/limma analysis.
 
 For evidence attribution and entailment, `benchmarks/evidence_adjudication_template.json` defines a human-label schema. Populate it only after at least two reviewers independently check each source. When reviewer labels disagree, record both `adjudication_note` and `adjudicator_id` before scoring. Score a completed file with:
 
@@ -367,7 +367,7 @@ python -m oracle --normalize-geo-matrix matrix_with_NA.tsv --normalization-metho
 # Repeat the same transform in the same runtime and compare output checksums
 python -m oracle --normalize-geo-matrix matrix.txt.gz --normalization-method quantile --normalization-output matrix.check.tsv --verify-normalization
 ```
-Supported methods: quantile normalization for continuous microarray-like measurements; CPM/log2-CPM and TMM-adjusted CPM/log2-CPM for non-negative integer raw counts; explicit row-median imputation followed by quantile normalization for continuous matrices with missing cells. The input is never overwritten. The report records input/output SHA-256, sample library sizes, and limitations. The optional rerun check compares byte-identical outputs in the same Python runtime; it is not an independent cross-platform validation. Quantile normalization should not be blindly applied to raw RNA-seq counts. CPM/log2-CPM is not DESeq2 or a differential-expression test. TMM is an ORACLE implementation of trimmed M-value effective-library-size scaling and has not yet been independently validated against edgeR reference outputs; do not use it as a production substitute until that comparison is completed. Row-median imputation emits a per-cell missingness mask and imputation values, but may bias distributions; it is an explicit exploratory option, not a missing-data model. Use DESeq2 for count-aware inference and verify assay/platform assumptions before interpretation.
+Supported methods: quantile normalization for continuous microarray-like measurements; CPM/log2-CPM and TMM-adjusted CPM/log2-CPM for non-negative integer raw counts; explicit row-median imputation followed by quantile normalization for continuous matrices with missing cells. The input is never overwritten. The report records input/output SHA-256, sample library sizes, and limitations. The optional rerun check compares byte-identical outputs in the same Python runtime; it is not an independent cross-platform validation. Quantile normalization should not be blindly applied to raw RNA-seq counts. CPM/log2-CPM is not DESeq2 or a differential-expression test. TMM is an ORACLE implementation of trimmed M-value effective-library-size scaling; its normalization factors have been compared with edgeR::calcNormFactors on the same matrix under a live numerical tolerance check. The GSE176261 published-reference reconstruction also uses the documented full-cohort TMM normalization scope. These checks do not establish universal validity across datasets. Row-median imputation emits a per-cell missingness mask and imputation values, but may bias distributions; it is an explicit exploratory option, not a missing-data model. Use DESeq2 for count-aware inference and verify assay/platform assumptions before interpretation.
 
 ### Raw-count RNA-seq differential expression (optional DESeq2 backend)
 
