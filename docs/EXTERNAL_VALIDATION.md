@@ -159,14 +159,14 @@ genuinely independent study:
   both matrices numerically.
 - **GSE176261** is the validation cohort from the *same* publication, not an
   independent study. It is a same-study cohort replication check only.
-- **GSE64099** is an independent platelet RNA-seq study. Its GEO sample
-  records describe sample-level `QCed_counts.txt`,
-  `Log2_normalized_expression.txt`, and `Voom_weights.txt` files, TMM
-  normalization, and the design
-  `~ 0 + treatment_drug + sex.x + Qubitconc.ng.ul + Order_Flowcell`, with
-  `StudyID` as the repeated-measures block. ORACLE downloads the sample files,
-  verifies exact feature/sample alignment, reconstructs the repeated-measures
-  voom pipeline, and compares expression and weight matrices.
+- **GSE64099** is a separate Smchd1 knockout-versus-wild-type mouse RNA-seq
+  experiment, independent of the GSE176260 host-response cohort. Its public
+  R object and original supplementary analysis are available from the
+  voomWithQualityWeights authors. ORACLE reproduces the published CPM filter,
+  TMM normalization, `~ genotype` design, voom, lmFit, and eBayes workflow,
+  then compares stable GeneID-matched logFC values and significant-gene counts
+  against the published top-table results. This is a published DE-result
+  comparison, not a submitter-published E/weights matrix comparison.
 
 A dataset is not marked passed until its live Actions run completes and the
 JSON report artifact has been inspected. GSE64099 is the independent-study
