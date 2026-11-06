@@ -93,24 +93,47 @@ gender <- vapply(selected_meta, get_field, character(1), key = "gender")
 if (anyNA(phenotype) || anyNA(gender) || any(!nzchar(phenotype)) || any(!nzchar(gender))) {
   stop("GEO phenotype/gender labels are incomplete; refusing to infer sample groups.")
 }
-# Preserve the full submitter GEO sample metadata in DGEList. In particular,
-# if the GEO Series Matrix carries precomputed lib.size/norm.factors fields,
-# edgeR must receive them exactly as in the submitter's DGEList construction.
+# GEO documents TMM normalization on the batch-2 all-samples count matrix.
+# Calculate normalization factors on that full matrix first, then retain the
+# validation_analysis_sample=Yes columns for the published validation voom run.
+all_sample_ids <- sub("\\s+RNA-seq.*$", "", as.character(pd$title))
+if (anyNA(all_sample_ids) || any(!nzchar(all_sample_ids)) ||
+    anyDuplicated(all_sample_ids) ||
+    !setequal(all_sample_ids, colnames(all_counts)) ||
+    length(all_sample_ids) != ncol(all_counts)) {
+  stop("GEO all-samples count matrix columns do not exactly match unique GEO sample title aliases.")
+}
+all_counts <- all_counts[, match(all_sample_ids, colnames(all_counts)), drop = FALSE]
+if (!setequal(rownames(all_counts), rownames(counts))) {
+  stop("All-samples and validation count matrices have different feature identifiers.")
+}
+all_counts <- all_counts[rownames(counts), , drop = FALSE]
+
+dge_all <- edgeR::DGEList(counts = all_counts)
+dge_all <- edgeR::calcNormFactors(dge_all, method = "TMM")
+if (!all(colnames(counts) %in% colnames(dge_all))) {
+  stop("Validation samples are missing from the all-samples normalized DGEList.")
+}
+dge <- dge_all[, colnames(counts), keep.lib.sizes = TRUE]
+
+# Preserve the validation GEO metadata while retaining the full-cohort
+# library sizes and TMM normalization factors calculated above.
 sample_data <- selected
 rownames(sample_data) <- colnames(counts)
-sample_data$phenotype <- factor(phenotype)
-sample_data$gender <- factor(gender)
 for (field in intersect(c("lib.size", "norm.factors"), names(sample_data))) {
   sample_data[[field]] <- as.numeric(sample_data[[field]])
   if (anyNA(sample_data[[field]]) || any(!is.finite(sample_data[[field]]))) {
     stop("GEO sample metadata contains invalid ", field)
   }
 }
-design <- model.matrix(~ 0 + phenotype + gender, data = sample_data)
+for (field in setdiff(names(sample_data), names(dge$samples))) {
+  dge$samples[[field]] <- sample_data[[field]]
+}
+dge$samples$phenotype <- factor(phenotype)
+dge$samples$gender <- factor(gender)
+design <- model.matrix(~ 0 + phenotype + gender, data = dge$samples)
 if (qr(design)$rank != ncol(design)) stop("Published GEO design is rank deficient.")
 
-dge <- edgeR::DGEList(counts = counts, samples = sample_data)
-dge <- edgeR::calcNormFactors(dge, method = "TMM")
 voom_result <- limma::voom(dge, design = design, plot = FALSE)
 
 align_reference <- function(reference, label) {
@@ -179,13 +202,13 @@ report <- list(
   dataset_title = "Host gene expression profiling of fungal, bacterial, viral, and non-infectious illness (validation cohort)",
   source_url = "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE176261",
   publication_pmid = "34225776",
-  reference_origin = "GEO submitter-supplied QCed_counts_validation, Log2_normalized_expression_validation, and Voom_weights_validation files",
-  reference_method = "edgeR TMM normalization followed by limma voom; design ~ 0 + phenotype + gender",
+  reference_origin = "GEO submitter-supplied all-samples QCed counts plus validation QCed counts, Log2_normalized_expression_validation, and Voom_weights_validation files",
+  reference_method = "edgeR TMM normalization factors calculated on the GEO batch-2 all-samples count matrix, subset to validation samples, then limma voom; design ~ 0 + phenotype + gender",
   software = list(R = as.character(getRversion()),
                   GEOquery = as.character(packageVersion("GEOquery")),
                   edgeR = as.character(packageVersion("edgeR")),
                   limma = as.character(packageVersion("limma"))),
-  sample_count = ncol(counts),
+  all_samples_count = ncol(all_counts),\n  sample_count = ncol(counts),
   sample_metadata_columns = names(selected),
   metadata_lib_size_supplied = "lib.size" %in% names(selected),
   metadata_norm_factors_supplied = "norm.factors" %in% names(selected),
@@ -194,7 +217,7 @@ report <- list(
   phenotype_counts = as.list(table(sample_data$phenotype)),
   gender_counts = as.list(table(sample_data$gender)),
   input_sha256 = list(
-    counts = digest::digest(file = counts_path, algo = "sha256"),
+    all_samples_counts = digest::digest(file = all_counts_path, algo = "sha256"),\n    validation_counts = digest::digest(file = counts_path, algo = "sha256"),
     reference_expression = digest::digest(file = reference_e_path, algo = "sha256"),
     reference_weights = digest::digest(file = reference_w_path, algo = "sha256")
   ),
@@ -212,7 +235,7 @@ report <- list(
   precision_weight_metrics = as.list(w_metrics),
   design_columns = colnames(design),
   normalization = list(
-    method = "edgeR TMM",
+    method = "edgeR TMM on all batch-2 samples; factors subset to validation samples",
     effective_library_sizes = as.list(setNames(as.numeric(dge$samples$lib.size * dge$samples$norm.factors), colnames(counts))),
     library_sizes = as.list(setNames(as.numeric(dge$samples$lib.size), colnames(counts))),
     norm_factors = as.list(setNames(as.numeric(dge$samples$norm.factors), colnames(counts)))
