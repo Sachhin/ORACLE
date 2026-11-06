@@ -41,14 +41,34 @@ python -m oracle.missingness_validation \
 
 ## Candidate public data
 
-PEPerMINT (Bioinformatics, 2024) describes six proteomics benchmark datasets
-and explicitly distinguishes masked-value proxies from genuine missingness.
-Its B1/B2 datasets use DDA measurements with orthogonal DIA measurements;
-B2 is an HIV blood dataset (PXD047528) with 15 biological samples. The paper
-also includes a mixture dataset with known organism spike-in ratios for
-downstream differential-abundance checks. Dataset choice, download URLs,
-sample-to-sample pairing, feature mapping, acquisition settings, and the
-published HIV outcome metadata must be verified before any score is reported.
+PEPerMINT (Bioinformatics, 2024; DOI 10.1093/bioinformatics/btae389)
+explicitly distinguishes synthetic masked-value proxies from genuine
+DDA-missing/DIA-observed measurements. Its B2 dataset is PXD047528, an HIV
+blood/plasma dataset with 15 biological samples, 2,535 peptides, 435 proteins,
+and 41.8% peptide-level missingness in the published benchmark table. The
+ProteomeXchange record describes a study of HIV and herpes-virus infections
+and HIV-associated neurocognitive disorder (HAND). These disease/cognitive
+groups are candidate biological outcomes, but the sample-to-group mapping must
+be taken from the original study's metadata—not inferred from filenames.
+
+Sources:
+- PEPerMINT benchmark paper:
+  https://academic.oup.com/bioinformatics/article/40/Supplement_2/ii70/7749076
+- PXD047528 ProteomeXchange record:
+  https://proteomecentral.proteomexchange.org/cgi/GetDataset?ID=PXD047528-1&test=no
+- Original HIV plasma proteomics paper DOI: 10.1007/S13365-022-01077-0
+
+Before running, inspect the PRIDE file manifest and confirm that it contains
+processed, sample-paired DDA and DIA abundance tables (not just raw mass
+spectrometry files). Verify that all 15 biological sample identifiers pair
+one-to-one across assays, identify peptide/protein keys and normalization
+scale, and obtain the original clinical labels with documented inclusion and
+exclusion rules. Preserve the original DDA missingness mask; do not convert
+zero abundance to missing or treat unobserved peptides as measured zeros.
+The PEPerMINT article also describes a HeLa/E. coli mixture dataset
+(PXD000279) with known organism spike-in ratios, which may support a separate
+downstream differential-abundance ground-truth check but is not a substitute
+for the real-missing-cell HIV benchmark.
 
 The evaluator does not download or infer labels. It rejects mismatched sample
 or feature identifiers and records SHA-256 hashes for every input. DIA is an
