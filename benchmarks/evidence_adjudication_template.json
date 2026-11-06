@@ -1,0 +1,19 @@
+{
+  "benchmark_id": "ORACLE-EVIDENCE-ADJUDICATED-TEMPLATE",
+  "version": "1.0",
+  "status": "empty_template_requires_human_annotations",
+  "label_policy": {
+    "supports": "The cited passage directly supports the stated claim within its stated scope.",
+    "refutes": "The cited passage directly contradicts the stated claim within its stated scope.",
+    "contextual": "The passage is indirect, insufficient, mixed, or not comparable to the claim."
+  },
+  "review_protocol": [
+    "Freeze the question, source packet, model version, prompt, and candidate claim before review.",
+    "At least two reviewers independently label each case and check the original source.",
+    "Record reviewer IDs, source IDs, verbatim quote, organism, tissue, assay, conditions, and locator.",
+    "Adjudicate disagreements with a written note; never infer the gold label from model output.",
+    "Split train/development/test by source or study, not random claim fragments, to reduce leakage.",
+    "Publish class counts and reviewer agreement before interpreting accuracy or macro-F1."
+  ],
+  "cases": []
+}
