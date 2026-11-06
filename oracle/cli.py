@@ -75,7 +75,7 @@ def build_parser() -> argparse.ArgumentParser:
                         default="")
     parser.add_argument("--protocol-hypothesis-id", default="",
                         help="Optional hypothesis ID to target with the protocol")
-    parser.add_argument("--experiment-action", choices=["simulate", "perform", "evaluate"],
+    parser.add_argument("--experiment-action", choices=["simulate", "perform", "evaluate", "review"],
                         help="Record a simulation, a real performed experiment, or its evaluation")
     parser.add_argument("--experiment-run", help="Research run ID containing the experiment")
     parser.add_argument("--experiment-id", help="Experiment ID to update")
@@ -85,6 +85,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--operator", default="", help="Person or lab recording the real experiment")
     parser.add_argument("--experiment-results", default="", help="Recorded experiment or simulation results")
     parser.add_argument("--evaluation-note", default="", help="Human evaluation note")
+    parser.add_argument("--execution-review-status", choices=["accepted", "rejected", "needs_context"])
+    parser.add_argument("--execution-reviewer", default="", help="Independent reviewer identity for a performed experiment")
+    parser.add_argument("--execution-review-note", default="", help="Independent review rationale for performed execution")
     portfolio_group = parser.add_mutually_exclusive_group()
     portfolio_group.add_argument("--portfolio", action="store_true",
                                  help="List saved research runs and their heuristic knowledge-gap scores")
@@ -125,6 +128,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--connection-id", default="", help="Cross-domain connection ID")
     parser.add_argument("--connection-status", choices=["accepted", "rejected", "needs_context"])
     parser.add_argument("--connection-note", default="", help="Human rationale for the connection review")
+    parser.add_argument("--review-claim", metavar="RUN_ID", help="Human-review a scientific claim in a saved run")
+    parser.add_argument("--claim-id", default="", help="Claim ID to review")
+    parser.add_argument("--claim-status", choices=["supported", "weakened", "rejected", "open"])
+    parser.add_argument("--claim-impact-level", choices=["normal", "high", "critical"], default="normal")
+    parser.add_argument("--claim-reviewer", default="", help="Human reviewer identity")
+    parser.add_argument("--claim-note", default="", help="Human rationale for claim review")
     parser.add_argument("--source-action", choices=["review"],
                         help="Record a human reliability assessment for a source")
     parser.add_argument("--source-run", help="Research run containing the source")
@@ -514,6 +523,25 @@ def main() -> None:
         print(json.dumps(link.__dict__, indent=2, ensure_ascii=False) if args.json
               else f"Cross-run link {link.link_id}: {link.status} (human-reviewed).")
         return
+    if args.review_claim:
+        if not args.claim_id or not args.claim_status or not args.claim_reviewer.strip() or not args.claim_note.strip():
+            raise SystemExit("--review-claim requires --claim-id, --claim-status, --claim-reviewer, and --claim-note.")
+        run = store.load_run(args.review_claim)
+        if run is None:
+            raise SystemExit(f"Research run not found: {args.review_claim}")
+        from .knowledge import KnowledgeBase
+        claim = KnowledgeBase().review_claim(
+            run, args.claim_id, args.claim_status, args.claim_reviewer,
+            args.claim_note, args.claim_impact_level,
+        )
+        store.save_run(run)
+        store.log_event(run.run_id, "claim_human_reviewed", {
+            "claim_id": claim.claim_id, "status": claim.status,
+            "impact_level": claim.impact_level, "reviewed_by": claim.reviewed_by,
+        }, event_key=f"claim-review:{claim.claim_id}:{claim.reviewed_at}")
+        print(json.dumps(claim.__dict__, indent=2, ensure_ascii=False) if args.json
+              else f"Claim {claim.claim_id}: {claim.status} | impact {claim.impact_level} | reviewed by {claim.reviewed_by}")
+        return
     if args.review_connection:
         if not args.connection_id or not args.connection_status or not args.connection_note.strip():
             raise SystemExit("--review-connection requires --connection-id, --connection-status, and --connection-note.")
@@ -647,6 +675,13 @@ def main() -> None:
             experiment = manager.record_performed(
                 run, args.experiment_id, args.execution_method, args.operator,
                 args.experiment_results,
+            )
+        elif args.experiment_action == "review":
+            if not args.execution_review_status or not args.execution_reviewer.strip() or not args.execution_review_note.strip():
+                raise SystemExit("review requires --execution-review-status, --execution-reviewer, and --execution-review-note.")
+            experiment = manager.review_performed_execution(
+                run, args.experiment_id, args.execution_review_status,
+                args.execution_reviewer, args.execution_review_note,
             )
         else:
             if not args.evaluation_note:
