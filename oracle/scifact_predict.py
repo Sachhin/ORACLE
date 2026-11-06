@@ -134,7 +134,7 @@ def generate_predictions(
     corpus_path: str | Path,
     output_path: str | Path,
     *,
-    model: str = "gemini-2.5-flash",
+    model: str = "gemini-3.8-flash",
     top_k: int = 8,
     max_claims: int = 0,
     provider_factory: Callable[[str], Any] | None = None,
@@ -215,7 +215,7 @@ def main() -> None:
     parser.add_argument("--claims", required=True)
     parser.add_argument("--corpus", required=True)
     parser.add_argument("--output", required=True)
-    parser.add_argument("--model", default="gemini-2.5-flash")
+    parser.add_argument("--model", default="gemini-3.8-flash")
     parser.add_argument("--top-k", type=int, default=8)
     parser.add_argument("--max-claims", type=int, default=0, help="0 evaluates every supplied claim")
     args = parser.parse_args()
