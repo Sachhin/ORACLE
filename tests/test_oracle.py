@@ -1043,5 +1043,29 @@ class OracleTests(unittest.TestCase):
         self.assertIn("high_missingness", summaries[1]["qc_flags"])
         self.assertEqual(len(summaries), 2)
 
+
+    def test_geo_matrix_parser_preserves_sample_characteristics_without_group_inference(self):
+        from oracle.geo_analysis import GEOExpressionAnalyzer
+        text = (
+            '!Sample_geo_accession = "GSM1" "GSM2"\\n'
+            '!Sample_title = "Control sample" "Treatment sample"\\n'
+            '!Sample_characteristics_ch1 = "treatment: control" "treatment: treated"\\n'
+            '!Sample_characteristics_ch1 = "genotype: WT" "genotype: mutant"\\n'
+            '!series_matrix_table_begin\\n'
+            'ID_REF\\tGSM1\\tGSM2\\n'
+            'gene_a\\t1.0\\t2.0\\n'
+            '!series_matrix_table_end\\n'
+        )
+        summaries, rows, numeric, missing, mean, minimum, maximum = GEOExpressionAnalyzer()._parse(text)
+        self.assertEqual(rows, 1)
+        self.assertEqual(summaries[0]["metadata"]["geo_accession"], "GSM1")
+        self.assertEqual(summaries[0]["metadata"]["title"], "Control sample")
+        self.assertEqual(summaries[0]["metadata"]["characteristics"], {
+            "treatment": "control", "genotype": "WT",
+        })
+        self.assertEqual(summaries[1]["metadata"]["characteristics"], {
+            "treatment": "treated", "genotype": "mutant",
+        })
+
 if __name__ == "__main__":
     unittest.main()
