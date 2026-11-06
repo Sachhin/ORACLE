@@ -225,6 +225,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--count-output", default="data/geo/merged_counts.tsv", help="Output matrix path for --merge-geo-counts")
     parser.add_argument("--compare-tmm-edger", default="", help="Compare ORACLE TMM factors with edgeR on the same raw-count matrix")
     parser.add_argument("--imputation-benchmark", default="", help="Run a reproducible MCAR/MAR/MNAR row-median imputation stress test on a complete matrix")
+    parser.add_argument("--imputation-holdout", default="", help="Compare row/column/global median methods on masked observed cells of a complete matrix")
     parser.add_argument("--imputation-de-bias", default="", help="Evaluate downstream Welch/BH differential-expression sensitivity to row-median imputation")
     parser.add_argument("--imputation-group-a", default="", help="Reference group for --imputation-de-bias")
     parser.add_argument("--imputation-group-b", default="", help="Comparison group for --imputation-de-bias")
@@ -278,6 +279,20 @@ def main() -> None:
             )
         except (OSError, ValueError, RuntimeError) as exc:
             raise SystemExit(f"Imputation benchmark failed: {exc}") from exc
+        print(json.dumps(report, indent=2, ensure_ascii=False))
+        return
+
+    if args.imputation_holdout:
+        from .geo_reference import evaluate_imputation_holdout
+        try:
+            report = evaluate_imputation_holdout(
+                args.imputation_holdout,
+                missing_fraction=args.imputation_missing_fraction,
+                replicates=args.imputation_replicates, seed=args.imputation_seed,
+                mechanism=args.imputation_mechanism,
+            )
+        except (OSError, ValueError, RuntimeError) as exc:
+            raise SystemExit(f"Imputation holdout comparison failed: {exc}") from exc
         print(json.dumps(report, indent=2, ensure_ascii=False))
         return
     if args.imputation_de_bias:
