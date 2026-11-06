@@ -6,7 +6,7 @@ import re
 from .models import (
     Claim, ClaimRevision, ContradictionCandidate, EvidenceClaimLink, EvidenceReviewCandidate,
     EvidenceKind, EvidenceStance, Hypothesis, HypothesisGroup, HypothesisStatus, ResearchRun,
-    SourceRecord, UncertaintyAssessment,
+    SourceRecord, UncertaintyAssessment, utc_now,
 )
 
 
@@ -158,6 +158,10 @@ class KnowledgeBase:
             raise ValueError("A human review note is required for hypothesis evidence links.")
         target = (hypothesis.supporting_evidence_ids if stance == EvidenceStance.SUPPORTS
                   else hypothesis.opposing_evidence_ids)
+        opposite = (hypothesis.opposing_evidence_ids if stance == EvidenceStance.SUPPORTS
+                    else hypothesis.supporting_evidence_ids)
+        if evidence_id in opposite:
+            raise ValueError("The same evidence record cannot support and refute one hypothesis.")
         if evidence_id not in target:
             target.append(evidence_id)
         hypothesis.status = HypothesisStatus.UNDER_REVIEW
