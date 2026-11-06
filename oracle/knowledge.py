@@ -283,6 +283,53 @@ class KnowledgeBase:
         connection.reviewed_at = utc_now()
         return connection
 
+
+    def review_claim(self, run: ResearchRun, claim_id: str, status: str,
+                     reviewer: str, reviewer_note: str,
+                     impact_level: str = "normal"):
+        """Human-review a claim; high-impact labels require independent source groups."""
+        if status not in {"supported", "weakened", "rejected", "open"}:
+            raise ValueError("Claim status must be supported, weakened, rejected, or open.")
+        if impact_level not in {"normal", "high", "critical"}:
+            raise ValueError("Impact level must be normal, high, or critical.")
+        if not reviewer.strip() or not reviewer_note.strip():
+            raise ValueError("A reviewer identity and rationale are required.")
+        claim = next((item for item in run.claims if item.claim_id == claim_id), None)
+        if claim is None:
+            raise ValueError(f"Unknown claim: {claim_id}")
+        evidence_by_id = {item.evidence_id: item for item in run.evidence}
+        source_ids = {item.source_id for item in run.sources}
+        relevant = []
+        for link in run.evidence_claim_links:
+            evidence = evidence_by_id.get(link.evidence_id)
+            if (link.claim_id == claim_id and evidence is not None
+                    and evidence.kind != EvidenceKind.INFERENCE
+                    and evidence.source_id and evidence.source_id in source_ids):
+                relevant.append((link, evidence))
+        if status in {"supported", "weakened", "rejected"}:
+            required_stance = (EvidenceStance.SUPPORTS if status == "supported"
+                               else EvidenceStance.REFUTES)
+            relevant = [(link, evidence) for link, evidence in relevant
+                        if link.stance == required_stance and link.strength > 0]
+            if not relevant:
+                raise ValueError(f"Claim status {status!r} requires linked source-backed {required_stance.value} evidence.")
+            minimum_groups = {"normal": 1, "high": 2, "critical": 3}[impact_level]
+            groups = {
+                evidence.dependence_group.strip() or evidence.source_id
+                for _, evidence in relevant
+            }
+            if len(groups) < minimum_groups:
+                raise ValueError(
+                    f"Impact level {impact_level!r} requires {minimum_groups} independent source group(s); "
+                    f"only {len(groups)} are linked."
+                )
+        claim.status = status
+        claim.impact_level = impact_level
+        claim.reviewer_note = reviewer_note.strip()
+        claim.reviewed_by = reviewer.strip()
+        claim.reviewed_at = utc_now()
+        return claim
+
     def assess_claim(self, run: ResearchRun, claim_id: str) -> UncertaintyAssessment:
         claim = next((c for c in run.claims if c.claim_id == claim_id), None)
         if claim is None:
