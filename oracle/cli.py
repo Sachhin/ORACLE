@@ -33,6 +33,14 @@ def build_parser() -> argparse.ArgumentParser:
                         help="Discover and download GEO supplementary files within the configured size cap")
     parser.add_argument("--analyze-geo-files", action="store_true",
                         help="Download and parse supported GEO TSV/CSV expression matrices (descriptive only)")
+    parser.add_argument("--geo-contrast", metavar="MATRIX_PATH",
+                        help="Run an explicit two-group Welch contrast on declared log2-continuous GEO matrix data")
+    parser.add_argument("--geo-group", action="append", default=[], metavar="SAMPLE=GROUP",
+                        help="Explicit sample-to-group assignment; repeat once per matrix sample")
+    parser.add_argument("--geo-group-a", default="", help="Reference group in the GEO contrast")
+    parser.add_argument("--geo-group-b", default="", help="Comparison group in the GEO contrast")
+    parser.add_argument("--geo-scale", choices=["log2_continuous"], default="",
+                        help="Required declaration of measurement scale; raw counts are not supported")
     parser.add_argument("--dataset-max-mb", type=int, default=50,
                         help="Maximum size of each GEO supplementary download in MB (1-1000)")
     parser.add_argument("--limit", type=int, default=10, help="Maximum literature records (1-50)")
@@ -103,6 +111,33 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main() -> None:
     args = build_parser().parse_args()
+    if args.geo_contrast:
+        if not args.geo_scale or not args.geo_group_a or not args.geo_group_b or not args.geo_group:
+            raise SystemExit("--geo-contrast requires --geo-scale log2_continuous, --geo-group (for every sample), --geo-group-a, and --geo-group-b.")
+        labels = {}
+        for assignment in args.geo_group:
+            sample, separator, group = assignment.partition("=")
+            if not separator or not sample.strip() or not group.strip() or sample.strip() in labels:
+                raise SystemExit(f"Invalid or duplicate --geo-group assignment: {assignment!r}")
+            labels[sample.strip()] = group.strip()
+        from .geo_statistics import GEOContrastAnalyzer
+        try:
+            result = GEOContrastAnalyzer().analyze(
+                args.geo_contrast, labels, args.geo_group_a, args.geo_group_b, args.geo_scale,
+            )
+        except (OSError, ValueError) as exc:
+            raise SystemExit(f"GEO contrast failed: {exc}") from exc
+        if args.json:
+            print(json.dumps(result, indent=2, ensure_ascii=False))
+        else:
+            print(f"Method: {result['method']}")
+            print(f"Contrast: {args.geo_group_b} minus {args.geo_group_a}; "
+                  f"{result['features_tested']} features tested, {result['features_skipped']} skipped")
+            for item in result["results"][:20]:
+                print(f"{item['feature']}: difference={item['log2_mean_difference_b_minus_a']:.4g}, "
+                      f"p={item['p_value']:.4g}, BH-FDR={item['p_value_adjusted_bh']:.4g}")
+            print("Limitations: " + result["limitations"])
+        return
     store = ResearchStore(args.db)
     if args.source_action:
         if (not args.source_run or not args.source_id or args.source_score is None

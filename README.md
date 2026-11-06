@@ -159,3 +159,17 @@ It checks that the deterministic baseline preserves provenance and status invari
 ## Current limitations
 
 The Gemini adapter currently extracts quote-grounded candidate claims and proposes cross-paper relationships; it does not perform complete entailment verification or update scientific truth status. The autonomous cycle defaults to deterministic baseline agents; the optional Gemini agent suite can be selected explicitly. The decision engine measures newly persisted unique records (not scientific quality) and requests one bounded revised plan after the first stagnant cycle before stopping on repeated no-progress. A stopped run can be explicitly resumed; repeated no-progress cycles will stop it again unless a provider or new input produces new information.
+
+
+### Explicit two-group GEO contrast (continuous log2 data only)
+
+After checking the matrix scale and assigning every sample to exactly one of two groups, run:
+
+```bash
+python -m oracle --geo-contrast expression.tsv --geo-scale log2_continuous \
+  --geo-group GSM_A1=control --geo-group GSM_A2=control \
+  --geo-group GSM_B1=treated --geo-group GSM_B2=treated \
+  --geo-group-a control --geo-group-b treated --json
+```
+
+This runs a per-feature Welch two-sample t-test and Benjamini-Hochberg false-discovery-rate correction. Group assignments are explicit user input; ORACLE does not infer them from sample titles. The adapter requires at least two observations per group and complete sample mapping. It is **not suitable for raw RNA-seq counts**, does not normalize values or correct batch effects, and assumes independent biological replicates and appropriately transformed continuous log2 measurements. Results are statistical associations, not causal or validated biological discoveries.
