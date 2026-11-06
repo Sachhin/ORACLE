@@ -348,5 +348,60 @@ class OracleTests(unittest.TestCase):
         self.assertEqual(resumed.run_id, run.run_id)
 
 
+
+    def test_gemini_agents_keep_model_outputs_provisional(self):
+        from oracle.agents import AgentContext
+        from oracle.model_agents import (
+            GeminiExperimentDesignerAgent, GeminiHypothesisAgent,
+            GeminiResearcherAgent,
+        )
+        from oracle.models import EvidenceKind, ExperimentStatus
+
+        class FakeProvider:
+            model = "fake-gemini"
+
+            def generate_json(self, prompt):
+                if "AGENT: researcher" in prompt:
+                    return {"inferences": [{
+                        "statement": "Several interacting mechanisms may contribute to cell fate.",
+                        "rationale": "A provisional synthesis that needs source verification.",
+                    }]}
+                if "AGENT: hypothesis_generator" in prompt:
+                    return {"hypotheses": [
+                        {"statement": "Model A explains the outcome through pathway A.",
+                         "rationale": "Provisional mechanism A.",
+                         "predictions": ["Blocking pathway A changes the measured outcome."]},
+                        {"statement": "Model B explains the outcome through mechanical cues.",
+                         "rationale": "Competing provisional mechanism B.",
+                         "predictions": ["Changing mechanical cues changes the measured outcome."]},
+                    ]}
+                if "AGENT: experiment_designer" in prompt:
+                    return {"question": "Which mechanism predicts the measured outcome?",
+                            "protocol": ["Define conditions", "Measure the outcome", "Compare controls"],
+                            "predictions": ["Model A predicts one outcome", "Model B predicts another"],
+                            "limitations": "Requires domain expert review."}
+                raise AssertionError("Unexpected agent prompt")
+
+        context = AgentContext("How do cells choose a fate?", 1, "both")
+        researcher = GeminiResearcherAgent(FakeProvider()).run(context)
+        self.assertTrue(researcher.items)
+        self.assertTrue(all(item.kind == EvidenceKind.INFERENCE for item in researcher.items))
+        self.assertTrue(all("not an external" in item.source for item in researcher.items))
+
+        hypotheses = GeminiHypothesisAgent(FakeProvider()).run(context)
+        self.assertEqual(len(hypotheses.items), 2)
+        context.hypotheses = hypotheses.items
+        design = GeminiExperimentDesignerAgent(FakeProvider()).run(context)
+        self.assertEqual(len(design.items), 1)
+        self.assertEqual(design.items[0].status, ExperimentStatus.PROPOSED)
+        self.assertIn("not performed or simulated", design.items[0].limitations)
+
+    def test_gemini_agent_suite_requires_environment_key(self):
+        from unittest.mock import patch
+        from oracle.model_agents import GeminiAgentSuite
+        with patch.dict("os.environ", {}, clear=True):
+            with self.assertRaises(ValueError):
+                GeminiAgentSuite()
+
 if __name__ == "__main__":
     unittest.main()
