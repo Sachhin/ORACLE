@@ -61,7 +61,7 @@ The adapter records every CEL SHA-256, file size, R/package versions, output che
 
 ## Paired model evaluation
 
-To compare a Gemini/hosted model with ORACLE's deterministic baseline, use the paired human-scoring template at `benchmarks/paired_model_comparison_template.json`. Populate it only after both systems answer the same frozen question using the same source packet, then have at least two reviewers score both answers with the same five-dimension rubric.
+To compare a Gemini/hosted model with ORACLE's deterministic baseline, use the paired human-scoring template at `benchmarks/paired_model_comparison_template.json` (schema v2). Populate it only after both systems answer the same frozen question using the same source packet. At least two reviewers must independently score both answers; store each reviewer's baseline and candidate scores separately under `reviewer_scores`. The evaluator averages reviewer deltas within each case and bootstraps paired cases, avoiding the false assumption that multiple reviewer scores are independent research cases.
 
 ```bash
 python -m oracle --paired-answer-benchmark benchmarks/my_paired_scores.json
