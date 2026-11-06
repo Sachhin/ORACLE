@@ -226,6 +226,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--count-delimiter", choices=["auto", "tab", "comma"], default="auto", help="Delimiter used by per-sample count files")
     parser.add_argument("--count-output", default="data/geo/merged_counts.tsv", help="Output matrix path for --merge-geo-counts")
     parser.add_argument("--compare-tmm-edger", default="", help="Compare ORACLE TMM factors with edgeR on the same raw-count matrix")
+    parser.add_argument("--orthogonal-missingness-benchmark", action="store_true", help="Evaluate an imputed matrix against paired orthogonal-assay measurements at genuinely missing cells")
+    parser.add_argument("--missingness-observed", default="", help="Original assay TSV containing real missing values")
+    parser.add_argument("--missingness-orthogonal", default="", help="Paired orthogonal assay TSV, e.g. DIA")
+    parser.add_argument("--missingness-imputed", default="", help="ORACLE-imputed matrix TSV")
+    parser.add_argument("--missingness-labels", default="", help="TSV with sample_id and independent outcome labels")
+    parser.add_argument("--missingness-outcome-column", default="", help="Two-class biological outcome column in labels TSV")
+    parser.add_argument("--missingness-top-k", type=int, default=20, help="Top absolute outcome effects to compare (default 20)")
     parser.add_argument("--imputation-benchmark", default="", help="Run a reproducible MCAR/MAR/MNAR row-median imputation stress test on a complete matrix")
     parser.add_argument("--imputation-holdout", default="", help="Compare row/column/global median methods on masked observed cells of a complete matrix")
     parser.add_argument("--imputation-de-bias", default="", help="Evaluate downstream Welch/BH differential-expression sensitivity to row-median imputation")
@@ -268,6 +275,24 @@ def main() -> None:
             report = compare_tmm_to_edger(args.compare_tmm_edger, rscript=args.rscript)
         except (OSError, ValueError, RuntimeError) as exc:
             raise SystemExit(f"TMM/edgeR reference comparison failed: {exc}") from exc
+        print(json.dumps(report, indent=2, ensure_ascii=False))
+        return
+    if args.orthogonal_missingness_benchmark:
+        required = [args.missingness_observed, args.missingness_orthogonal,
+                    args.missingness_imputed, args.missingness_labels,
+                    args.missingness_outcome_column]
+        if not all(required):
+            raise SystemExit("--orthogonal-missingness-benchmark requires --missingness-observed, --missingness-orthogonal, --missingness-imputed, --missingness-labels, and --missingness-outcome-column.")
+        from .missingness_validation import evaluate_orthogonal_missingness
+        try:
+            report = evaluate_orthogonal_missingness(
+                args.missingness_observed, args.missingness_orthogonal,
+                args.missingness_imputed, args.missingness_labels,
+                outcome_column=args.missingness_outcome_column,
+                top_k=args.missingness_top_k,
+            )
+        except (OSError, ValueError, RuntimeError) as exc:
+            raise SystemExit(f"Orthogonal missingness benchmark failed: {exc}") from exc
         print(json.dumps(report, indent=2, ensure_ascii=False))
         return
     if args.imputation_benchmark:
