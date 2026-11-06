@@ -42,7 +42,7 @@ Status reflects code currently present on the main branch. Checked items are imp
 - [x] Preserve GEO sample accessions, titles, and characteristics for later explicitly defined group comparisons
 - [x] Explicit GEO quantile normalization for continuous microarray-like matrices and CPM/log2-CPM transforms for integer raw counts (separate output with checksums)
 - [x] TMM effective-library-size CPM/log2-CPM adapter with deterministic tests and factor provenance (independent edgeR reference validation still pending)
-- [ ] Limma-voom adapter with trusted reference outputs
+- [x] Optional limma-voom adapter with explicit two-group raw-count design, R/edgeR/limma version provenance, checksum, and mocked-subprocess tests (trusted reference-output comparison remains pending)
 - [ ] Platform-specific background-correction adapters (require platform/raw probe-level inputs and reference datasets)
 - [x] Explicit row-median imputation for continuous matrices with a separate SHA-256 missingness mask and recorded imputation values (bias evaluation and alternative missingness models remain pending)
 - [x] Count-aware DESeq2 raw-count analysis with explicit categorical batch/covariate designs, rank-deficiency checks, and default median-of-ratios size-factor normalization
