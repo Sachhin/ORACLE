@@ -43,7 +43,7 @@ Status reflects code currently present on the main branch. Checked items are imp
 - [x] Explicit GEO quantile normalization for continuous microarray-like matrices and CPM/log2-CPM transforms for integer raw counts (separate output with checksums)
 - [x] TMM effective-library-size CPM/log2-CPM adapter with deterministic tests and factor provenance (independent edgeR reference validation still pending)
 - [x] Optional limma-voom adapter with explicit two-group raw-count design, R/edgeR/limma version provenance, checksum, and mocked-subprocess tests (trusted reference-output comparison remains pending)
-- [ ] Platform-specific background-correction adapters (require platform/raw probe-level inputs and reference datasets)
+- [x] Optional Affymetrix CEL RMA adapter for explicit affy/oligo package families, with input checksums, software provenance, bounded execution, and mocked contract tests (real CEL/reference validation and platform annotation remain pending)
 - [x] Explicit row-median imputation for continuous matrices with a separate SHA-256 missingness mask and recorded imputation values (bias evaluation and alternative missingness models remain pending)
 - [x] Count-aware DESeq2 raw-count analysis with explicit categorical batch/covariate designs, rank-deficiency checks, and default median-of-ratios size-factor normalization
 - [x] Optional DESeq2 adapter for explicitly mapped raw integer-count two-group designs (external R runtime; CI subprocess mocked)
