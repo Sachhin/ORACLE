@@ -44,7 +44,8 @@ Status reflects code currently present on the main branch. Checked items are imp
 - [x] Optional DESeq2 adapter for explicitly mapped raw integer-count two-group designs (external R runtime; CI subprocess mocked)
 - [x] Explicit-design Welch contrasts with BH-FDR for user-declared continuous log2 GEO matrices; raw counts rejected
 - [x] Bounded first-degree reference discovery from DOI-backed Crossref works
-- [ ] Incoming citation discovery, graph ranking, and broader citation-network exploration
+- [x] Bounded incoming citation discovery for DOI-backed works via OpenAlex, with persisted source-linked citation records
+- [ ] Citation graph ranking, traversal, and broader citation-network exploration
 - [x] Explicit experiment lifecycle recording for proposed, simulated, performed, and evaluated states with execution provenance
 - [ ] Domain-specific experiment protocols and reproducible analysis adapters
 
