@@ -1,0 +1,80 @@
+name: GEO GSE111062 data audit
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/geo-data-audit.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  acquire-and-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out ORACLE
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Download official GEO Series archive
+        run: |
+          python -m oracle --download-geo-series-archive GSE111062 --dataset-max-mb 10 --json | tee data/geo/GSE111062_download.json
+
+      - name: Safely extract sample files
+        run: |
+          python -m oracle --extract-geo-archive data/geo/GSE111062/GSE111062_RAW.tar | tee data/geo/GSE111062_extraction.json
+
+      - name: Audit sample files and print real headers
+        run: |
+          python - <<'PY'
+          import gzip
+          import hashlib
+          import json
+          from pathlib import Path
+
+          root = Path("data/geo/GSE111062/GSE111062_RAW_extracted")
+          files = sorted(p for p in root.iterdir() if p.is_file())
+          if not files:
+              raise SystemExit("No GSM sample files were extracted.")
+          inventory = []
+          for path in files:
+              digest = hashlib.sha256(path.read_bytes()).hexdigest()
+              opener = gzip.open if path.name.lower().endswith(".gz") else open
+              with opener(path, "rt", encoding="utf-8-sig", errors="replace") as handle:
+                  preview = [line.rstrip("\r\n") for _, line in zip(range(6), handle)]
+              inventory.append({
+                  "filename": path.name,
+                  "size_bytes": path.stat().st_size,
+                  "sha256": digest,
+                  "preview_first_6_lines": preview,
+              })
+          report = {
+              "accession": "GSE111062",
+              "sample_file_count": len(inventory),
+              "files": inventory,
+              "note": "Headers/previews are for format inspection only; no sample groups or gene-level results are inferred.",
+          }
+          out = Path("data/geo/GSE111062_data_audit.json")
+          out.write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
+          print(json.dumps(report, indent=2, ensure_ascii=False))
+          PY
+
+      - name: Upload reproducible GEO data and audit report
+        uses: actions/upload-artifact@v4
+        with:
+          name: oracle-gse111062-data-audit
+          path: |
+            data/geo/GSE111062/GSE111062_RAW.tar
+            data/geo/GSE111062/GSE111062_RAW_extracted/
+            data/geo/GSE111062_download.json
+            data/geo/GSE111062_extraction.json
+            data/geo/GSE111062_data_audit.json
+          if-no-files-found: error
+          retention-days: 7
