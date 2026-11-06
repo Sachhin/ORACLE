@@ -43,7 +43,7 @@ Status reflects code currently present on the main branch; checked items are imp
 ## Milestone 5 — Evaluation and scientific validation
 - [ ] Golden research-question benchmark set
 - [ ] Benchmarked evidence attribution, entailment, contradiction, and hallucination evaluations (model review suggestions are implemented but not validated as accurate)
-- [ ] Reproducibility and regression suite across supported Python versions
+- [x] Reproducibility and regression suite across Python 3.10–3.14 CI matrix
 - [ ] Human review gates for high-impact claims and real experiments
 - [ ] Independent validation that model outputs improve scientific reasoning over deterministic baselines
 
