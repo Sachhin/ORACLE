@@ -40,5 +40,8 @@ Saved runs can be browsed as a portfolio. A transparent heuristic reports missin
 ## Failure and autonomy controls
 Cycle budgets, task budgets, checkpoint persistence, deterministic IDs, error events, and explicit stop reasons prevent unbounded loops. Repeated no-progress cycles should trigger re-planning or a safe stop.
 
-## Future provider boundary
-Provider adapters will be introduced only after offline lifecycle tests pass. API credentials must be environment variables or a secret store, never committed to source control.
+## Provider boundary
+Deterministic agents remain the default and require no credentials. An optional Gemini suite replaces selected agents behind the same contract; shared Gemini requests use bounded transient retries and stop immediately when quota exhaustion is explicit. Provider failures are checkpointed rather than silently falling back to a different model. Credentials are read from environment variables and must never be committed to source control.
+
+## External research connectors
+Europe PMC and Crossref metadata/abstract retrieval, licence-gated Europe PMC full text, NCBI GEO metadata, size-capped GEO supplementary downloads, and bounded first-degree Crossref reference discovery are opt-in. Downloaded GEO files are stored with checksums but are not automatically parsed into scientific evidence.
