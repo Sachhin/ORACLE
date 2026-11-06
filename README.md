@@ -48,6 +48,17 @@ python -m oracle --geo-voom counts.tsv \
 
 Install R, edgeR and limma separately. CI mocks the R subprocess; the adapter still needs independent comparison against trusted limma/edgeR reference outputs before production scientific use. It currently supports only a two-group design without additional covariates.
 
+## Optional Affymetrix CEL RMA preprocessing
+
+For Affymetrix raw CEL files, ORACLE can run Bioconductor RMA preprocessing through an explicitly selected package family. Supply each CEL file separately and choose `affy` for compatible classic 3-prime arrays or `oligo` for compatible oligonucleotide array families; do not guess the family from filenames.
+
+```bash
+python -m oracle --geo-affymetrix-rma sample1.CEL --geo-affymetrix-rma sample2.CEL \
+  --affy-backend affy --affy-output normalized-expression.tsv --json
+```
+
+The adapter records every CEL SHA-256, file size, R/package versions, output checksum, and bounded runtime. It preserves feature/probe-set identifiers but does not perform annotation mapping, batch correction, differential testing, or biological interpretation. Install the selected Bioconductor package and its platform-specific annotation/CDF dependencies separately. CI tests the adapter contract with a mocked R subprocess; real CEL execution and comparison with trusted platform reference outputs remain unvalidated.
+
 ## Domain-specific experiment protocols
 
 ORACLE can append a conservative protocol scaffold to a saved run. Supported templates: `plant_biology`, `molecular_biology`, `cell_biology`, and `computational_biology`.
