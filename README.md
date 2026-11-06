@@ -74,6 +74,16 @@ Add --compare-papers together with --extract-claims to compare candidate stateme
 
 Gemini can propose one of four cross-paper relations: corroborates, contrasts, contextual, or not_comparable. Separately, --review-evidence asks Gemini to propose supports, refutes, or contextual for a candidate claim against an independent source passage. Both workflows require exact source quotations and preserve pending human review; model suggestions never change evidence stance or weight automatically. Every saved comparison must include exact quotations found in BOTH source abstracts/summaries. Comparisons retain both source and evidence IDs, model, rationale, and pending_review status. These are review candidates, not verified contradictions or proof of agreement. ORACLE does not change claim status, evidence stance, or uncertainty scores based on these model suggestions. At most 30 claim pairs are sent per run by default.
 
+### Research portfolio and knowledge gaps
+
+List saved research runs and compare their recorded coverage:
+
+    python -m oracle --portfolio
+    python -m oracle --assess-gaps RUN_ID
+    python -m oracle --related-to "cell fate signaling"
+
+The gap score is a transparent record-coverage heuristic based on source-backed evidence, claim review links, hypothesis evidence links, unresolved contradiction candidates, and task completion. It is not a probability, evidence quality score, or scientific completeness guarantee. Related-run search uses lexical token overlap only; it does not claim semantic similarity or discovery of a scientific connection.
+
 ## Current limitations
 
 The Gemini adapter currently extracts quote-grounded candidate claims and proposes cross-paper relationships; it does not perform complete entailment verification or update scientific truth status. The autonomous cycle defaults to deterministic baseline agents; the optional Gemini agent suite can be selected explicitly. The decision engine's progress signal measures newly persisted unique records, not scientific quality. A stopped run can be explicitly resumed; repeated no-progress cycles will stop it again unless a provider or new input produces new information.

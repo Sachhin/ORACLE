@@ -33,12 +33,55 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--compare-papers", action="store_true", help="Compare extracted claims across distinct papers")
     parser.add_argument("--review-evidence", action="store_true",
                         help="Ask Gemini for quote-grounded support/refute/contextual suggestions; requires human review")
+    portfolio_group = parser.add_mutually_exclusive_group()
+    portfolio_group.add_argument("--portfolio", action="store_true",
+                                 help="List saved research runs and their heuristic knowledge-gap scores")
+    portfolio_group.add_argument("--assess-gaps", metavar="RUN_ID",
+                                 help="Explain the knowledge gaps recorded for a saved run")
+    portfolio_group.add_argument("--related-to", metavar="QUESTION",
+                                 help="Find prior runs with lexically related research questions")
     return parser
 
 
 def main() -> None:
     args = build_parser().parse_args()
     store = ResearchStore(args.db)
+    if args.portfolio or args.assess_gaps or args.related_to is not None:
+        from dataclasses import asdict
+        from .portfolio import ResearchPortfolio
+        portfolio = ResearchPortfolio(store)
+        if args.portfolio:
+            entries = portfolio.list_entries(limit=args.limit)
+            if args.json:
+                print(json.dumps(entries, indent=2, ensure_ascii=False))
+            else:
+                print("Saved ORACLE research runs")
+                for item in entries:
+                    print(f"- {item['run_id']} | {item['status']} | gap score {item['knowledge_gap_score']}/100")
+                    print(f"  {item['question']}")
+                    print(f"  Sources: {item['sources']} | Evidence: {item['evidence']} | Claims: {item['claims']} | Hypotheses: {item['hypotheses']}")
+            return
+        if args.assess_gaps:
+            assessment = asdict(portfolio.assess(args.assess_gaps))
+            if args.json:
+                print(json.dumps(assessment, indent=2, ensure_ascii=False))
+            else:
+                print(f"Knowledge-gap score: {assessment['score']}/100 (heuristic, not scientific confidence)")
+                print(f"Question: {assessment['question']}")
+                for name, value in assessment["criteria"].items():
+                    print(f"- {name}: {value:.2f}")
+                for gap in assessment["gaps"]:
+                    print(f"  GAP: {gap}")
+            return
+        related = portfolio.related_runs(args.related_to, limit=args.limit)
+        if args.json:
+            print(json.dumps(related, indent=2, ensure_ascii=False))
+        else:
+            print("Prior runs with lexically related questions (not semantic discovery):")
+            for item in related:
+                print(f"- {item['run_id']} | similarity {item['lexical_similarity']:.3f} | {item['status']}")
+                print(f"  {item['question']}")
+        return
     if args.research_literature and args.literature is not None:
         raise SystemExit("Use either --literature or --research-literature, not both.")
     if (args.extract_claims or args.compare_papers) and args.literature is None and not args.research_literature:
