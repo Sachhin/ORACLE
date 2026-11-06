@@ -7,7 +7,7 @@ ORACLE combines Deep Research and Autonomous Discovery under a balanced operatin
 
 ### Live limma-voom reproducibility check
 
-The Bioconductor CI job now runs the adapter on a fixed 300-feature, six-sample raw-count fixture and compares every returned statistic with a separately executed edgeR/limma reference script. This is a strict adapter/serialization parity test using the same Bioconductor implementation; it is **not** an independent algorithm benchmark or biological validation. External trusted reference datasets and platform-matched Affymetrix CEL/RMA validation remain open.
+The Bioconductor CI job now runs the adapter on a fixed 300-feature, six-sample raw-count fixture and compares every returned statistic with a separately executed edgeR/limma reference script. This is a strict adapter/serialization parity test using the same Bioconductor implementation; it is **not** an independent algorithm benchmark or biological validation. The live GEO GPL96 CEL/RMA workflow now passes on two real samples (GSM1003058 and GSM1003059), producing 22,283 hgu133a probe sets. Trusted external limma-voom/RMA reference-output comparisons remain open.
 
 
 ### Imputation holdout benchmark
@@ -77,7 +77,23 @@ python -m oracle --geo-affymetrix-rma sample1.CEL --geo-affymetrix-rma sample2.C
   --affy-backend affy --affy-output normalized-expression.tsv --json
 ```
 
-The adapter records every CEL SHA-256, file size, R/package versions, output checksum, and bounded runtime. It preserves feature/probe-set identifiers but does not perform annotation mapping, batch correction, differential testing, or biological interpretation. Install the selected Bioconductor package and its platform-specific annotation/CDF dependencies separately. CI tests the adapter contract with a mocked R subprocess; real CEL execution and comparison with trusted platform reference outputs remain unvalidated.
+The adapter records every CEL SHA-256, file size, R/package versions, output checksum, and bounded runtime. It preserves feature/probe-set identifiers but does not perform annotation mapping, batch correction, differential testing, or biological interpretation. Install the selected Bioconductor package and its platform-specific annotation/CDF dependencies separately. CI tests the adapter contract and runs a real GEO GPL96 CEL workflow: two GEO CEL files were downloaded, platform-checked, and RMA-normalized successfully (22,283 probe sets). This confirms real execution, not agreement with an independently generated trusted reference; probe annotation and reference comparison remain open.
+
+## External scientific reference comparisons
+
+The new provenance-checked comparator accepts frozen reference outputs and emits checksummed, overlap-aware reports:
+
+```bash
+python -m oracle.external_validation expression \
+  --oracle oracle-rma.tsv --reference trusted-rma.tsv \
+  --provenance-json reference-provenance.json --output rma-comparison.json
+
+python -m oracle.external_validation de \
+  --oracle oracle-de.tsv --reference trusted-limma-de.tsv \
+  --provenance-json reference-provenance.json --output de-comparison.json
+```
+
+See [docs/EXTERNAL_VALIDATION.md](docs/EXTERNAL_VALIDATION.md) for required provenance, file formats, metrics, and interpretation limits. The comparator is implemented and tested; trusted external reference files must still be supplied before empirical reference validation can be claimed.
 
 ## Paired model evaluation
 
