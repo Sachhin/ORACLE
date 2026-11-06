@@ -14,7 +14,7 @@ Integrated Deep Research + Autonomous Discovery. Balanced priority: scientific a
 8. **Decision** — continue, re-plan, investigate gap, reject, or conclude.
 
 ## Agent contracts
-Agents are replaceable components implementing a common `run(context) -> result` contract. Baseline agents are deterministic and deliberately conservative. The optional Gemini suite implements the same contract for planning, research synthesis, exploration, hypothesis generation, skeptic review, and experiment proposal. It is opt-in through `--agent-provider gemini`; deterministic agents remain the default. Model-generated research statements are always typed as inference, never source evidence. The structural auditor and novelty assessor remain deterministic until provider-backed evaluation is validated.
+Agents are replaceable components implementing a common `run(context) -> result` contract. Baseline agents are deterministic and deliberately conservative. The optional Gemini suite implements the same contract for planning, research synthesis, exploration, hypothesis generation, skeptic review, experiment proposal, provisional integrity auditing, and literature-conditioned novelty triage. It is opt-in through `--agent-provider gemini`; deterministic agents remain the default. Model-generated research statements are always typed as inference, never source evidence. Auditor findings are warnings only and never mutate evidence links or claim status. Novelty triage requires source-backed literature evidence, validates every cited source ID against the supplied context, and remains provisional rather than a priority claim.
 
 ## Research cycle
 QUESTION → PLAN → RESEARCH → DISCOVER → HYPOTHESIZE → CHALLENGE → EXPERIMENT DESIGN → EVALUATE → UPDATE KNOWLEDGE → DECIDE.
