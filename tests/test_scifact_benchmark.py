@@ -56,10 +56,10 @@ class SciFactBenchmarkTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             claims, corpus, predictions = [root / n for n in ("claims.jsonl", "corpus.jsonl", "pred.jsonl")]
-            claims.write_text(json.dumps({"id": 1, "claim": "A", "evidence": {}}) + "\\n")
-            corpus.write_text(json.dumps({"doc_id": 10, "abstract": ["only sentence"]}) + "\\n")
+            claims.write_text(json.dumps({"id": 1, "claim": "A", "evidence": {}}) + "\n")
+            corpus.write_text(json.dumps({"doc_id": 10, "abstract": ["only sentence"]}) + "\n")
             predictions.write_text(json.dumps({"id": 1, "evidence": {
-                "10": {"label": "SUPPORT", "sentences": [1]}}}) + "\\n")
+                "10": {"label": "SUPPORT", "sentences": [1]}}}) + "\n")
             with self.assertRaisesRegex(ValueError, "in-range abstract indices"):
                 evaluate_scifact(claims, corpus, predictions)
 
@@ -68,9 +68,9 @@ class SciFactBenchmarkTests(unittest.TestCase):
             root = Path(tmp)
             claims, corpus, predictions = [root / n for n in ("claims.jsonl", "corpus.jsonl", "pred.jsonl")]
             claims.write_text(json.dumps({"id": 1, "claim": "A", "evidence": {
-                "10": [{"label": "SUPPORT", "sentences": [2]}]}}) + "\\n")
-            corpus.write_text(json.dumps({"doc_id": 10, "abstract": ["only sentence"]}) + "\\n")
-            predictions.write_text(json.dumps({"id": 1, "evidence": {}}) + "\\n")
+                "10": [{"label": "SUPPORT", "sentences": [2]}]}}) + "\n")
+            corpus.write_text(json.dumps({"doc_id": 10, "abstract": ["only sentence"]}) + "\n")
+            predictions.write_text(json.dumps({"id": 1, "evidence": {}}) + "\n")
             with self.assertRaisesRegex(ValueError, "gold sentence index is outside"):
                 evaluate_scifact(claims, corpus, predictions)
 
