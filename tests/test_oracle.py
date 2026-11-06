@@ -56,6 +56,20 @@ class OracleTests(unittest.TestCase):
     def test_decision_stops_on_no_progress(self):
         self.assertEqual(choose_next_action(1, 4, progress=False).action, "stop")
 
+    def test_decision_allows_one_bounded_stagnant_cycle(self):
+        decision = choose_next_action(
+            2, 5, progress=False, consecutive_no_progress=0, max_no_progress=2
+        )
+        self.assertEqual(decision.action, "continue")
+        decision = choose_next_action(
+            3, 5, progress=False, consecutive_no_progress=1, max_no_progress=2
+        )
+        self.assertEqual(decision.action, "stop")
+
+    def test_critical_integrity_warning_stops_run(self):
+        decision = choose_next_action(1, 5, progress=True, critical_warnings=1)
+        self.assertEqual(decision.action, "stop")
+
     def test_evidence_links_and_uncertainty_are_auditable(self):
         run = OracleOrchestrator(self.store).run("Test claim", max_cycles=1)
         kb = KnowledgeBase()
@@ -310,6 +324,19 @@ class OracleTests(unittest.TestCase):
         self.assertEqual(len(loaded.evidence_comparisons), 1)
         self.assertEqual(loaded.evidence_comparisons[0].status, "pending_review")
 
+    def test_repeated_no_progress_stops_without_duplicate_records(self):
+        run = OracleOrchestrator(self.store, max_no_progress_cycles=2).run(
+            "A deterministic question", max_cycles=5
+        )
+        self.assertEqual(run.status, RunStatus.STOPPED)
+        self.assertEqual(run.current_cycle, 3)
+        self.assertEqual(run.consecutive_no_progress_cycles, 2)
+        self.assertEqual(len(run.evidence), 1)
+        self.assertEqual(len(run.experiments), 1)
+        self.assertIn("run_stopped", [event["event_type"] for event in self.store.list_events(run.run_id)])
+        loaded = self.store.load_run(run.run_id)
+        self.assertEqual(loaded.consecutive_no_progress_cycles, 2)
+
     def test_resume_interrupted_run_without_resetting_history(self):
         run = OracleOrchestrator(self.store).run("Resume this", max_cycles=1)
         run.status = RunStatus.PAUSED
@@ -317,7 +344,7 @@ class OracleTests(unittest.TestCase):
         resumed = OracleOrchestrator(self.store).resume(run.run_id, additional_cycles=1)
         self.assertEqual(resumed.status, RunStatus.COMPLETED)
         self.assertEqual(resumed.current_cycle, 2)
-        self.assertEqual(len(resumed.evidence), 2)
+        self.assertEqual(len(resumed.evidence), 1)
         self.assertEqual(resumed.run_id, run.run_id)
 
 
