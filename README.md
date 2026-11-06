@@ -54,6 +54,15 @@ Set GEMINI_API_KEY in your shell (do not put the key in source files or commit i
 
 Gemini output is accepted only when its evidence_quote is an exact substring of the retrieved abstract or GEO summary. Each candidate stores that quote, model name, source/evidence link, and an unreviewed status. Its evidence link remains CONTEXTUAL with zero weight. The feature is opt-in; normal offline runs never call Gemini.
 
+### Cross-paper evidence comparison
+
+Add --compare-papers together with --extract-claims to compare candidate statements across distinct papers:
+
+    python -m oracle --literature "embryonic development cell fate signaling" --provider both --limit 10 --extract-claims --compare-papers
+    python -m oracle --literature "Arabidopsis heat stress" --provider all --limit 12 --extract-claims --compare-papers --json
+
+Gemini proposes one of four relations: corroborates, contrasts, contextual, or not_comparable. Every saved comparison must include exact quotations found in BOTH source abstracts/summaries. Comparisons retain both source and evidence IDs, model, rationale, and pending_review status. These are review candidates, not verified contradictions or proof of agreement. ORACLE does not change claim status, evidence stance, or uncertainty scores based on these model suggestions. At most 30 claim pairs are sent per run by default.
+
 ## Scope of this milestone
 
 Included: offline research foundation, provenance-aware SQLite knowledge graph, public scholarly metadata/abstract search, deterministic candidate sentence extraction, and offline tests. Real LLM providers and autonomous scientific discovery are not claimed.
