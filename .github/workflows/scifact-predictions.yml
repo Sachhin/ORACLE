@@ -1,0 +1,85 @@
+name: ORACLE SciFact prediction benchmark
+
+on:
+  workflow_dispatch:
+    inputs:
+      split:
+        description: Labelled SciFact split
+        required: true
+        type: choice
+        options: [dev, train]
+        default: dev
+      model:
+        description: Gemini model ID
+        required: true
+        type: string
+        default: gemini-2.5-flash
+      max_claims:
+        description: Optional pilot cap (0 = full split)
+        required: true
+        type: string
+        default: "0"
+
+permissions:
+  contents: read
+
+jobs:
+  predict-and-score:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      SPLIT: ${{ inputs.split }}
+      MODEL: ${{ inputs.model }}
+      MAX_CLAIMS: ${{ inputs.max_claims }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Verify model credential
+        run: |
+          if [ -z "$GEMINI_API_KEY" ]; then
+            echo "::error::Add GEMINI_API_KEY as a repository Actions secret before dispatching this workflow."
+            exit 1
+          fi
+      - name: Download official SciFact data
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p data/scifact
+          curl --fail --location --retry 4 --retry-all-errors \
+            https://scifact.s3-us-west-2.amazonaws.com/release/latest/data.tar.gz \
+            -o data/scifact/data.tar.gz
+          tar -xzf data/scifact/data.tar.gz -C data/scifact
+          claims="$(find data/scifact -name "claims_${SPLIT}.jsonl" -print -quit)"
+          corpus="$(find data/scifact -name corpus.jsonl -print -quit)"
+          test -n "$claims" && test -n "$corpus"
+          echo "CLAIMS_PATH=$claims" >> "$GITHUB_ENV"
+          echo "CORPUS_PATH=$corpus" >> "$GITHUB_ENV"
+      - name: Generate frozen ORACLE predictions
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=(--claims "$CLAIMS_PATH" --corpus "$CORPUS_PATH"
+                --output data/scifact/oracle_predictions_${SPLIT}.jsonl
+                --model "$MODEL" --top-k 8)
+          if [ "$MAX_CLAIMS" != "0" ]; then args+=(--max-claims "$MAX_CLAIMS"); fi
+          python -m oracle.scifact_predict "${args[@]}"
+      - name: Score frozen predictions
+        run: |
+          python -m oracle.scifact_benchmark \
+            --claims "$CLAIMS_PATH" --corpus "$CORPUS_PATH" \
+            --predictions "data/scifact/oracle_predictions_${SPLIT}.jsonl" \
+            --split "$SPLIT" > "data/scifact/oracle_scifact_report_${SPLIT}.json"
+      - name: Upload predictions, provenance, and report
+        uses: actions/upload-artifact@v4
+        with:
+          name: oracle-scifact-${{ inputs.split }}-${{ github.run_id }}
+          path: |
+            data/scifact/oracle_predictions_${{ inputs.split }}.jsonl
+            data/scifact/oracle_predictions_${{ inputs.split }}.jsonl.meta.json
+            data/scifact/oracle_scifact_report_${{ inputs.split }}.json
+          if-no-files-found: error
+          retention-days: 90
