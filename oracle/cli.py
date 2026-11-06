@@ -27,6 +27,8 @@ def build_parser() -> argparse.ArgumentParser:
                         help="Retrieve licence-eligible Europe PMC open-access full text for PMCID records")
     parser.add_argument("--citation-network", action="store_true",
                         help="Retrieve first-degree reference metadata for DOI-backed sources from Crossref")
+    parser.add_argument("--download-geo-samples", action="store_true", help="Download supplementary count files for explicitly selected GSM accessions")
+    parser.add_argument("--gsm", action="append", default=[], metavar="GSM_ACCESSION", help="GEO Sample accession for --download-geo-samples; repeat per sample")
     parser.add_argument("--discover-geo-files", action="store_true",
                         help="List supplementary files for GEO Series records; does not download them")
     parser.add_argument("--download-geo-files", action="store_true",
@@ -140,6 +142,27 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main() -> None:
     args = build_parser().parse_args()
+    if args.download_geo_samples:
+        from .geo_data import GEOSupplementaryClient
+        try:
+            report = GEOSupplementaryClient().download_sample_files(
+                args.gsm, max_file_bytes=args.dataset_max_mb * 1_000_000
+            )
+        except (OSError, ValueError, RuntimeError) as exc:
+            raise SystemExit(f"GEO sample download failed: {exc}") from exc
+        if args.json:
+            print(json.dumps(report, indent=2, ensure_ascii=False))
+        else:
+            print(f"GSM samples examined: {report['samples_examined']} | "
+                  f"files discovered: {report['files_discovered']} | "
+                  f"downloaded: {report['files_downloaded']} | "
+                  f"skipped by size: {report['files_skipped_size']}")
+            for item in report["files"]:
+                print(f"{item['accession']} {item['filename']}: {item['status']} "
+                      f"{item.get('sha256', '')}")
+            for warning in report["warnings"]:
+                print("WARNING: " + warning)
+        return
     if args.merge_geo_counts:
         sample_files = {}
         for assignment in args.geo_sample_file:
