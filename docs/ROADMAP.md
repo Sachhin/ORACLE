@@ -44,7 +44,7 @@ Status reflects code currently present on the main branch. Checked items are imp
 - [x] TMM effective-library-size CPM/log2-CPM adapter with deterministic tests and factor provenance; optional same-matrix edgeR factor comparison CLI added (live edgeR 4.10.7 comparison now runs in CI with a numerical tolerance assertion)
 - [x] Optional limma-voom adapter with explicit two-group raw-count design, R/edgeR/limma version provenance, checksum, and mocked-subprocess tests (trusted reference-output comparison remains pending)
 - [x] Optional Affymetrix CEL RMA adapter for explicit affy/oligo package families, with input checksums, software provenance, bounded execution, and mocked contract tests (real CEL/reference validation and platform annotation remain pending)
-- [x] Explicit row-median imputation for continuous matrices with a separate SHA-256 missingness mask and recorded imputation values; reproducible MCAR/MAR/MNAR masking sensitivity diagnostics added (downstream differential-expression bias evaluation remains pending)
+- [x] Explicit row-median imputation for continuous matrices with a separate SHA-256 missingness mask and recorded imputation values; reproducible MCAR/MAR/MNAR masking and synthetic downstream Welch/BH sensitivity diagnostics added (real labelled-data bias evaluation remains pending)
 - [x] Count-aware DESeq2 raw-count analysis with explicit categorical batch/covariate designs, rank-deficiency checks, and default median-of-ratios size-factor normalization
 - [x] Optional DESeq2 adapter for explicitly mapped raw integer-count two-group designs (external R runtime; CI subprocess mocked)
 - [x] Explicit-design Welch contrasts with BH-FDR for user-declared continuous log2 GEO matrices; raw counts rejected
