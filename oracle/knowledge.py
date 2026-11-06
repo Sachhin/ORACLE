@@ -95,6 +95,8 @@ class KnowledgeBase:
             raise ValueError("Evidence review must reference an existing claim and evidence record.")
         if evidence.kind == EvidenceKind.INFERENCE or not evidence.source_id:
             raise ValueError("Only source-backed evidence can receive a scientific evidence review.")
+        if not isinstance(proposed_stance, EvidenceStance):
+            raise ValueError("Proposed stance must be a valid EvidenceStance.")
         if not source_quote or source_quote not in evidence.claim:
             raise ValueError("Review quote must be an exact substring of the evidence text.")
         if not rationale.strip() or not model.strip():
@@ -125,6 +127,8 @@ class KnowledgeBase:
         if candidate.status != "pending_review":
             raise ValueError("Evidence review candidate has already been reviewed.")
         if status == "accepted":
+            if not reviewer_note.strip():
+                raise ValueError("A reviewer note is required to accept a model suggestion.")
             self.link_evidence(
                 run, candidate.claim_id, candidate.evidence_id,
                 candidate.proposed_stance, strength,
