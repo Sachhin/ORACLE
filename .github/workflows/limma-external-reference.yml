@@ -31,7 +31,7 @@ jobs:
           Rscript -e 'BiocManager::install(c("GEOquery", "edgeR", "limma"), ask=FALSE, update=FALSE)'
           Rscript -e 'if (!requireNamespace("digest", quietly=TRUE)) install.packages("digest"); if (!requireNamespace("jsonlite", quietly=TRUE)) install.packages("jsonlite")'
           Rscript -e 'stopifnot(requireNamespace("GEOquery"), requireNamespace("edgeR"), requireNamespace("limma"), requireNamespace("digest"), requireNamespace("jsonlite"))'
-          Rscript -e 'cat("R", as.character(getRversion()), "Bioconductor", as.character(BiocManager::version()), "GEOquery", packageVersion("GEOquery"), "edgeR", packageVersion("edgeR"), "limma", packageVersion("limma"), "\\n")'
+          Rscript -e 'cat("Pinned R/Bioconductor runtime and required packages verified.\\n")'
 
       - name: Download frozen GEO submitter reference files
         shell: bash
@@ -82,7 +82,7 @@ jobs:
           Rscript -e 'BiocManager::install(c("GEOquery", "edgeR", "limma"), ask=FALSE, update=FALSE)'
           Rscript -e 'if (!requireNamespace("digest", quietly=TRUE)) install.packages("digest"); if (!requireNamespace("jsonlite", quietly=TRUE)) install.packages("jsonlite")'
           Rscript -e 'stopifnot(requireNamespace("GEOquery"), requireNamespace("edgeR"), requireNamespace("limma"), requireNamespace("digest"), requireNamespace("jsonlite"))'
-          Rscript -e 'cat("R", as.character(getRversion()), "Bioconductor", as.character(BiocManager::version()), "GEOquery", packageVersion("GEOquery"), "edgeR", packageVersion("edgeR"), "limma", packageVersion("limma"), "\\n")'
+          Rscript -e 'cat("Pinned R/Bioconductor runtime and required packages verified.\\n")'
 
       - name: Download frozen GEO validation-cohort reference files
         shell: bash
@@ -143,7 +143,7 @@ jobs:
           Rscript -e 'BiocManager::install(c("edgeR", "limma"), ask=FALSE, update=FALSE)'
           Rscript -e 'if (!requireNamespace("digest", quietly=TRUE)) install.packages("digest"); if (!requireNamespace("jsonlite", quietly=TRUE)) install.packages("jsonlite")'
           Rscript -e 'stopifnot(requireNamespace("edgeR"), requireNamespace("limma"), requireNamespace("digest"), requireNamespace("jsonlite"))'
-          Rscript -e 'cat("R", as.character(getRversion()), "Bioconductor", as.character(BiocManager::version()), "edgeR", packageVersion("edgeR"), "limma", packageVersion("limma"), "\\n")'
+          Rscript -e 'cat("Pinned R/Bioconductor runtime and required packages verified.\\n")'
 
       - name: Recompute GSE64099 voom and compare published Smchd1 results
         run: |
