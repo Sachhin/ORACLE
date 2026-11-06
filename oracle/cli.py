@@ -124,6 +124,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--replication-analysis-id", default="", help="Source DESeq2 analysis ID")
     parser.add_argument("--replication-feature", default="", help="Exact gene/feature identifier to compare")
     parser.add_argument("--replication-fdr", type=float, default=0.05, help="Adjusted p-value threshold for the directional consistency screen")
+    parser.add_argument("--merge-geo-counts", action="store_true", help="Merge explicitly mapped per-sample GEO raw-count files into one DESeq2 matrix")
+    parser.add_argument("--geo-sample-file", action="append", default=[], metavar="SAMPLE=PATH", help="Explicit sample accession/name and local count-file path; repeat per sample")
+    parser.add_argument("--count-feature-column", type=int, default=0, help="Zero-based feature identifier column in each sample count file")
+    parser.add_argument("--count-value-column", type=int, default=-1, help="Zero-based raw-count column; -1 means last column")
+    parser.add_argument("--count-no-header", action="store_true", help="Treat each sample count file as headerless")
+    parser.add_argument("--count-delimiter", choices=["auto", "tab", "comma"], default="auto", help="Delimiter used by per-sample count files")
+    parser.add_argument("--count-output", default="data/geo/merged_counts.tsv", help="Output matrix path for --merge-geo-counts")
     parser.add_argument("--benchmark-results", default="", help="DESeq2 result JSON/TSV to score against a curated known-positive set")
     parser.add_argument("--benchmark-manifest", default="", help="JSON manifest with dataset_accession, HTTPS reference, and known_positive_features")
     parser.add_argument("--benchmark-fdr", type=float, default=0.05, help="Adjusted p-value threshold for benchmark hit selection")
@@ -133,6 +140,33 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main() -> None:
     args = build_parser().parse_args()
+    if args.merge_geo_counts:
+        sample_files = {}
+        for assignment in args.geo_sample_file:
+            sample, separator, path = assignment.partition("=")
+            if not separator or not sample.strip() or not path.strip() or sample.strip() in sample_files:
+                raise SystemExit(f"Invalid or duplicate --geo-sample-file assignment: {assignment!r}")
+            sample_files[sample.strip()] = path.strip()
+        from .geo_matrix import merge_sample_count_files
+        try:
+            report = merge_sample_count_files(
+                sample_files, args.count_output,
+                feature_column=args.count_feature_column,
+                count_column=args.count_value_column,
+                has_header=not args.count_no_header,
+                delimiter=args.count_delimiter,
+            )
+        except (OSError, ValueError) as exc:
+            raise SystemExit(f"GEO count matrix merge failed: {exc}") from exc
+        if args.json:
+            print(json.dumps(report, indent=2, ensure_ascii=False))
+        else:
+            print(f"Created {report['output_path']}: {report['feature_count']} features x "
+                  f"{report['sample_count']} samples")
+            print(f"Matrix SHA-256: {report['matrix_sha256']}")
+            print("Sample groups were not inferred; provide them explicitly to --geo-deseq2.")
+            print("Limitations: " + report["limitations"])
+        return
     if args.benchmark_results or args.benchmark_manifest:
         if not args.benchmark_results or not args.benchmark_manifest:
             raise SystemExit("--benchmark-results and --benchmark-manifest must be supplied together.")
