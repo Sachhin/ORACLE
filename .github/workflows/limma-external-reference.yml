@@ -91,6 +91,7 @@ jobs:
           mkdir -p validation-artifacts
           base="https://ftp.ncbi.nlm.nih.gov/geo/series/GSE176nnn/GSE176261/suppl"
           for file in \
+            GSE176261_QCed_counts_batch2_allsamples.txt.gz \
             GSE176261_QCed_counts_batch2_validationsamples.txt.gz \
             GSE176261_Log2_normalized_expression_batch2_validationsamples.txt.gz \
             GSE176261_Voom_weights_batch2_validationsamples.txt.gz; do
@@ -103,6 +104,7 @@ jobs:
       - name: Recompute same-study validation-cohort limma-voom and compare with published E and weights
         run: |
           Rscript scripts/validate_gse176261_voom.R \
+            validation-artifacts/GSE176261_QCed_counts_batch2_allsamples.txt.gz \
             validation-artifacts/GSE176261_QCed_counts_batch2_validationsamples.txt.gz \
             validation-artifacts/GSE176261_Log2_normalized_expression_batch2_validationsamples.txt.gz \
             validation-artifacts/GSE176261_Voom_weights_batch2_validationsamples.txt.gz \
