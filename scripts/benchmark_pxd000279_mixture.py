@@ -70,12 +70,32 @@ def benchmark_pxd000279(input_path: str | Path, *, seed: int = 1729) -> dict:
         if fasta_col is None:
             raise ValueError("Expected MaxQuant 'Fasta headers' column for species assignment")
         intensity_cols = [c for c in fields if c.startswith("LFQ intensity ")]
-        if len(intensity_cols) != 6:
-            raise ValueError(f"Expected exactly six LFQ intensity columns; found {len(intensity_cols)}")
         group10 = [c for c in intensity_cols if "Ecoli10" in c or "E. coli 10" in c]
         group30 = [c for c in intensity_cols if "Ecoli30" in c or "E. coli 30" in c]
+        group_assignment_method = "explicit sample labels in LFQ headers"
         if len(group10) != 3 or len(group30) != 3:
-            raise ValueError("Could not identify three Ecoli10 and three Ecoli30 LFQ replicate columns from headers")
+            # The published DEqMS PXD000279 workflow selects proteinGroups
+            # columns 89:94 (1-based), treating the first three as H and the
+            # final three as L. In the Cox mixture, H is Ecoli10 and L is
+            # Ecoli30 because the HeLa background is held constant while E. coli
+            # input rises from 10 to 30 micrograms. The MaxQuant headers in the
+            # deposited archive are run identifiers, not condition labels.
+            # Source: https://rdrr.io/github/yafeng/DEqMS/f/vignettes/DEqMS-package-vignette.Rmd
+            canonical = fields[88:94]
+            if len(canonical) == 6 and all(c.startswith("LFQ intensity ") for c in canonical):
+                intensity_cols = canonical
+                group10, group30 = canonical[:3], canonical[3:]
+                group_assignment_method = (
+                    "published DEqMS PXD000279 column contract: proteinGroups columns 89-91=Ecoli10 "
+                    "and 92-94=Ecoli30 (H/L order)"
+                )
+            else:
+                raise ValueError(
+                    "Could not identify Ecoli10/Ecoli30 groups from LFQ headers, and the published "
+                    "PXD000279 LFQ columns 89:94 contract was not present"
+                )
+        if len(intensity_cols) != 6 or len(group10) != 3 or len(group30) != 3:
+            raise ValueError("PXD000279 requires exactly three Ecoli10 and three Ecoli30 LFQ replicates")
         required_flags = [c for c in ("Reverse", "Potential contaminant", "Only identified by site") if c in fields]
         rows = []
         skipped = {"decoy_or_contaminant_or_site_only": 0, "ambiguous_species": 0,
@@ -159,10 +179,12 @@ def benchmark_pxd000279(input_path: str | Path, *, seed: int = 1729) -> dict:
         "dataset_accession": "PXD000279",
         "dataset_title": "MaxLFQ HeLa/E. coli controlled-mixture proteome benchmark",
         "source_url": "https://ftp.ebi.ac.uk/pride-archive/2014/09/PXD000279/proteomebenchmark.zip",
+        "sample_design_reference": "https://rdrr.io/github/yafeng/DEqMS/f/vignettes/DEqMS-package-vignette.Rmd",
         "publication_doi": "10.1074/mcp.M113.031591",
         "status": "SCORED_KNOWN_MIXTURE_RATIO",
         "input_sha256": _sha256(path),
         "sample_columns": {"Ecoli10": group10, "Ecoli30": group30},
+        "sample_group_assignment_method": group_assignment_method,
         "replicates_per_group": 3,
         "protein_universe": len(rows),
         "missing_lfq_cells": missing_total,
