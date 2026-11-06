@@ -30,7 +30,7 @@ Citation graph ranking and bounded multi-hop traversal are available for DOI-res
 ```bash
 python -m oracle --rank-citation-graph RUN_ID
 python -m oracle --traverse-citation-graph RUN_ID --citation-start-source SOURCE_ID --citation-direction both --citation-depth 3
-python -m oracle --literature "embryo development" --citation-network --citation-depth 3 --citation-nodes 100
+python -m oracle --literature "embryo development" --citation-network --reference-depth 3 --reference-nodes 100
 python -m oracle --literature "embryo development" --incoming-citations --incoming-citation-depth 3 --incoming-citation-nodes 100
 ```
 Traversal supports `outgoing` (works cited by the start paper), `incoming` (works citing it), or `both`, with depth capped at six and result count bounded by `--limit`. Each result includes its shortest source-ID path. Unresolved DOI targets are not fabricated as graph nodes; citation connectivity is not evidence quality, agreement, or scientific truth.
