@@ -1,0 +1,101 @@
+name: ORACLE PXD047528 real missingness preparation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/pxd047528-preparation.yml"
+      - "scripts/prepare_pxd047528_missingness.py"
+      - "oracle/missingness_validation.py"
+      - "oracle/cli.py"
+      - "docs/MISSINGNESS_VALIDATION.md"
+      - "tests/test_prepare_pxd047528_missingness.py"
+      - "tests/test_missingness_validation.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  prepare-and-score:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Download PEPerMINT Zenodo archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p data/pepermint data/pxd047528
+          curl --fail --location --retry 5 --retry-all-errors \
+            --connect-timeout 30 --max-time 7200 \
+            "https://zenodo.org/records/11216899/files/data.zip?download=1" \
+            -o data/pepermint/data.zip
+          sha256sum data/pepermint/data.zip | tee data/pxd047528/source_archive.sha256
+      - name: Extract only paired PXD047528 peptide tables
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile
+          archive = Path("data/pepermint/data.zip")
+          out = Path("data/pxd047528/source")
+          out.mkdir(parents=True, exist_ok=True)
+          wanted = [
+              "datasets/blood_hiv_dda_dia/dda/peptides.tsv",
+              "datasets/blood_hiv_dda_dia/dia/peptides.tsv",
+              "datasets/blood_hiv_dda_dia/dda/proteins.tsv",
+              "datasets/blood_hiv_dda_dia/dia/proteins.tsv",
+          ]
+          with ZipFile(archive) as zf:
+              names = set(zf.namelist())
+              missing = [name for name in wanted if name not in names]
+              if missing:
+                  raise SystemExit(f"Zenodo archive missing expected PXD047528 files: {missing}")
+              for name in wanted:
+                  target = out / name.split("/")[-2] / name.split("/")[-1]
+                  target.parent.mkdir(parents=True, exist_ok=True)
+                  with zf.open(name) as source, target.open("wb") as dest:
+                      while block := source.read(1024 * 1024):
+                          dest.write(block)
+                  print(f"{name}: {target.stat().st_size} bytes")
+          PY
+      - name: Prepare paired DDA/DIA matrices and provenance
+        run: |
+          python scripts/prepare_pxd047528_missingness.py \
+            --dda-peptides data/pxd047528/source/dda/peptides.tsv \
+            --dia-peptides data/pxd047528/source/dia/peptides.tsv \
+            --output-dir data/pxd047528/prepared
+          python - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          manifest = Path("data/pxd047528/prepared/preparation_manifest.json")
+          data = json.loads(manifest.read_text())
+          archive = Path("data/pepermint/data.zip")
+          data["source_archive_sha256"] = hashlib.sha256(archive.read_bytes()).hexdigest()
+          data["source_protein_files"] = {
+              "dda": str(Path("data/pxd047528/source/dda/proteins.tsv")),
+              "dia": str(Path("data/pxd047528/source/dia/proteins.tsv")),
+          }
+          manifest.write_text(json.dumps(data, indent=2) + "\n")
+          PY
+      - name: Score real missing DDA cells against paired DIA (outcome labels pending)
+        run: |
+          python -m oracle.missingness_validation \
+            --observed data/pxd047528/prepared/observed_dda_log.tsv \
+            --orthogonal data/pxd047528/prepared/orthogonal_dia_log.tsv \
+            --imputed data/pxd047528/prepared/row_median_imputed_dda_log.tsv \
+            > data/pxd047528/prepared/reconstruction_report.json
+      - name: Upload frozen PXD047528 matrices, labels template, and reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: oracle-pxd047528-real-missingness-preparation
+          path: |
+            data/pxd047528/prepared/
+            data/pxd047528/source/dda/proteins.tsv
+            data/pxd047528/source/dia/proteins.tsv
+            data/pxd047528/source_archive.sha256
+          if-no-files-found: error
+          retention-days: 90
