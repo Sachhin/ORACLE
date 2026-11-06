@@ -52,5 +52,42 @@ class IncomingCitationTests(unittest.TestCase):
             OpenAlexIncomingCitationClient(max_sources=0)
 
 
+    def test_bounded_multihop_adds_metadata_nodes_and_follows_them(self):
+        class MultiHopClient(OpenAlexIncomingCitationClient):
+            def __init__(self):
+                super().__init__(max_depth=2, max_nodes=5, max_sources=2, max_citing_works=5)
+            def _get_json(self, url):
+                if "/works/https://doi.org/" in url:
+                    if "10.1000/root" in url:
+                        return {"id": "https://openalex.org/W1"}
+                    if "10.1000/next" in url:
+                        return {"id": "https://openalex.org/W2"}
+                if "cites%3AW1" in url or "cites%3AW1" in url:
+                    return {"results": [{"doi": "https://doi.org/10.1000/next",
+                                         "title": "Second paper", "publication_year": 2024}]}
+                if "cites%3AW2" in url:
+                    return {"results": [{"doi": "https://doi.org/10.1000/third",
+                                         "title": "Third paper", "publication_year": 2025}]}
+                return {"results": []}
+
+        run = ResearchRun("Multi-hop OpenAlex")
+        root = SourceRecord("Root paper", doi="10.1000/root", source_id="root")
+        run.sources.append(root)
+        report = MultiHopClient().discover(run)
+        self.assertEqual(report.depth_reached, 2)
+        self.assertEqual(report.external_nodes_created, 2)
+        self.assertEqual(report.requests_made, 4)
+        self.assertEqual(len(run.sources), 3)
+        self.assertTrue(all(x.source_type == "external_citation" for x in run.sources[1:]))
+        self.assertEqual(len(run.citation_links), 2)
+        self.assertTrue(all(x.relation == "cited_by" for x in run.citation_links))
+
+    def test_multihop_node_cap_and_depth_validation(self):
+        with self.assertRaises(ValueError):
+            OpenAlexIncomingCitationClient(max_depth=6)
+        with self.assertRaises(ValueError):
+            OpenAlexIncomingCitationClient(max_nodes=251)
+
+
 if __name__ == "__main__":
     unittest.main()
