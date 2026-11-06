@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
-from oracle.geo_reference import compare_tmm_to_edger, evaluate_row_median_imputation
+from oracle.geo_reference import compare_tmm_to_edger, evaluate_row_median_imputation, evaluate_imputation_downstream_bias
 
 class GEOReferenceTests(unittest.TestCase):
     def setUp(self):
@@ -28,6 +28,24 @@ class GEOReferenceTests(unittest.TestCase):
         self.assertNotEqual(mar["benchmark_type"], mnar["benchmark_type"])
         self.assertGreater(mar["masked_values"], 0)
         self.assertGreater(mnar["masked_values"], 0)
+    def test_downstream_imputation_bias_is_reproducible_for_mnar(self):
+        labels = {"A":"control", "B":"control", "C":"treated"}
+        a = evaluate_imputation_downstream_bias(
+            self.path, labels, group_a="control", group_b="treated",
+            mechanism="MNAR", missing_fraction=.15, replicates=3, seed=11)
+        b = evaluate_imputation_downstream_bias(
+            self.path, labels, group_a="control", group_b="treated",
+            mechanism="MNAR", missing_fraction=.15, replicates=3, seed=11)
+        self.assertEqual(a, b)
+        self.assertEqual(a["benchmark_type"], "synthetic_downstream_de_bias_mnar")
+        self.assertEqual(len(a["replicate_results"]), 3)
+        self.assertIn("complete input matrix", a["limitations"])
+    def test_downstream_bias_requires_explicit_complete_two_group_design(self):
+        with self.assertRaisesRegex(ValueError, "cover every matrix sample"):
+            evaluate_imputation_downstream_bias(self.path, {"A":"x"}, group_a="x", group_b="y")
+        with self.assertRaisesRegex(ValueError, "exactly the two requested groups"):
+            evaluate_imputation_downstream_bias(
+                self.path, {"A":"x","B":"y","C":"z"}, group_a="x", group_b="y")
     def test_invalid_mechanism_rejected(self):
         with self.assertRaisesRegex(ValueError, "mechanism"):
             evaluate_row_median_imputation(self.path, mechanism="UNKNOWN")
