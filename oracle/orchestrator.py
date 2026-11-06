@@ -70,6 +70,10 @@ class OracleOrchestrator:
             agent_suite.experiment_designer if agent_suite else ExperimentDesignerAgent()
         )
         self.novelty = agent_suite.novelty if agent_suite and hasattr(agent_suite, "novelty") else NoveltyAssessorAgent()
+        self.connection_explorer = (
+            agent_suite.connection_explorer if agent_suite and hasattr(agent_suite, "connection_explorer")
+            else None
+        )
         self.knowledge = KnowledgeBase()
 
     def _event(self, run: ResearchRun, kind: str, payload: dict,
@@ -163,6 +167,11 @@ class OracleOrchestrator:
                 or not experiment.evaluation_note.strip()
             ):
                 warnings.append("An evaluated experiment lacks its execution kind or evaluation note.")
+                break
+        for connection in run.cross_domain_connections:
+            if (len(set(connection.source_ids)) < 2
+                    or any(source_id not in source_ids for source_id in connection.source_ids)):
+                warnings.append("Cross-domain connection has insufficient or invalid source provenance.")
                 break
         for candidate in run.evidence_review_candidates:
             evidence = next((item for item in run.evidence if item.evidence_id == candidate.evidence_id), None)
@@ -282,7 +291,7 @@ class OracleOrchestrator:
                 checkpoint = deepcopy(run)
                 before = (len(run.evidence), len(run.hypotheses), len(run.experiments),
                           len(run.sources), len(run.claims), len(run.findings),
-                          len(run.evidence_comparisons),
+                          len(run.evidence_comparisons), len(run.cross_domain_connections),
                           tuple((task.task_id, task.status) for task in run.tasks))
                 context = AgentContext(run.question, cycle, run.mode.value,
                                        run.evidence, run.hypotheses, run.findings)
@@ -320,7 +329,26 @@ class OracleOrchestrator:
                 design = self.experiment_designer.run(context)
                 self._add_unique_experiments(run, design.items)
                 novelty = self.novelty.run(context)
+                connection_result = None
+                if self.connection_explorer is not None:
+                    connection_result = self.connection_explorer.run(context)
+                    known_connections = {
+                        (self._normalise(item.statement), tuple(sorted(item.source_ids)))
+                        for item in run.cross_domain_connections
+                    }
+                    for item in connection_result.items:
+                        key = (self._normalise(item.statement), tuple(sorted(item.source_ids)))
+                        if key not in known_connections:
+                            run.cross_domain_connections.append(item)
+                            known_connections.add(key)
+                    if connection_result.items:
+                        self._event(run, "cross_domain_connections_proposed", {
+                            "count": len(connection_result.items),
+                            "connection_ids": [item.connection_id for item in connection_result.items],
+                        }, False, f"cycle:{cycle}:cross-domain-connections")
                 warnings = skeptic.warnings + audit.warnings + novelty.warnings
+                if connection_result:
+                    warnings.extend(connection_result.warnings)
                 self._add_unique_strings(
                     run.findings,
                     ["Skeptic review: " + warning for warning in skeptic.warnings]
@@ -329,7 +357,7 @@ class OracleOrchestrator:
 
                 after = (len(run.evidence), len(run.hypotheses), len(run.experiments),
                          len(run.sources), len(run.claims), len(run.findings),
-                         len(run.evidence_comparisons),
+                         len(run.evidence_comparisons), len(run.cross_domain_connections),
                          tuple((task.task_id, task.status) for task in run.tasks))
                 progress = after != before
                 if progress:
