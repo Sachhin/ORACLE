@@ -87,6 +87,15 @@ List saved research runs and compare their recorded coverage:
 
 The gap score is a transparent record-coverage heuristic based on source-backed evidence, claim review links, hypothesis evidence links, unresolved contradiction candidates, and task completion. It is not a probability, evidence quality score, or scientific completeness guarantee. Related-run search uses lexical token overlap only; it does not claim semantic similarity or discovery of a scientific connection.
 
+### Source-quality review
+
+ORACLE does not assign journal reputation or source reliability automatically. A human can inspect source provenance and record a transparent reliability assessment:
+
+    python -m oracle --show-sources RUN_ID
+    python -m oracle --source-action review --source-run RUN_ID --source-id SOURCE_ID --source-score 0.8 --source-note "Primary study; methods and controls reviewed."
+
+The score is a human assessment on a 0–1 scale, not a calibrated probability. Updating a source score also updates the reliability field on evidence records linked to that source.
+
 ### Hypothesis evidence review
 
 Inspect competing hypotheses and their source links:
