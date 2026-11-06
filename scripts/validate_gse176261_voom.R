@@ -99,13 +99,16 @@ if (anyNA(phenotype) || anyNA(gender) || any(!nzchar(phenotype)) || any(!nzchar(
 # Calculate normalization factors on that full matrix first, then retain the
 # validation_analysis_sample=Yes columns for the published validation voom run.
 all_sample_ids <- sub("\\s+RNA-seq.*$", "", as.character(pd$title))
-if (anyNA(all_sample_ids) || any(!nzchar(all_sample_ids)) ||
-    anyDuplicated(all_sample_ids) ||
-    !setequal(all_sample_ids, colnames(all_counts)) ||
-    length(all_sample_ids) != ncol(all_counts)) {
-  stop("GEO all-samples count matrix columns do not exactly match unique GEO sample title aliases.")
+if (anyNA(all_sample_ids) || any(!nzchar(all_sample_ids)) || anyDuplicated(all_sample_ids)) {
+  stop("GEO sample title aliases must be unique and non-empty.")
 }
-all_counts <- all_counts[, match(all_sample_ids, colnames(all_counts)), drop = FALSE]
+# The all-samples count file contains the submitter's QC-passing batch-2
+# samples; GEO may also list excluded samples. Require every count column to
+# map one-to-one to a GEO sample, without requiring excluded samples in counts.
+all_sample_rows <- match(colnames(all_counts), all_sample_ids)
+if (anyNA(all_sample_rows) || anyDuplicated(all_sample_rows)) {
+  stop("All-samples count matrix columns do not map one-to-one to GEO sample title aliases.")
+}
 if (!setequal(rownames(all_counts), rownames(counts))) {
   stop("All-samples and validation count matrices have different feature identifiers.")
 }
