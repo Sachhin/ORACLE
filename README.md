@@ -42,6 +42,17 @@ python -m oracle --propose-protocol RUN_ID --protocol-domain plant_biology --pro
 
 Templates prompt for controls, biological replication, randomization, batch metadata, pre-specified analysis, raw-data preservation, software versions, and checksums. They remain `PROPOSED`; they are not validated SOPs, do not execute experiments, and require qualified domain/ethics/biosafety review. Reproducible analysis adapters are still a separate pending milestone.
 
+## Human review for high-impact claims and performed experiments
+
+Claims can be marked `normal`, `high`, or `critical` impact when reviewed. A supported claim needs source-backed support links; high-impact claims require at least two independent source groups, and critical claims require three. Weakened/rejected decisions require source-backed refuting links. Every decision records reviewer identity and rationale.
+
+```bash
+python -m oracle --review-claim RUN_ID --claim-id CLAIM_ID --claim-status supported --claim-impact-level high --claim-reviewer "Reviewer" --claim-note "Compared independent primary sources"
+python -m oracle --experiment-action review --experiment-run RUN_ID --experiment-id EXPERIMENT_ID --execution-review-status accepted --execution-reviewer "Independent reviewer" --execution-review-note "Verified notebook, sample IDs, and raw files"
+```
+
+A real experiment remains recorded as performed but cannot be evaluated until a reviewer other than the recorded operator accepts its execution provenance. Simulations are not subject to this real-world execution check.
+
 ## Shared cross-run knowledge graph
 
 Saved runs can be searched for lexically similar claim pairs, but only when each claim has at least one source-backed evidence link. The candidate queue is a retrieval heuristic, not a semantic verdict. Inspect candidates, then persist a relationship explicitly:
