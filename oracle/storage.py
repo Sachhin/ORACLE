@@ -9,7 +9,7 @@ from typing import Any
 
 from .models import (
     Claim, ClaimRevision, ContradictionCandidate, Evidence, EvidenceClaimLink, EvidenceComparison,
-    EvidenceReviewCandidate,
+    EvidenceReviewCandidate, DatasetFileRecord,
     EvidenceKind, EvidenceStance, Experiment, ExperimentStatus, Hypothesis,
     HypothesisGroup, HypothesisStatus, ResearchMode, ResearchRun, ResearchTask,
     RunStatus, SourceRecord, UncertaintyAssessment, utc_now,
@@ -156,6 +156,7 @@ class ResearchStore:
                 EvidenceReviewCandidate(**{**x, "proposed_stance": EvidenceStance(x["proposed_stance"])})
                 for x in data.get("evidence_review_candidates", [])
             ],
+            dataset_files=[DatasetFileRecord(**x) for x in data.get("dataset_files", [])],
             contradiction_candidates=[ContradictionCandidate(**x) for x in data.get("contradiction_candidates", [])],
             hypotheses=[Hypothesis(**{**x, "status": enum_value(HypothesisStatus, x.get("status", "proposed"))})
                         for x in data.get("hypotheses", [])],
