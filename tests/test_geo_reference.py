@@ -20,6 +20,17 @@ class GEOReferenceTests(unittest.TestCase):
         self.assertEqual(a, b)
         self.assertGreater(a["masked_values"], 0)
         self.assertIn("MCAR", a["limitations"])
+    def test_mar_and_mnar_diagnostics_are_reproducible_and_distinct(self):
+        mar = evaluate_row_median_imputation(self.path, missing_fraction=.2, replicates=5, seed=7, mechanism="MAR")
+        mnar = evaluate_row_median_imputation(self.path, missing_fraction=.2, replicates=5, seed=7, mechanism="MNAR")
+        self.assertEqual(mar["missingness_mechanism"], "MAR")
+        self.assertEqual(mnar["missingness_mechanism"], "MNAR")
+        self.assertNotEqual(mar["benchmark_type"], mnar["benchmark_type"])
+        self.assertGreater(mar["masked_values"], 0)
+        self.assertGreater(mnar["masked_values"], 0)
+    def test_invalid_mechanism_rejected(self):
+        with self.assertRaisesRegex(ValueError, "mechanism"):
+            evaluate_row_median_imputation(self.path, mechanism="UNKNOWN")
     def test_invalid_mcar_fraction_rejected(self):
         with self.assertRaises(ValueError):
             evaluate_row_median_imputation(self.path, missing_fraction=1)
