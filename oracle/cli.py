@@ -223,6 +223,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--count-no-header", action="store_true", help="Treat each sample count file as headerless")
     parser.add_argument("--count-delimiter", choices=["auto", "tab", "comma"], default="auto", help="Delimiter used by per-sample count files")
     parser.add_argument("--count-output", default="data/geo/merged_counts.tsv", help="Output matrix path for --merge-geo-counts")
+    parser.add_argument("--compare-tmm-edger", default="", help="Compare ORACLE TMM factors with edgeR on the same raw-count matrix")
+    parser.add_argument("--imputation-benchmark", default="", help="Run a reproducible MCAR row-median imputation stress test on a complete matrix")
+    parser.add_argument("--imputation-missing-fraction", type=float, default=0.1)
+    parser.add_argument("--imputation-replicates", type=int, default=20)
+    parser.add_argument("--imputation-seed", type=int, default=1729)
     parser.add_argument("--benchmark-results", default="", help="DESeq2 result JSON/TSV to score against a curated known-positive set")
     parser.add_argument("--benchmark-manifest", default="", help="JSON manifest with dataset_accession, HTTPS reference, and known_positive_features")
     parser.add_argument("--benchmark-fdr", type=float, default=0.05, help="Adjusted p-value threshold for benchmark hit selection")
@@ -232,6 +237,26 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main() -> None:
     args = build_parser().parse_args()
+    if args.compare_tmm_edger:
+        from .geo_reference import compare_tmm_to_edger
+        try:
+            report = compare_tmm_to_edger(args.compare_tmm_edger, rscript=args.rscript)
+        except (OSError, ValueError, RuntimeError) as exc:
+            raise SystemExit(f"TMM/edgeR reference comparison failed: {exc}") from exc
+        print(json.dumps(report, indent=2, ensure_ascii=False))
+        return
+    if args.imputation_benchmark:
+        from .geo_reference import evaluate_row_median_imputation
+        try:
+            report = evaluate_row_median_imputation(
+                args.imputation_benchmark,
+                missing_fraction=args.imputation_missing_fraction,
+                replicates=args.imputation_replicates, seed=args.imputation_seed,
+            )
+        except (OSError, ValueError, RuntimeError) as exc:
+            raise SystemExit(f"Imputation benchmark failed: {exc}") from exc
+        print(json.dumps(report, indent=2, ensure_ascii=False))
+        return
     if args.normalize_geo_matrix:
         if not args.normalization_method or not args.normalization_output:
             raise SystemExit("--normalize-geo-matrix requires --normalization-method and --normalization-output.")
