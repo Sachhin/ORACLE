@@ -27,6 +27,8 @@ def build_parser() -> argparse.ArgumentParser:
                         help="Retrieve licence-eligible Europe PMC open-access full text for PMCID records")
     parser.add_argument("--citation-network", action="store_true",
                         help="Retrieve first-degree reference metadata for DOI-backed sources from Crossref")
+    parser.add_argument("--download-geo-series-archive", metavar="GSE_ACCESSION", help="Download the official GSE *_RAW.tar archive")
+    parser.add_argument("--extract-geo-archive", metavar="TAR_PATH", help="Safely extract GSM-prefixed regular files from a downloaded GEO tar archive")
     parser.add_argument("--download-geo-samples", action="store_true", help="Download supplementary count files for explicitly selected GSM accessions")
     parser.add_argument("--gsm", action="append", default=[], metavar="GSM_ACCESSION", help="GEO Sample accession for --download-geo-samples; repeat per sample")
     parser.add_argument("--discover-geo-files", action="store_true",
@@ -142,6 +144,25 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main() -> None:
     args = build_parser().parse_args()
+    if args.download_geo_series_archive:
+        from .geo_data import GEOSupplementaryClient
+        try:
+            report = GEOSupplementaryClient().download_series_raw_archive(
+                args.download_geo_series_archive,
+                max_file_bytes=args.dataset_max_mb * 1_000_000,
+            )
+        except (OSError, ValueError, RuntimeError) as exc:
+            raise SystemExit(f"GEO Series archive download failed: {exc}") from exc
+        print(json.dumps(report, indent=2, ensure_ascii=False))
+        return
+    if args.extract_geo_archive:
+        from .geo_data import GEOSupplementaryClient
+        try:
+            report = GEOSupplementaryClient.extract_raw_archive(args.extract_geo_archive)
+        except (OSError, ValueError, RuntimeError) as exc:
+            raise SystemExit(f"GEO archive extraction failed: {exc}") from exc
+        print(json.dumps(report, indent=2, ensure_ascii=False))
+        return
     if args.download_geo_samples:
         from .geo_data import GEOSupplementaryClient
         try:
