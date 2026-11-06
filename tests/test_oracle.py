@@ -660,12 +660,11 @@ class OracleTests(unittest.TestCase):
 
     def test_claim_review_rejects_unprovenanced_support(self):
         from oracle.knowledge import KnowledgeBase
-        from oracle.models import Claim, Evidence, EvidenceStance
+        from oracle.models import Claim, Evidence, EvidenceKind, EvidenceStance
         run = ResearchRun("Claim review provenance")
         claim = Claim("A claim without source evidence.")
         run.claims.append(claim)
-        evidence = Evidence("Inference only", "ORACLE", kind=__import__(
-            "oracle.models", fromlist=["EvidenceKind"]).EvidenceKind.INFERENCE)
+        evidence = Evidence("Inference only", "ORACLE", kind=EvidenceKind.INFERENCE)
         run.evidence.append(evidence)
         KnowledgeBase().link_evidence(run, claim.claim_id, evidence.evidence_id,
                                       EvidenceStance.SUPPORTS)
