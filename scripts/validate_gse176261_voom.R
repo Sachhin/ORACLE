@@ -91,11 +91,19 @@ gender <- vapply(selected_meta, get_field, character(1), key = "gender")
 if (anyNA(phenotype) || anyNA(gender) || any(!nzchar(phenotype)) || any(!nzchar(gender))) {
   stop("GEO phenotype/gender labels are incomplete; refusing to infer sample groups.")
 }
-sample_data <- data.frame(
-  phenotype = factor(phenotype),
-  gender = factor(gender),
-  row.names = colnames(counts)
-)
+# Preserve the full submitter GEO sample metadata in DGEList. In particular,
+# if the GEO Series Matrix carries precomputed lib.size/norm.factors fields,
+# edgeR must receive them exactly as in the submitter's DGEList construction.
+sample_data <- selected
+rownames(sample_data) <- colnames(counts)
+sample_data$phenotype <- factor(phenotype)
+sample_data$gender <- factor(gender)
+for (field in intersect(c("lib.size", "norm.factors"), names(sample_data))) {
+  sample_data[[field]] <- as.numeric(sample_data[[field]])
+  if (anyNA(sample_data[[field]]) || any(!is.finite(sample_data[[field]]))) {
+    stop("GEO sample metadata contains invalid ", field)
+  }
+}
 design <- model.matrix(~ 0 + phenotype + gender, data = sample_data)
 if (qr(design)$rank != ncol(design)) stop("Published GEO design is rank deficient.")
 
