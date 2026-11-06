@@ -429,14 +429,26 @@ class OracleOrchestrator:
                     self._event(run, "hypotheses_created", {"count": len(hypotheses.items)}, False,
                                 f"cycle:{cycle}:hypotheses")
 
-                skeptic = self.skeptic.run(context)
-                audit = self.auditor.run(context)
-                design = self.experiment_designer.run(context)
+                # Rebuild the review context after research and hypothesis generation.
+                # Previously these agents received the pre-cycle snapshot, so the skeptic,
+                # auditor, experiment designer, and novelty assessor could miss the very
+                # inferences/hypotheses produced earlier in this cycle.
+                review_context = AgentContext(
+                    run.question, cycle, run.mode.value,
+                    run.evidence, run.hypotheses, run.findings, run.tasks,
+                )
+                skeptic = self.skeptic.run(review_context)
+                audit = self.auditor.run(review_context)
+                design = self.experiment_designer.run(review_context)
                 self._add_unique_experiments(run, design.items)
-                novelty = self.novelty.run(context)
+                novelty = self.novelty.run(review_context)
                 connection_result = None
                 if self.connection_explorer is not None:
-                    connection_result = self.connection_explorer.run(context)
+                    connection_context = AgentContext(
+                        run.question, cycle, run.mode.value,
+                        run.evidence, run.hypotheses, run.findings, run.tasks,
+                    )
+                    connection_result = self.connection_explorer.run(connection_context)
                     known_connections = {
                         (self._normalise(item.statement), tuple(sorted(item.source_ids)))
                         for item in run.cross_domain_connections
