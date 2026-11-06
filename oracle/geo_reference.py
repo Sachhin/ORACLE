@@ -398,3 +398,123 @@ def compare_voom_to_limma_reference(
             "or evidence of biological correctness."
         ),
     }
+
+
+def evaluate_imputation_holdout(
+    matrix_path: str | Path, *, missing_fraction: float = 0.1,
+    replicates: int = 20, seed: int = 1729, mechanism: str = "MCAR",
+    max_cells: int = 500_000,
+) -> dict:
+    """Compare simple imputation methods on held-out observed cells of a real matrix.
+
+    This is a masked-observed-value reconstruction benchmark. It can compare
+    row, column, and global medians on a supplied complete matrix, but it does
+    not reveal the values that were genuinely missing in the original study.
+    """
+    import random
+    mechanism = mechanism.upper()
+    if mechanism not in {"MCAR", "MAR", "MNAR"}:
+        raise ValueError("mechanism must be MCAR, MAR, or MNAR.")
+    if not 0 < missing_fraction < 1 or replicates < 1:
+        raise ValueError("missing_fraction must be in (0,1) and replicates positive.")
+    source = Path(matrix_path)
+    features, samples, matrix, _ = _read_matrix(source, max_cells)
+    if len(features) < 2 or len(samples) < 2:
+        raise ValueError("Holdout comparison requires at least two features and two samples.")
+    if any(value is None for row in matrix for value in row):
+        raise ValueError("Holdout comparison requires a complete numeric matrix.")
+    rng = random.Random(seed)
+    method_errors = {
+        method: {"absolute": [], "squared": [], "signed": []}
+        for method in ("row_median", "column_median", "global_median")
+    }
+    heldout = 0
+    for _ in range(replicates):
+        mask = []
+        for row in matrix:
+            if mechanism == "MNAR":
+                order = sorted(range(len(row)), key=lambda j: row[j])
+                ranks = [0.0] * len(row)
+                for rank, index in enumerate(order):
+                    ranks[index] = rank / max(1, len(row) - 1)
+            row_mask = []
+            for column, value in enumerate(row):
+                if mechanism == "MCAR":
+                    probability = missing_fraction
+                elif mechanism == "MAR":
+                    probability = missing_fraction * (0.5 + column / max(1, len(row) - 1))
+                else:
+                    probability = missing_fraction * (1.5 - ranks[column])
+                row_mask.append(rng.random() < min(0.95, max(0.01, probability)))
+            if all(row_mask):
+                row_mask[rng.randrange(len(row_mask))] = False
+            mask.append(row_mask)
+        # Keep at least one observed value in every sample column.
+        for column in range(len(samples)):
+            if all(mask[row][column] for row in range(len(features))):
+                mask[rng.randrange(len(features))][column] = False
+        observed = [
+            matrix[i][j] for i in range(len(features))
+            for j in range(len(samples)) if not mask[i][j]
+        ]
+        if not observed:
+            raise RuntimeError("Masking left no observed values for fallback estimation.")
+        ordered = sorted(observed)
+        middle = len(ordered) // 2
+        global_median = (ordered[middle] if len(ordered) % 2
+                         else (ordered[middle - 1] + ordered[middle]) / 2)
+        row_medians = []
+        for i, row in enumerate(matrix):
+            values = sorted(value for j, value in enumerate(row) if not mask[i][j])
+            if not values:
+                row_medians.append(global_median)
+            else:
+                m = len(values) // 2
+                row_medians.append(values[m] if len(values) % 2 else (values[m-1] + values[m]) / 2)
+        column_medians = []
+        for j in range(len(samples)):
+            values = sorted(matrix[i][j] for i in range(len(features)) if not mask[i][j])
+            if not values:
+                column_medians.append(global_median)
+            else:
+                m = len(values) // 2
+                column_medians.append(values[m] if len(values) % 2 else (values[m-1] + values[m]) / 2)
+        for i, row in enumerate(matrix):
+            for j, actual in enumerate(row):
+                if not mask[i][j]:
+                    continue
+                predictions = {
+                    "row_median": row_medians[i],
+                    "column_median": column_medians[j],
+                    "global_median": global_median,
+                }
+                for method, predicted in predictions.items():
+                    error = predicted - actual
+                    method_errors[method]["absolute"].append(abs(error))
+                    method_errors[method]["squared"].append(error * error)
+                    method_errors[method]["signed"].append(error)
+                heldout += 1
+    summaries = {}
+    for method, errors in method_errors.items():
+        summaries[method] = {
+            "mae": math.fsum(errors["absolute"]) / heldout if heldout else None,
+            "rmse": math.sqrt(math.fsum(errors["squared"]) / heldout) if heldout else None,
+            "mean_signed_error": math.fsum(errors["signed"]) / heldout if heldout else None,
+        }
+    ranked = sorted(summaries, key=lambda method: summaries[method]["mae"])
+    return {
+        "benchmark_type": "observed_cell_masking_imputation_method_comparison",
+        "input_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
+        "features": len(features), "samples": len(samples),
+        "missingness_mechanism": mechanism,
+        "requested_missing_fraction": missing_fraction,
+        "replicates": replicates, "seed": seed, "heldout_values": heldout,
+        "methods": summaries, "mae_ranking_best_first": ranked,
+        "interpretation": (
+            "Metrics measure reconstruction of deliberately hidden values that were observed "
+            "in the supplied complete matrix. They are dataset-specific holdout estimates, not "
+            "accuracy on genuinely missing measurements. MCAR/MAR/MNAR are imposed masking "
+            "scenarios, not inferred properties of the study. Compare results across mechanisms "
+            "and datasets; do not infer biological validity from the lowest reconstruction error."
+        ),
+    }
