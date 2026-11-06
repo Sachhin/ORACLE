@@ -59,8 +59,9 @@ class PXD000279MixtureBenchmarkTests(unittest.TestCase):
                 writer.writerow([*metadata, *columns])
                 writer.writerow(["sp|P1|HUMAN OS=Homo sapiens", "", "", "",
                                  *([""] * 84), 100, 100, 100, 100, 100, 100])
+                # H is the high-spike Ecoli30 group; L is Ecoli10.
                 writer.writerow(["sp|P2|ECOLI OS=Escherichia coli", "", "", "",
-                                 *([""] * 84), 100, 100, 100, 300, 300, 300])
+                                 *([""] * 84), 300, 300, 300, 100, 100, 100])
                 writer.writerow(["sp|P3|HUMAN OS=Homo sapiens", "", "+", "",
                                  *([""] * 84), 100, 100, 100, 100, 100, 100])
             report = benchmark_pxd000279(path)
