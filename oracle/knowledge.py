@@ -6,7 +6,7 @@ import re
 from .models import (
     Claim, ClaimRevision, ContradictionCandidate, EvidenceClaimLink, EvidenceReviewCandidate,
     EvidenceKind, EvidenceStance, Hypothesis, HypothesisGroup, HypothesisStatus, ResearchRun,
-    SourceRecord, UncertaintyAssessment, utc_now,
+    SourceRecord, UncertaintyAssessment, utc_now, utc_now,
 )
 
 
