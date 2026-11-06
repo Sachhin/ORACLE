@@ -9,7 +9,7 @@ from oracle.missingness_validation import evaluate_orthogonal_missingness
 class OrthogonalMissingnessTests(unittest.TestCase):
     def write_tsv(self, path, header, rows):
         with path.open("w", newline="", encoding="utf-8") as handle:
-            writer = csv.writer(handle, delimiter="\\t")
+            writer = csv.writer(handle, delimiter="\t")
             writer.writerow(header)
             writer.writerows(rows)
 
