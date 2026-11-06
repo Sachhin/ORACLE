@@ -80,10 +80,10 @@ jobs:
       - name: Upload predictions, provenance, and report
         uses: actions/upload-artifact@v4
         with:
-          name: oracle-scifact-${{ inputs.split }}-${{ github.run_id }}
+          name: oracle-scifact-${{ env.SPLIT }}-${{ github.run_id }}
           path: |
-            data/scifact/oracle_predictions_${{ inputs.split }}.jsonl
-            data/scifact/oracle_predictions_${{ inputs.split }}.jsonl.meta.json
-            data/scifact/oracle_scifact_report_${{ inputs.split }}.json
+            data/scifact/oracle_predictions_${{ env.SPLIT }}.jsonl
+            data/scifact/oracle_predictions_${{ env.SPLIT }}.jsonl.meta.json
+            data/scifact/oracle_scifact_report_${{ env.SPLIT }}.json
           if-no-files-found: error
           retention-days: 90
