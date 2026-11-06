@@ -138,6 +138,24 @@ generalization to all RNA-seq workflows, or model superiority. GSE176260
 and GSE176261 are related cohorts from the same study; GSE64099 supplies
 the independent-study check.
 
+## Platform-matched Affymetrix RMA reference comparison (workflow added; result pending)
+
+The new workflow `.github/workflows/affymetrix-rma-reference.yml` uses
+GSE12837 (GPL96 / hgu133a), a 24-sample GEO series with deposited raw CEL
+files and a submitter RMA reference matrix. GEO sample GSM321568 explicitly
+documents Bioconductor RMA preprocessing and supplies its raw CEL file:
+https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSM321568
+
+The workflow downloads the complete raw CEL archive, runs ORACLE
+`affy::rma` jointly across all 24 samples, obtains the GEO processed
+reference matrix with GEOquery, and compares exact sample identities and
+overlapping probe-set values. It reports overall and per-sample MAE, RMSE,
+Pearson correlation, sample/probe overlap, and SHA-256 provenance. The
+predeclared numerical criteria are RMSE <= 0.25 log2 units and Pearson
+r >= 0.995. A PASS is not claimed until the live workflow completes and
+its JSON report is inspected. This is a same-study, same-platform
+preprocessing reproducibility check, not independent biological validation.
+
 ## What this tooling does not claim
 
 A successful comparator run means only that the supplied outputs were compared
