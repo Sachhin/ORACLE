@@ -212,3 +212,33 @@ python -m oracle --geo-deseq2 raw_counts.tsv \
 ```
 
 The analysis is stored in the run payload and the SQLite `differential_expression_analyses` table. It starts with `review_status=unreviewed`; no gene result is automatically promoted to a scientific claim or evidence link. Without `--geo-run-id`, the command remains a standalone analysis and does not persist a run record.
+
+
+### Provisional DESeq2 candidate findings and human review
+
+When a DESeq2 result is attached to a research run, ORACLE creates provisional candidate findings for rows with a non-null adjusted p-value at or below the configured threshold (default 0.05) and a finite log2 fold change:
+
+```bash
+python -m oracle --geo-deseq2 raw_counts.tsv \
+  --geo-group C1=control --geo-group C2=control \
+  --geo-group T1=treated --geo-group T2=treated \
+  --geo-group-a control --geo-group-b treated \
+  --geo-run-id RUN_ID --geo-accession GSE12345 --deseq2-fdr 0.05
+```
+
+Inspect the analysis and candidates:
+
+```bash
+python -m oracle --show-deseq2 RUN_ID
+```
+
+Record an explicit human decision with a rationale:
+
+```bash
+python -m oracle --review-deseq2 RUN_ID \
+  --deseq2-analysis-id ANALYSIS_ID --deseq2-feature GENE_ID \
+  --deseq2-review-status accepted \
+  --deseq2-review-note "Checked sample design, contrast, and dataset context."
+```
+
+Review statuses are `pending_review`, `accepted`, `rejected`, or `needs_context`. A candidate can be reviewed only once through this command; a review note is mandatory. **Accepted here means a human accepted the candidate analysis finding, not that ORACLE has established a validated scientific claim.** This workflow does not automatically create claims, evidence links, or biological causality statements. Independent replication and source/context review are still required.
