@@ -148,12 +148,18 @@ jobs:
           count="$(find data/gse12837/raw -type f -iname '*.CEL' | wc -l)"
           test "$count" -eq 24
           find data/gse12837/raw -type f -iname '*.CEL' -print | sort > data/gse12837/cel_paths.txt
-      - name: Fetch the submitter-deposited GEO RMA reference matrix
+      - name: Download the submitter-deposited GEO series matrix directly
+        run: |
+          curl --fail --location --retry 4 --retry-all-errors --connect-timeout 20 --max-time 600 \
+            https://ftp.ncbi.nlm.nih.gov/geo/series/GSE12nnn/GSE12837/matrix/GSE12837_series_matrix.txt.gz \
+            -o data/gse12837/GSE12837_series_matrix.txt.gz
+          gzip -t data/gse12837/GSE12837_series_matrix.txt.gz
+      - name: Parse the local GEO RMA reference matrix
         run: |
           Rscript - <<'RS'
           suppressPackageStartupMessages(library(GEOquery))
           suppressPackageStartupMessages(library(Biobase))
-          x <- getGEO("GSE12837", GSEMatrix=TRUE, getGPL=FALSE)
+          x <- getGEO(filename="data/gse12837/GSE12837_series_matrix.txt.gz", GSEMatrix=TRUE, getGPL=FALSE)
           if (!is.list(x) || length(x) != 1L) stop("Expected one GPL96 ExpressionSet for GSE12837")
           eset <- x[[1]]
           if (!identical(annotation(eset), "hgu133a")) stop(paste("Unexpected annotation:", annotation(eset)))
@@ -161,7 +167,7 @@ jobs:
           if (ncol(expr) != 24L || nrow(expr) < 22000L) stop("Unexpected GSE12837 reference dimensions")
           out <- data.frame(feature=rownames(expr), expr, check.names=FALSE)
           write.table(out, "data/gse12837/GSE12837_GEO_RMA_reference.tsv",
-                      sep="\t", quote=FALSE, row.names=FALSE, na="NA")
+                      sep="\\t", quote=FALSE, row.names=FALSE, na="NA")
           writeLines(colnames(expr), "data/gse12837/reference_samples.txt")
           RS
       - name: Run ORACLE RMA on all 24 CEL files
