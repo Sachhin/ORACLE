@@ -641,7 +641,7 @@ class OracleTests(unittest.TestCase):
             run.evidence.append(evidence)
             kb.link_evidence(run, claim.claim_id, evidence.evidence_id,
                              EvidenceStance.SUPPORTS, rationale="Primary source observation.")
-        with self.assertRaisesRegex(ValueError, "requires 2 independent source group"):
+        with self.assertRaisesRegex(ValueError, "requires 3 independent source group"):
             kb.review_claim(
                 run, claim.claim_id, "supported", "Reviewer A",
                 "Evidence is relevant.", impact_level="critical",
