@@ -14,7 +14,7 @@ from urllib.parse import quote
 from urllib.request import Request, urlopen
 
 from .agents import AgentContext, AgentResult
-from .models import Evidence, EvidenceKind, Experiment, Hypothesis, ResearchTask
+from .models import CrossDomainConnection, Evidence, EvidenceKind, Experiment, Hypothesis, ResearchTask
 
 
 class GeminiAgentError(RuntimeError):
@@ -372,6 +372,63 @@ class GeminiNoveltyAssessorAgent(_GeminiAgent):
         return AgentResult(self.name, summary, items=[summary], warnings=warnings)
 
 
+class GeminiCrossDomainConnectionAgent(_GeminiAgent):
+    """Propose source-linked cross-domain connections for human review."""
+    name = "cross_domain_connector"
+
+    def run(self, context: AgentContext) -> AgentResult:
+        eligible = {item.source_id for item in context.evidence
+                    if item.kind != EvidenceKind.INFERENCE and item.source_id}
+        if len(eligible) < 2:
+            return AgentResult(self.name,
+                "Cross-domain connections deferred: at least two source-backed records are required.",
+                warnings=["No cross-domain connection was proposed without multiple independent source records."])
+        data = self._call(context,
+            "Find up to 4 potentially useful connections between distinct scientific domains in "
+            "the supplied source-backed evidence. Treat the connection as a hypothesis, not a "
+            "discovery. Each proposal must cite at least two distinct supplied source IDs, name "
+            "two distinct domains, explain a plausible shared mechanism or transferable method, "
+            "and give one falsifiable prediction. Do not invent sources or claim causality. "
+            'Schema: {"connections":[{"statement":"...","domain_a":"...","domain_b":"...",'
+            '"rationale":"...","source_ids":["...","..."],"testable_prediction":"...",'
+            '"limitations":"..."}]}')
+        raw = data.get("connections")
+        if not isinstance(raw, list):
+            raise GeminiAgentError("Cross-domain connector response must contain a connections array.")
+        proposals = []
+        for item in raw[:4]:
+            if not isinstance(item, dict):
+                continue
+            statement = item.get("statement")
+            domain_a, domain_b = item.get("domain_a"), item.get("domain_b")
+            rationale = item.get("rationale")
+            source_ids = item.get("source_ids")
+            prediction = item.get("testable_prediction")
+            limitations = item.get("limitations", "")
+            if (not all(isinstance(value, str) and value.strip() for value in
+                        (statement, domain_a, domain_b, rationale, prediction))
+                    or not isinstance(source_ids, list) or not isinstance(limitations, str)
+                    or len(statement) > 1200 or len(rationale) > 1600
+                    or len(prediction) > 1200 or len(limitations) > 1600
+                    or len(domain_a) > 120 or len(domain_b) > 120
+                    or domain_a.strip().casefold() == domain_b.strip().casefold()):
+                continue
+            if (len(set(source_ids)) < 2 or any(not isinstance(value, str) or value not in eligible
+                                                for value in source_ids)):
+                raise GeminiAgentError("Cross-domain proposal used invalid or insufficient source IDs.")
+            proposals.append(CrossDomainConnection(
+                statement.strip(), domain_a.strip(), domain_b.strip(), rationale.strip(),
+                list(dict.fromkeys(source_ids)), prediction.strip(), limitations.strip()
+                + " Model-generated proposal; requires independent scientific review."
+            ))
+        if not proposals:
+            raise GeminiAgentError("Cross-domain connector returned no valid source-linked proposals.")
+        return AgentResult(self.name,
+            f"Generated {len(proposals)} provisional cross-domain connection proposal(s) for human review.",
+            items=proposals,
+            warnings=["Cross-domain connections are hypotheses for review, not established scientific discoveries."])
+
+
 class GeminiAgentSuite:
     """Drop-in Gemini-backed agent collection; all judgements remain provisional."""
 
@@ -386,3 +443,4 @@ class GeminiAgentSuite:
         self.experiment_designer = GeminiExperimentDesignerAgent(provider)
         self.auditor = GeminiAuditorAgent(provider)
         self.novelty = GeminiNoveltyAssessorAgent(provider)
+        self.connection_explorer = GeminiCrossDomainConnectionAgent(provider)
