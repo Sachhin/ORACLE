@@ -7,6 +7,7 @@ import json
 from .models import ResearchMode, ResearchRun
 from .literature import LiteratureClient
 from .llm import GeminiClaimExtractor
+from .comparison import CrossPaperComparator
 from .orchestrator import OracleOrchestrator
 from .storage import ResearchStore
 
@@ -24,7 +25,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--provider", choices=["both", "all", "europepmc", "crossref", "geo"], default="both")
     parser.add_argument("--mailto", default="", help="Optional contact email for Crossref polite pool")
     parser.add_argument("--extract-claims", action="store_true", help="Extract quote-grounded candidates with Gemini")
-    parser.add_argument("--gemini-model", default="gemini-2.5-flash", help="Gemini model for claim extraction")
+    parser.add_argument("--gemini-model", default="gemini-2.5-flash", help="Gemini model for claim extraction and comparison")
+    parser.add_argument("--compare-papers", action="store_true", help="Compare extracted claims across distinct papers")
     return parser
 
 
