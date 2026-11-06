@@ -332,6 +332,76 @@ def main() -> None:
                   f"| Untested positives: {report['untested_truth_count']}")
             print("Interpretation: " + report["interpretation"])
         return
+    if args.geo_voom:
+        if not args.geo_group_a or not args.geo_group_b or not args.geo_group:
+            raise SystemExit("--geo-voom requires --geo-group for every sample, --geo-group-a, and --geo-group-b.")
+        labels = {}
+        for assignment in args.geo_group:
+            sample, separator, group = assignment.partition("=")
+            if not separator or not sample.strip() or not group.strip() or sample.strip() in labels:
+                raise SystemExit(f"Invalid or duplicate --geo-group assignment: {assignment!r}")
+            labels[sample.strip()] = group.strip()
+        from .geo_voom import GEOVoomAnalyzer
+        try:
+            result = GEOVoomAnalyzer().analyze(
+                args.geo_voom, labels, args.geo_group_a, args.geo_group_b,
+                rscript=args.rscript, timeout_seconds=args.voom_timeout,
+            )
+        except (OSError, ValueError, RuntimeError) as exc:
+            raise SystemExit(f"limma-voom analysis failed: {exc}") from exc
+        if not 0 < args.deseq2_fdr < 1:
+            raise SystemExit("--deseq2-fdr must be strictly between 0 and 1.")
+        if args.geo_run_id:
+            from .models import DifferentialExpressionAnalysisRecord
+            store = ResearchStore(args.db)
+            run = store.load_run(args.geo_run_id)
+            if run is None:
+                raise SystemExit(f"Research run not found: {args.geo_run_id}")
+            record = DifferentialExpressionAnalysisRecord(
+                dataset_accession=args.geo_accession.strip() or "unspecified",
+                source_file=str(args.geo_voom),
+                matrix_sha256=result["matrix_sha256"],
+                method=result["method"],
+                contrast=result["contrast"],
+                sample_groups=result["sample_groups"],
+                sample_count=result["sample_count"],
+                features_input=result["features_input"],
+                software=result["software"],
+                results=result["results"],
+                limitations=result["limitations"],
+                features_returned=result["features_returned"],
+                features_with_adjusted_p_value=result["features_with_adjusted_p_value"],
+                candidate_findings=[
+                    {"feature": item["feature"],
+                     "log2_fold_change": item["log2_fold_change"],
+                     "p_value": item["p_value"],
+                     "p_value_adjusted_bh": item["p_value_adjusted_bh"],
+                     "status": "pending_review", "reviewer_note": "", "reviewed_at": ""}
+                    for item in result["results"]
+                    if item["p_value_adjusted_bh"] is not None
+                    and item["p_value_adjusted_bh"] <= args.deseq2_fdr
+                    and item["log2_fold_change"] is not None
+                ],
+            )
+            run.differential_expression_analyses.append(record)
+            store.save_run(run)
+            store.log_event(
+                run.run_id, "differential_expression_analysis_saved",
+                {"analysis_id": record.analysis_id, "dataset_accession": record.dataset_accession,
+                 "matrix_sha256": record.matrix_sha256, "method": record.method},
+                event_key=f"differential-expression:{record.analysis_id}",
+            )
+            result["analysis_id"] = record.analysis_id
+            result["persisted_to_run"] = run.run_id
+            result["candidate_findings"] = record.candidate_findings
+            result["candidate_fdr_threshold"] = args.deseq2_fdr
+        if args.json:
+            print(json.dumps(result, indent=2, ensure_ascii=False))
+        else:
+            print(f"limma-voom: {result['features_returned']} features | {result['contrast']['direction']}")
+            print(f"Software: R {result['software']['r']}, edgeR {result['software']['edgeR']}, limma {result['software']['limma']}")
+            print("Interpretation: " + result["limitations"])
+        return
     if args.geo_deseq2:
         if not args.geo_group_a or not args.geo_group_b or not args.geo_group:
             raise SystemExit("--geo-deseq2 requires --geo-group for every sample, --geo-group-a, and --geo-group-b.")
