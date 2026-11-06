@@ -24,7 +24,7 @@ python -m oracle.scifact_predict \
   --claims data/scifact/claims_dev.jsonl \
   --corpus data/scifact/corpus.jsonl \
   --output data/scifact/oracle_predictions_dev.jsonl \
-  --model gemini-2.5-flash --top-k 8
+  --model gemini-3.8-flash --top-k 8
 ```
 
 The retriever uses deterministic BM25 over titles and abstract text. Gemini
