@@ -76,6 +76,30 @@ Use the existing benchmark validators to reject missing reviewer pairs or
 unadjudicated disagreements. Store raw annotations separately from aggregate
 reports so results can be audited.
 
+## External limma-voom numerical runs (2026-11-06)
+
+Two real external datasets have passed numerical checks in the ORACLE
+validation branch:
+
+- **GSE176260 discovery cohort** (138 samples, 11,111 features): recomputed
+  expression matrix versus submitter-published GEO expression matrix had
+  RMSE 4.31e-15, MAE 2.68e-15, and Pearson r 1.0000. Recomputed voom weights
+  versus submitter-published weights had RMSE 0.0478 and Pearson r 0.9998.
+  This is a direct full-matrix reference comparison.
+- **GSE64099 Smchd1 knockout versus wild type** (7 samples; 12,303 features
+  after the published CPM filter): the reproduced top ten stable GeneID
+  results had recall 1.00, logFC RMSE 0.0021, and direction agreement 1.00;
+  the recomputed FDR<0.05 and FDR<0.01 counts exactly matched the published
+  values (12 and 1). This is an independent dataset comparison against the
+  published DE table, not a submitter-published E/weights matrix.
+
+The GSE176261 validation cohort belongs to the same publication as GSE176260,
+so it is not counted as an independent study. Its first numerical run gave
+expression RMSE 0.0580 (pre-set maximum 0.0500), Pearson r 0.9999, and weight
+RMSE 0.0471; the expression comparison therefore did **not** pass the
+pre-set tolerance. This result must not be relabelled as a pass by relaxing
+the threshold after seeing the data. Further investigation is pending.
+
 ## What this tooling does not claim
 
 A successful comparator run means only that the supplied outputs were compared
