@@ -47,7 +47,8 @@ Status reflects code currently present on the main branch. Checked items are imp
 - [x] Provenance-checked external reference comparison tooling for expression matrices and differential-expression tables (MAE/RMSE/correlation and DE call concordance; external reference datasets/results still pending)\n- [ ] Independent limma-voom implementation/reference comparison on external real datasets
 - [x] Optional Affymetrix CEL RMA adapter for explicit affy/oligo package families, with input checksums, software/platform provenance, exact sample-identity validation, expected-platform guard, bounded execution, and mocked contract tests; live GEO GPL96 CEL run passed for GSM1003058/GSM1003059 (hgu133a, 22,283 features; trusted platform-matched reference comparison and probe annotation remain pending)
 - [x] Explicit row-median imputation for continuous matrices with a separate SHA-256 missingness mask and recorded imputation values; reproducible MCAR/MAR/MNAR masking, synthetic downstream Welch/BH sensitivity diagnostics, and observed-cell holdout comparison of row/column/global median reconstruction added
-- [ ] Validation against genuinely missing values with known ground truth and independent biological outcome labels (observed-cell masking remains a proxy, not ground truth)
+- [x] Paired orthogonal-assay missingness evaluator: scores only genuine primary-assay missing cells with non-missing paired orthogonal measurements, hashes all inputs, and checks two-group biological-outcome effect concordance (real PXD047528 matrices and sample labels still need freezing and execution)
+- [ ] Validation against genuinely missing values with known ground truth and independent biological outcome labels (empirical results remain pending)
 - [x] Count-aware DESeq2 raw-count analysis with explicit categorical batch/covariate designs, rank-deficiency checks, and default median-of-ratios size-factor normalization
 - [x] Optional DESeq2 adapter for explicitly mapped raw integer-count two-group designs (external R runtime; CI subprocess mocked)
 - [x] Explicit-design Welch contrasts with BH-FDR for user-declared continuous log2 GEO matrices; raw counts rejected
@@ -69,11 +70,13 @@ Status reflects code currently present on the main branch. Checked items are imp
 - [x] Evidence benchmark reviewer-agreement (Cohen's kappa), source/quote coverage, and conditional validity reporting
 - [x] Machine-validated benchmark ingestion requirements for frozen source packets, two independent reviewers, adjudication, and paired baseline/candidate scores\n- [ ] Curated expert-scored scientific answer benchmark set with multiple reviewers and adjudicated labels (rubric, starter questions, and adjudication protocol exist; real labels remain pending)
 - [x] Evidence benchmark requires two named human annotations per case, records reviewer agreement, and validates adjudication on disagreement
-- [ ] Empirical evidence attribution, entailment, contradiction, and hallucination benchmark results (expert-labelled corpus and model predictions remain pending)
+- [x] External SciFact labelled train/dev corpus evaluator for supports/refutes/contextual stance, abstract-level evidence retrieval, and complete sentence-rationale scoring with input hashes (model predictions still pending)
+- [ ] Empirical evidence attribution, entailment, contradiction, and hallucination benchmark results (frozen ORACLE predictions and expert adjudication remain pending)
 - [x] Reproducibility and regression suite across Python 3.10–3.14 CI matrix
 - [x] High-impact claim review requires independent source groups, reviewer identity, and rationale
 - [x] Performed-experiment execution provenance requires independent human acceptance before evaluation
 - [x] Paired model evaluator requires per-reviewer scores for both systems and bootstraps paired cases rather than treating reviewer ratings as independent samples
+- [x] Blinded A/B review packet generation with reviewer-specific randomization, separate private unblinding keys, frozen source/model/prompt provenance, and strict score unblinding validation
 - [ ] Empirical validation that model outputs improve scientific reasoning over deterministic baselines (populated blinded evaluations and independent scoring remain pending)
 
 ## Explicit non-goals until validated
