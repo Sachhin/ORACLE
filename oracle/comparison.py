@@ -47,7 +47,7 @@ class CrossPaperComparator:
             "contradiction. For each pair return exact verbatim quotes from BOTH supplied source "
             "texts that justify your classification. If either exact quote cannot be provided, "
             "omit that pair. Return JSON only: "
-            '{"comparisons":[{"pair_index":0,"relation":"contextual","rationale":"...","quote_a":"...","quote_b":"..."}]}\n'
+            '{"claims":[{"pair_index":0,"relation":"contextual","rationale":"...","quote_a":"...","quote_b":"..."}]}\n'
             f"Research question: {question[:1000]}\nPAIRS:\n"
             + json.dumps(pairs, ensure_ascii=False)
         )
@@ -111,7 +111,7 @@ class CrossPaperComparator:
         } for i, p in enumerate(pairs)]
         result = self.extractor._generate_json(self._prompt(run.question, prompt_pairs))
         seen_indices = set()
-        for item in result.get("comparisons", [])[:self.max_pairs]:
+        for item in result.get("claims", [])[:self.max_pairs]:
             if not isinstance(item, dict):
                 report.comparisons_rejected += 1
                 continue
