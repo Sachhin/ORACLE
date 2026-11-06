@@ -242,3 +242,16 @@ python -m oracle --review-deseq2 RUN_ID \
 ```
 
 Review statuses are `pending_review`, `accepted`, `rejected`, or `needs_context`. A candidate can be reviewed only once through this command; a review note is mandatory. **Accepted here means a human accepted the candidate analysis finding, not that ORACLE has established a validated scientific claim.** This workflow does not automatically create claims, evidence links, or biological causality statements. Independent replication and source/context review are still required.
+
+
+### Cross-dataset directional consistency screen
+
+After saving DESeq2 analyses from more than one GEO Series into the same research run, ORACLE can compare an exact feature across analyses with distinct GEO accessions and distinct matrix SHA-256 checksums:
+
+```bash
+python -m oracle --screen-replication RUN_ID \
+  --replication-analysis-id SOURCE_ANALYSIS_ID \
+  --replication-feature GENE_ID --replication-fdr 0.05 --json
+```
+
+The screen reports whether other eligible datasets show a significant effect in the same or opposite direction, a non-significant effect, or did not test the feature. It excludes analyses that reuse the source accession or matrix checksum. This is deliberately a **directional consistency screen, not a replication verdict**: distinct accessions/checksums do not prove independent cohorts, and group labels alone do not prove comparable biology. A scientist must verify treatment/genotype, tissue, timepoint, phenotype, feature annotation, and design before calling results replication. It does not perform meta-analysis, batch correction, causal inference, or automatic claim promotion.
