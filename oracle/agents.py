@@ -15,6 +15,7 @@ class AgentContext:
     evidence: list[Evidence] = field(default_factory=list)
     hypotheses: list[Hypothesis] = field(default_factory=list)
     findings: list[str] = field(default_factory=list)
+    tasks: list[ResearchTask] = field(default_factory=list)
 
 
 @dataclass
