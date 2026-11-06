@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from oracle.geo_reference import compare_tmm_to_edger
+from oracle.geo_reference import compare_tmm_to_edger, compare_voom_to_limma_reference
 from oracle.geo_voom import GEOVoomAnalyzer
 
 R_AVAILABLE = shutil.which("Rscript") is not None
@@ -48,6 +48,24 @@ class BioconductorIntegrationTests(unittest.TestCase):
         self.assertEqual(result["features_returned"], 300)
         self.assertTrue(result["software"]["limma"])
         self.assertTrue(result["matrix_sha256"])
+
+
+    def test_live_limma_voom_reference_output_parity(self):
+        groups = {"C1":"control","C2":"control","C3":"control",
+                  "T1":"treated","T2":"treated","T3":"treated"}
+        try:
+            report = compare_voom_to_limma_reference(
+                self.matrix, groups, group_a="control", group_b="treated",
+                timeout_seconds=300, tolerance=1e-10,
+            )
+        except RuntimeError as exc:
+            if "not installed" in str(exc) or "there is no package called" in str(exc):
+                self.skipTest(str(exc))
+            raise
+        self.assertEqual(report["features_compared"], 300)
+        self.assertTrue(report["within_tolerance"], report)
+        self.assertEqual(report["overall_maximum_absolute_difference"], 0.0)
+        self.assertIn("not an independent algorithm", report["interpretation"])
 
 if __name__ == "__main__":
     unittest.main()
