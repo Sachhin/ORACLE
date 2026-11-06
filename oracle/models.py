@@ -314,6 +314,7 @@ class DifferentialExpressionAnalysisRecord:
     analyzed_at: str = field(default_factory=utc_now)
     review_status: str = "unreviewed"
     evidence_ids: list[str] = field(default_factory=list)
+    candidate_findings: list[dict[str, Any]] = field(default_factory=list)
 
 @dataclass
 class ResearchTask:

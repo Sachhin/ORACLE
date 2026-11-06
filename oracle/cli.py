@@ -39,6 +39,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--geo-accession", default="", help="GEO accession for the analyzed count matrix (e.g. GSE12345)")
     parser.add_argument("--rscript", default="Rscript", help="Rscript executable for the optional DESeq2 backend")
     parser.add_argument("--deseq2-timeout", type=int, default=900, help="Maximum DESeq2 runtime in seconds")
+    parser.add_argument("--deseq2-fdr", type=float, default=0.05, help="Adjusted p-value threshold for provisional candidate findings")
     parser.add_argument("--geo-contrast", metavar="MATRIX_PATH",
                         help="Run an explicit two-group Welch contrast on declared log2-continuous GEO matrix data")
     parser.add_argument("--geo-group", action="append", default=[], metavar="SAMPLE=GROUP",
@@ -76,6 +77,8 @@ def build_parser() -> argparse.ArgumentParser:
                                  help="Explain the knowledge gaps recorded for a saved run")
     portfolio_group.add_argument("--related-to", metavar="QUESTION",
                                  help="Find prior runs with lexically related research questions")
+    portfolio_group.add_argument("--show-deseq2", metavar="RUN_ID",
+                                 help="Show persisted DESeq2 analyses and provisional candidate findings")
     portfolio_group.add_argument("--show-reviews", metavar="RUN_ID",
                                  help="Show pending and completed evidence-review candidates in a run")
     portfolio_group.add_argument("--show-tasks", metavar="RUN_ID",
@@ -112,6 +115,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--review-note", default="", help="Human rationale for the review decision")
     parser.add_argument("--review-strength", type=float, default=1.0,
                         help="Evidence-link strength to apply on acceptance (0..1)")
+    parser.add_argument("--review-deseq2", metavar="RUN_ID", help="Human-review a provisional DESeq2 candidate in a research run")
+    parser.add_argument("--deseq2-analysis-id", default="", help="Persisted DESeq2 analysis ID")
+    parser.add_argument("--deseq2-feature", default="", help="Exact feature/gene identifier to review")
+    parser.add_argument("--deseq2-review-status", choices=["accepted", "rejected", "needs_context"])
+    parser.add_argument("--deseq2-review-note", default="", help="Human rationale required for candidate review")
     return parser
 
 
@@ -134,6 +142,8 @@ def main() -> None:
             )
         except (OSError, ValueError, RuntimeError) as exc:
             raise SystemExit(f"DESeq2 analysis failed: {exc}") from exc
+        if not 0 < args.deseq2_fdr < 1:
+            raise SystemExit("--deseq2-fdr must be strictly between 0 and 1.")
         if args.geo_run_id:
             from .models import DifferentialExpressionAnalysisRecord
             store = ResearchStore(args.db)
@@ -154,6 +164,17 @@ def main() -> None:
                 limitations=result["limitations"],
                 features_returned=result["features_returned"],
                 features_with_adjusted_p_value=result["features_with_adjusted_p_value"],
+                candidate_findings=[
+                    {"feature": item["feature"],
+                     "log2_fold_change": item["log2_fold_change"],
+                     "p_value": item["p_value"],
+                     "p_value_adjusted_bh": item["p_value_adjusted_bh"],
+                     "status": "pending_review", "reviewer_note": "", "reviewed_at": ""}
+                    for item in result["results"]
+                    if item["p_value_adjusted_bh"] is not None
+                    and item["p_value_adjusted_bh"] <= args.deseq2_fdr
+                    and item["log2_fold_change"] is not None
+                ],
             )
             run.differential_expression_analyses.append(record)
             store.save_run(run)
@@ -165,6 +186,8 @@ def main() -> None:
             )
             result["analysis_id"] = record.analysis_id
             result["persisted_to_run"] = run.run_id
+            result["candidate_findings"] = record.candidate_findings
+            result["candidate_fdr_threshold"] = args.deseq2_fdr
         if args.json:
             print(json.dumps(result, indent=2, ensure_ascii=False))
         else:
@@ -209,6 +232,62 @@ def main() -> None:
             print("Limitations: " + result["limitations"])
         return
     store = ResearchStore(args.db)
+    if args.show_deseq2:
+        run = store.load_run(args.show_deseq2)
+        if run is None:
+            raise SystemExit(f"Research run not found: {args.show_deseq2}")
+        analyses = [item.__dict__ for item in run.differential_expression_analyses]
+        if args.json:
+            print(json.dumps(analyses, indent=2, ensure_ascii=False))
+        else:
+            if not analyses:
+                print("No persisted DESeq2 analyses in this run.")
+            for analysis in analyses:
+                print(f"Analysis {analysis['analysis_id']} | {analysis['dataset_accession']} | "
+                      f"{analysis['contrast'].get('direction', 'contrast')} | {analysis['review_status']}")
+                print(f"  Matrix SHA-256: {analysis['matrix_sha256']}")
+                print(f"  Software: R {analysis['software'].get('r')} / DESeq2 {analysis['software'].get('deseq2')}")
+                if not analysis.get("candidate_findings"):
+                    print("  No rows met the configured FDR threshold.")
+                for candidate in analysis.get("candidate_findings", []):
+                    print(f"  {candidate['feature']}: log2FC={candidate['log2_fold_change']}, "
+                          f"BH-FDR={candidate['p_value_adjusted_bh']} | {candidate['status']}")
+        return
+    if args.review_deseq2:
+        if (not args.deseq2_analysis_id or not args.deseq2_feature
+                or not args.deseq2_review_status or not args.deseq2_review_note.strip()):
+            raise SystemExit("--review-deseq2 requires --deseq2-analysis-id, --deseq2-feature, "
+                             "--deseq2-review-status, and --deseq2-review-note.")
+        run = store.load_run(args.review_deseq2)
+        if run is None:
+            raise SystemExit(f"Research run not found: {args.review_deseq2}")
+        analysis = next((item for item in run.differential_expression_analyses
+                         if item.analysis_id == args.deseq2_analysis_id), None)
+        if analysis is None:
+            raise SystemExit(f"DESeq2 analysis not found: {args.deseq2_analysis_id}")
+        candidate = next((item for item in analysis.candidate_findings
+                          if item["feature"] == args.deseq2_feature), None)
+        if candidate is None:
+            raise SystemExit(f"Candidate feature not found: {args.deseq2_feature}")
+        if candidate["status"] != "pending_review":
+            raise SystemExit(f"Candidate already reviewed with status {candidate['status']}; no overwrite allowed.")
+        from .models import utc_now
+        candidate["status"] = args.deseq2_review_status
+        candidate["reviewer_note"] = args.deseq2_review_note.strip()
+        candidate["reviewed_at"] = utc_now()
+        store.save_run(run)
+        store.log_event(
+            run.run_id, "deseq2_candidate_reviewed",
+            {"analysis_id": analysis.analysis_id, "feature": candidate["feature"],
+             "status": candidate["status"], "reviewer_note": candidate["reviewer_note"]},
+            event_key=f"deseq2-review:{analysis.analysis_id}:{candidate['feature']}",
+        )
+        if args.json:
+            print(json.dumps(candidate, indent=2, ensure_ascii=False))
+        else:
+            print(f"Candidate {candidate['feature']} marked {candidate['status']}.")
+            print("This review does not automatically create or promote a scientific claim.")
+        return
     if args.source_action:
         if (not args.source_run or not args.source_id or args.source_score is None
                 or not args.source_note.strip()):
