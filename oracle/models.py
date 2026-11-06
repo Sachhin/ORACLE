@@ -237,6 +237,22 @@ class Experiment:
 
 
 @dataclass
+class DatasetFileRecord:
+    accession: str
+    source_id: str
+    filename: str
+    url: str
+    category: str = "supplementary"
+    size_bytes: int | None = None
+    status: str = "discovered"
+    local_path: str = ""
+    sha256: str = ""
+    error: str = ""
+    file_id: str = field(default_factory=lambda: new_id("dsf"))
+    discovered_at: str = field(default_factory=utc_now)
+
+
+@dataclass
 class ResearchTask:
     name: str
     description: str
@@ -262,6 +278,7 @@ class ResearchRun:
     evidence_claim_links: list[EvidenceClaimLink] = field(default_factory=list)
     evidence_comparisons: list[EvidenceComparison] = field(default_factory=list)
     evidence_review_candidates: list[EvidenceReviewCandidate] = field(default_factory=list)
+    dataset_files: list[DatasetFileRecord] = field(default_factory=list)
     contradiction_candidates: list[ContradictionCandidate] = field(default_factory=list)
     hypotheses: list[Hypothesis] = field(default_factory=list)
     hypothesis_groups: list[HypothesisGroup] = field(default_factory=list)
