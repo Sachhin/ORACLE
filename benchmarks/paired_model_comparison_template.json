@@ -1,0 +1,14 @@
+{
+  "benchmark_id": "ORACLE-PAIRED-MODEL-COMPARISON",
+  "version": "1.0",
+  "status": "empty_template_requires_human_scoring",
+  "protocol": [
+    "Run deterministic baseline and candidate model on identical frozen questions and source packets.",
+    "Record source_packet_sha256, prompt_version, model_version, and configuration for each case.",
+    "Use at least two independent reviewers, blinded to system identity where practical.",
+    "Review both answers using the same five-dimension rubric; adjudicate disagreements separately.",
+    "Keep case IDs unique and never mix different source packets within a pair.",
+    "Interpret paired ordinal-score differences descriptively; do not claim scientific superiority from a small or biased sample."
+  ],
+  "cases": []
+}
