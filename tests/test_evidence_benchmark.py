@@ -24,6 +24,9 @@ class EvidenceBenchmarkTests(unittest.TestCase):
     def test_requires_two_reviewers(self):
         with self.assertRaisesRegex(ValueError,"two distinct reviewers"):
             evaluate_evidence_predictions([self.case(reviewer_ids=["R1"])])
+    def test_rejects_duplicate_reviewer_ids(self):
+        with self.assertRaisesRegex(ValueError, "two distinct reviewers"):
+            evaluate_evidence_predictions([self.case(reviewer_ids=["R1","R1"])])
     def test_requires_adjudication_for_three_or_more_reviewers(self):
         with self.assertRaisesRegex(ValueError,"adjudication_note"):
             evaluate_evidence_predictions([self.case(reviewer_ids=["R1","R2","R3"])])
