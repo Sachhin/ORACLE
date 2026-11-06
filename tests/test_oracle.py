@@ -1142,7 +1142,7 @@ class OracleTests(unittest.TestCase):
         self.assertEqual(len(result["matrix_sha256"]), 64)
         command = run.call_args.args[0]
         self.assertEqual(command[1], "--vanilla")
-        self.assertEqual(command[-2:], ["control", "treated"])
+        self.assertEqual(command[-3:], ["control", "treated", ""])
         self.assertIn("DESeq2::DESeq", script_text[0])
 
 
