@@ -27,6 +27,23 @@ class EvidenceBenchmarkTests(unittest.TestCase):
     def test_requires_adjudication_for_three_or_more_reviewers(self):
         with self.assertRaisesRegex(ValueError,"adjudication_note"):
             evaluate_evidence_predictions([self.case(reviewer_ids=["R1","R2","R3"])])
+    def test_reports_inter_reviewer_agreement_and_coverage(self):
+        rows = [
+            self.case(case_id="E1", reviewer_labels={"R1":"supports","R2":"supports"}),
+            self.case(case_id="E2", reviewer_labels={"R1":"refutes","R2":"contextual"},
+                      predicted_source_id=None, predicted_quote=None),
+        ]
+        report = evaluate_evidence_predictions(rows)
+        self.assertEqual(report["reviewer_annotation_cases"], 4)
+        self.assertEqual(report["reviewer_pair_agreement"]["R1__R2"]["paired_cases"], 2)
+        self.assertAlmostEqual(report["reviewer_pair_agreement"]["R1__R2"]["observed_agreement"], .5)
+        self.assertEqual(report["source_attribution_coverage"], .5)
+        self.assertEqual(report["quote_coverage"], .5)
+        self.assertIsNotNone(report["mean_pairwise_cohen_kappa"])
+    def test_reviewer_labels_must_cover_reviewers(self):
+        row = self.case(reviewer_labels={"R1":"supports"})
+        with self.assertRaisesRegex(ValueError, "every reviewer_id"):
+            evaluate_evidence_predictions([row])
     def test_file_runner_hashes_benchmark(self):
         with tempfile.TemporaryDirectory() as tmp:
             path=Path(tmp)/"bench.json"
