@@ -30,7 +30,7 @@ jobs:
       - name: Set up R
         uses: r-lib/actions/setup-r@v2
         with:
-          r-version: "release"
+          r-version: "4.5.2"
           use-public-rspm: true
 
       - name: Install GEOquery, edgeR, limma, and digest
@@ -110,7 +110,7 @@ jobs:
           done
           sha256sum validation-artifacts/*.gz | tee validation-artifacts/GSE176261_SHA256SUMS.txt
 
-      - name: Recompute independent validation-cohort limma-voom and compare with published E and weights
+      - name: Recompute same-study validation-cohort limma-voom and compare with published E and weights
         run: |
           Rscript scripts/validate_gse176261_voom.R \
             validation-artifacts/GSE176261_QCed_counts_batch2_validationsamples.txt.gz \
@@ -118,10 +118,44 @@ jobs:
             validation-artifacts/GSE176261_Voom_weights_batch2_validationsamples.txt.gz \
             validation-artifacts/gse176261-reference-report.json
 
-      - name: Upload independent validation-cohort evidence
+      - name: Upload same-study validation-cohort evidence
         uses: actions/upload-artifact@v4
         with:
-          name: oracle-gse176261-independent-validation-cohort
+          name: oracle-gse176261-same-study-validation-cohort
           path: validation-artifacts/
+          if-no-files-found: error
+          retention-days: 30
+
+  gse158765-independent-study:
+    name: GSE158765 independent-study published voom reference
+    needs: gse176260-reference
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Check out ORACLE
+        uses: actions/checkout@v4
+
+      - name: Set up R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: "4.5.2"
+          use-public-rspm: true
+
+      - name: Install GEOquery, edgeR, limma, digest, and jsonlite
+        run: |
+          Rscript -e 'if (!requireNamespace("BiocManager", quietly=TRUE)) install.packages("BiocManager", repos="https://cloud.r-project.org")'
+          Rscript -e 'BiocManager::install(c("GEOquery", "edgeR", "limma"), ask=FALSE, update=FALSE, Ncpus=2)'
+          Rscript -e 'install.packages(c("digest", "jsonlite"), repos="https://cloud.r-project.org")'
+          Rscript -e 'stopifnot(requireNamespace("GEOquery"), requireNamespace("edgeR"), requireNamespace("limma"), requireNamespace("digest"), requireNamespace("jsonlite"))'
+
+      - name: Recompute GSE158765 repeated-measures limma-voom and compare published E and weights
+        run: |
+          Rscript scripts/validate_gse158765_voom.R validation-artifacts/gse158765-reference-report.json
+
+      - name: Upload independent-study validation evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: oracle-gse158765-independent-study-voom-reference
+          path: validation-artifacts/gse158765-reference-report.json
           if-no-files-found: error
           retention-days: 30
