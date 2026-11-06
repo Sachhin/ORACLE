@@ -47,7 +47,8 @@ Status reflects code currently present on the main branch. Checked items are imp
 - [x] Bounded first-degree reference discovery from DOI-backed Crossref works
 - [x] Bounded incoming citation discovery for DOI-backed works via OpenAlex, with persisted source-linked citation records
 - [x] DOI-resolved directed citation graph ranking with degree counts and bounded PageRank
-- [ ] Multi-hop citation traversal and broader citation-network exploration
+- [x] Bounded multi-hop citation traversal with incoming/outgoing direction, shortest paths, and depth/node limits
+- [ ] Broader citation-network discovery beyond DOI-resolved sources already present in a run
 - [x] Explicit experiment lifecycle recording for proposed, simulated, performed, and evaluated states with execution provenance
 - [x] Domain-specific proposed protocol templates for plant, molecular, cell, and computational biology
 - [ ] Reproducible domain-specific analysis adapters and independent rerun verification
