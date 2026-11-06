@@ -132,6 +132,59 @@ def _outcome_effects(matrix, samples, labels, groups):
     return effects
 
 
+def _read_expected_effects(path: str | Path, feature_column: str):
+    with Path(path).open("r", encoding="utf-8-sig", newline="") as handle:
+        reader = csv.DictReader(handle, delimiter="\\t")
+        if not reader.fieldnames or not {"feature_id", feature_column}.issubset(reader.fieldnames):
+            raise ValueError(f"expected-effects file requires feature_id and {feature_column!r}")
+        effects = {}
+        for line, row in enumerate(reader, start=2):
+            feature = (row.get("feature_id") or "").strip()
+            raw = (row.get(feature_column) or "").strip()
+            if not feature or feature in effects:
+                raise ValueError(f"{path}:{line}: feature IDs must be unique and non-empty")
+            if raw in _MISSING:
+                continue
+            try:
+                value = float(raw)
+            except ValueError as exc:
+                raise ValueError(f"{path}:{line}: expected effect must be numeric") from exc
+            if not math.isfinite(value):
+                raise ValueError(f"{path}:{line}: expected effect must be finite")
+            effects[feature] = value
+    if not effects:
+        raise ValueError("expected-effects file contains no numeric expected effects")
+    return effects
+
+
+def _evaluate_known_spikein_effects(imputed, samples, labels, groups, expected,
+                                    *, effect_tolerance: float):
+    observed_effects = _outcome_effects(imputed, samples, labels, groups)
+    shared = sorted(set(observed_effects) & set(expected))
+    if not shared:
+        raise ValueError("No overlap between imputed features and known spike-in effect labels")
+    observed = [observed_effects[feature] for feature in shared]
+    truth = [expected[feature] for feature in shared]
+    ecoli = [observed_effects[feature] for feature in shared if expected[feature] > 0]
+    human = [observed_effects[feature] for feature in shared if expected[feature] == 0]
+    return {
+        "features_scored": len(shared),
+        "expected_log2fc_mae": statistics.mean(abs(a-b) for a, b in zip(observed, truth)),
+        "expected_log2fc_rmse": math.sqrt(statistics.mean((a-b)**2 for a, b in zip(observed, truth))),
+        "expected_log2fc_pearson_r": _pearson(observed, truth),
+        "ecoli_positive_direction_accuracy": (
+            sum(value > 0 for value in ecoli) / len(ecoli) if ecoli else None
+        ),
+        "human_background_within_zero_tolerance_rate": (
+            sum(abs(value) <= effect_tolerance for value in human) / len(human) if human else None
+        ),
+        "ecoli_features_scored": len(ecoli),
+        "human_features_scored": len(human),
+        "human_zero_effect_tolerance_log2fc": effect_tolerance,
+        "reference_expected_effects": "E. coli unique peptides +1 log2FC; human unique peptides 0 log2FC for 2x versus 1x",
+    }
+
+
 def evaluate_orthogonal_missingness(
     observed_path: str | Path,
     orthogonal_path: str | Path,
@@ -140,10 +193,18 @@ def evaluate_orthogonal_missingness(
     *,
     outcome_column: str,
     top_k: int = 20,
+    reference_mode: str = "sample_paired",
+    expected_effects_path: str | Path | None = None,
+    expected_effect_column: str = "expected_log2fc_2x_vs_1x",
+    effect_tolerance: float = 0.25,
 ) -> dict:
-    """Score actual missing DDA cells against paired DIA values and outcome effects."""
+    """Score actual missing DDA cells against paired or group-aggregated DIA references."""
     if top_k < 1:
         raise ValueError("top_k must be positive")
+    if reference_mode not in {"sample_paired", "group_aggregated_by_outcome"}:
+        raise ValueError("reference_mode must be sample_paired or group_aggregated_by_outcome")
+    if not math.isfinite(effect_tolerance) or effect_tolerance < 0:
+        raise ValueError("effect_tolerance must be finite and non-negative")
     samples, observed = _read_matrix(observed_path)
     features = set(observed)
     dia_samples, dia_raw = _read_matrix(orthogonal_path)
@@ -198,6 +259,15 @@ def evaluate_orthogonal_missingness(
         raise ValueError(f"Imputed matrix modified {len(observed_changed)} originally observed cells")
 
     labels, groups = _read_labels(labels_path, samples, outcome_column)
+    known_spikein_effects = None
+    expected_effects_hash = None
+    if expected_effects_path is not None:
+        expected = _read_expected_effects(expected_effects_path, expected_effect_column)
+        known_spikein_effects = _evaluate_known_spikein_effects(
+            imputed, samples, labels, groups, expected,
+            effect_tolerance=effect_tolerance,
+        )
+        expected_effects_hash = _sha256(expected_effects_path)
     dia_aligned = {
         feature: {sample: (None if dia[feature][sample] is None
                            else float(dia[feature][sample]) + feature_offsets[feature])
@@ -230,7 +300,8 @@ def evaluate_orthogonal_missingness(
             observed[f][s] is None for f in features for s in samples
         ) if any(observed[f][s] is None for f in features for s in samples) else 0.0,
         "paired_observed_cells_for_assay_alignment": len(overlaps),
-        "assay_alignment": "per-feature median DIA-to-DDA offset using >=2 paired observed cells; global median fallback otherwise",
+        "reference_mode": reference_mode,
+        "assay_alignment": "per-feature median DIA-to-DDA offset using >=2 overlapping observed cells; global median fallback otherwise",
         "missing_cell_reconstruction": {
             "mae": statistics.mean(abs(x) for x in delta),
             "rmse": math.sqrt(statistics.mean(x*x for x in delta)),
@@ -246,19 +317,23 @@ def evaluate_orthogonal_missingness(
             "reference_effects": "orthogonal DIA assay, aligned using observed paired cells",
             "candidate_effects": "ORACLE-imputed DDA matrix",
         },
+        "known_spikein_effects": known_spikein_effects,
         "provenance": {
             "observed_assay_sha256": _sha256(observed_path),
             "orthogonal_reference_sha256": _sha256(orthogonal_path),
             "imputed_matrix_sha256": _sha256(imputed_path),
             "outcome_labels_sha256": _sha256(labels_path),
+            "expected_effects_sha256": expected_effects_hash,
         },
         "limitations": (
             "Scores only real DDA-missing cells for which the paired DIA assay has a measurement. "
             "DIA is an orthogonal measurement, not an error-free absolute truth; per-feature offset "
-            "alignment assumes a stable additive scale difference. Biological outcome concordance "
-            "is agreement with the supplied two-group labels, not causal proof or clinical utility. "
-            "Report acquisition methods, sample pairing, normalization, feature mapping, and label "
-            "provenance. No synthetic masking is used in this evaluation."
+            "alignment assumes a stable additive scale difference. In group_aggregated_by_outcome "
+            "mode, the DIA reference is a condition-level technical-replicate median reused for "
+            "DDA samples in that condition, not a one-to-one paired run. Biological outcome "
+            "concordance is agreement with supplied two-group labels, not causal proof or clinical "
+            "utility. Report acquisition methods, sample pairing or aggregation, normalization, "
+            "feature mapping, and label provenance. No synthetic masking is used."
         ),
     }
 
@@ -271,10 +346,18 @@ def main() -> None:
     parser.add_argument("--labels", required=True, help="TSV with sample_id and independent outcome labels")
     parser.add_argument("--outcome-column", required=True, help="Column in labels TSV defining the two biological groups")
     parser.add_argument("--top-k", type=int, default=20)
+    parser.add_argument("--reference-mode", choices=["sample_paired", "group_aggregated_by_outcome"], default="sample_paired")
+    parser.add_argument("--expected-effects", default="", help="Optional feature_id TSV with known expected log2 fold changes")
+    parser.add_argument("--expected-effect-column", default="expected_log2fc_2x_vs_1x")
+    parser.add_argument("--effect-tolerance", type=float, default=0.25)
     args = parser.parse_args()
     report = evaluate_orthogonal_missingness(
         args.observed, args.orthogonal, args.imputed, args.labels,
         outcome_column=args.outcome_column, top_k=args.top_k,
+        reference_mode=args.reference_mode,
+        expected_effects_path=args.expected_effects or None,
+        expected_effect_column=args.expected_effect_column,
+        effect_tolerance=args.effect_tolerance,
     )
     print(json.dumps(report, indent=2, ensure_ascii=False))
 
