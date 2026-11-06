@@ -18,6 +18,7 @@ Status reflects code currently present on the main branch plus the literature-in
 - [x] Literature retrieval from Europe PMC, Crossref, and NCBI GEO metadata
 - [x] Optional source ingestion into the full autonomous research cycle
 - [x] Quote-validated Gemini claim extraction and cross-paper comparison candidates
+- [x] Quote-grounded support/refute/contextual evidence-review suggestions with a human acceptance gate
 - [x] Measured progress, duplicate suppression, critical integrity checks, and safe no-progress stopping
 - [x] Persisted no-progress state and explicit resume of safely stopped runs
 
@@ -39,7 +40,7 @@ Status reflects code currently present on the main branch plus the literature-in
 
 ## Milestone 5 — Evaluation and scientific validation
 - [ ] Golden research-question benchmark set
-- [ ] Evidence attribution, entailment, contradiction, and hallucination evaluations
+- [ ] Benchmarked evidence attribution, entailment, contradiction, and hallucination evaluations (model review suggestions are implemented but not validated as accurate)
 - [ ] Reproducibility and regression suite across supported Python versions
 - [ ] Human review gates for high-impact claims and real experiments
 - [ ] Independent validation that model outputs improve scientific reasoning over deterministic baselines
