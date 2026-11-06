@@ -96,7 +96,7 @@ def benchmark_pxd000279(input_path: str | Path, *, seed: int = 1729) -> dict:
                 )
         if len(intensity_cols) != 6 or len(group10) != 3 or len(group30) != 3:
             raise ValueError("PXD000279 requires exactly three Ecoli10 and three Ecoli30 LFQ replicates")
-        required_flags = [c for c in ("Reverse", "Potential contaminant", "Only identified by site") if c in fields]
+        required_flags = [c for c in ("Reverse", "Contaminant", "Potential contaminant", "Only identified by site") if c in fields]
         rows = []
         skipped = {"decoy_or_contaminant_or_site_only": 0, "ambiguous_species": 0,
                    "insufficient_replicates": 0}
