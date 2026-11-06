@@ -98,7 +98,7 @@ python -m oracle --imputation-de-bias complete-log2-matrix.tsv \
 
 This is still a synthetic masking sensitivity test: the complete matrix is the reference, not biological ground truth. It does not establish real-world downstream bias, validate a measurement scale, or replace covariate-aware DESeq2/limma analysis.
 
-For evidence attribution and entailment, `benchmarks/evidence_adjudication_template.json` defines a human-label schema. Populate it only after at least two reviewers independently check each source and disagreements are adjudicated. Score a completed file with:
+For evidence attribution and entailment, `benchmarks/evidence_adjudication_template.json` defines a human-label schema. Populate it only after at least two reviewers independently check each source. When reviewer labels disagree, record both `adjudication_note` and `adjudicator_id` before scoring. Score a completed file with:
 
 ```bash
 python -m oracle --evidence-benchmark benchmarks/my_adjudicated_cases.json
