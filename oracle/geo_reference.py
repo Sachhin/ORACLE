@@ -81,14 +81,19 @@ def compare_tmm_to_edger(matrix_path: str | Path, *, rscript: str = "Rscript",
 def evaluate_row_median_imputation(
     matrix_path: str | Path, *, missing_fraction: float = 0.1,
     replicates: int = 20, seed: int = 1729, max_cells: int = 500_000,
+    mechanism: str = "MCAR",
 ) -> dict:
-    """Mask observed values reproducibly and measure row-median reconstruction error.
+    """Stress-test row-median reconstruction under MCAR, MAR, or MNAR masking.
 
-    This is a within-matrix stress test under MCAR masking only. It cannot
-    establish performance under MAR/MNAR or recover the unknown true values
-    in naturally missing cells.
+    MCAR uses a constant cell-wise probability. MAR depends on sample position
+    (an observed design covariate). MNAR preferentially masks low values in each
+    feature row. These are synthetic sensitivity analyses, not estimates of a
+    dataset's actual missingness mechanism.
     """
     import random
+    mechanism = mechanism.upper()
+    if mechanism not in {"MCAR", "MAR", "MNAR"}:
+        raise ValueError("mechanism must be MCAR, MAR, or MNAR.")
     if not 0 < missing_fraction < 1 or replicates < 1 or max_cells < 1:
         raise ValueError("missing_fraction must be in (0,1), replicates/max_cells positive.")
     source = Path(matrix_path)
@@ -98,29 +103,50 @@ def evaluate_row_median_imputation(
     if len(samples) < 2:
         raise ValueError("At least two samples are required.")
     rng = random.Random(seed)
-    errors, biases, per_feature = [], [], []
+    errors, signed = [], []
+    masked_total = 0
     for _ in range(replicates):
-        masked = []
         for row in matrix:
-            keep = [rng.random() >= missing_fraction for _ in row]
+            n = len(row)
+            if mechanism == "MNAR":
+                order = sorted(range(n), key=lambda j: row[j])
+                rank = [0.0] * n
+                for k, j in enumerate(order):
+                    rank[j] = k / max(1, n - 1)
+            keep = []
+            for j, value in enumerate(row):
+                if mechanism == "MCAR":
+                    probability = missing_fraction
+                elif mechanism == "MAR":
+                    # Missingness depends on observed sample-position covariate.
+                    covariate = j / max(1, n - 1)
+                    probability = missing_fraction * (0.5 + covariate)
+                else:
+                    # Low-abundance measurements are preferentially missing.
+                    probability = missing_fraction * (1.5 - rank[j])
+                probability = min(0.95, max(0.01, probability))
+                keep.append(rng.random() >= probability)
             if not any(keep):
-                keep[rng.randrange(len(row))] = True
-            observed_sorted = sorted(v for v, retained in zip(row, keep) if retained)
-            mid = len(observed_sorted)//2
-            median = (observed_sorted[mid] if len(observed_sorted)%2
-                      else (observed_sorted[mid-1]+observed_sorted[mid])/2)
-            masked.extend((median-v) for v, retained in zip(row, keep) if not retained)
-        if masked:
-            errors.extend(abs(v) for v in masked)
-            biases.extend(masked)
-    mae = sum(errors)/len(errors) if errors else None
-    bias = sum(biases)/len(biases) if biases else None
+                keep[rng.randrange(n)] = True
+            observed = sorted(v for v, retained in zip(row, keep) if retained)
+            mid = len(observed) // 2
+            median = observed[mid] if len(observed) % 2 else (observed[mid-1] + observed[mid]) / 2
+            for original, retained in zip(row, keep):
+                if not retained:
+                    error = median - original
+                    errors.append(abs(error))
+                    signed.append(error)
+                    masked_total += 1
     return {
-        "benchmark_type": "row_median_imputation_mcar_stress_test",
+        "benchmark_type": f"row_median_imputation_{mechanism.lower()}_stress_test",
+        "missingness_mechanism": mechanism,
         "input_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
         "features": len(features), "samples": len(samples),
         "missing_fraction_requested": missing_fraction,
+        "observed_masked_fraction": masked_total / (len(features) * len(samples) * replicates),
         "replicates": replicates, "seed": seed,
-        "masked_values": len(errors), "mae": mae, "mean_signed_error": bias,
-        "limitations": "Synthetic MCAR masking of observed entries only. Does not assess MAR/MNAR, batch-dependent missingness, downstream differential-expression bias, or suitability of median imputation. Compare alternative methods and real missingness mechanisms before selecting an imputation policy.",
+        "masked_values": masked_total,
+        "mae": sum(errors) / len(errors) if errors else None,
+        "mean_signed_error": sum(signed) / len(signed) if signed else None,
+        "limitations": "Synthetic masking sensitivity test only. MAR uses sample-column position as an observed covariate; MNAR preferentially masks low values. The requested fraction is a base probability, not an exact realized fraction. These simulations do not identify the real missingness mechanism, assess batch-specific effects, or establish downstream differential-expression bias. Compare multiple imputation methods and real labelled missingness patterns before choosing a policy.",
     }
