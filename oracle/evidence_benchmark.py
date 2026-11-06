@@ -54,23 +54,22 @@ def evaluate_evidence_predictions(cases: list[dict[str, Any]]) -> dict[str, Any]
         if len(set(reviewers)) > 2 and not case.get("adjudication_note"):
             raise ValueError(f"Case {index} with multiple reviewers requires adjudication_note.")
         individual = case.get("reviewer_labels")
-        if individual is not None:
-            if not isinstance(individual, dict) or set(individual) != set(reviewers):
-                raise ValueError(f"Case {index} reviewer_labels must contain every reviewer_id exactly once.")
-            if any(label not in LABELS for label in individual.values()):
-                raise ValueError(f"Case {index} reviewer labels must be supports, refutes, or contextual.")
-            if len(set(individual.values())) > 1:
-                if not case.get("adjudication_note") or not case.get("adjudicator_id"):
-                    raise ValueError(
-                        f"Case {index} with reviewer disagreement requires adjudication_note and adjudicator_id."
-                    )
-            for reviewer, label in individual.items():
-                reviewer_labels.setdefault(reviewer, {})[case_id] = label
-            for left, right in combinations(sorted(reviewers), 2):
-                pair = (left, right)
-                a, b = reviewer_pairs.setdefault(pair, ([], []))
-                a.append(individual[left])
-                b.append(individual[right])
+        if not isinstance(individual, dict) or set(individual) != set(reviewers):
+            raise ValueError(f"Case {index} reviewer_labels must contain every reviewer_id exactly once.")
+        if any(label not in LABELS for label in individual.values()):
+            raise ValueError(f"Case {index} reviewer labels must be supports, refutes, or contextual.")
+        if len(set(individual.values())) > 1:
+            if not case.get("adjudication_note") or not case.get("adjudicator_id"):
+                raise ValueError(
+                    f"Case {index} with reviewer disagreement requires adjudication_note and adjudicator_id."
+                )
+        for reviewer, label in individual.items():
+            reviewer_labels.setdefault(reviewer, {})[case_id] = label
+        for left, right in combinations(sorted(reviewers), 2):
+            pair = (left, right)
+            a, b = reviewer_pairs.setdefault(pair, ([], []))
+            a.append(individual[left])
+            b.append(individual[right])
         confusion[gold][pred] += 1
         source_id = case.get("predicted_source_id")
         allowed = case.get("allowed_source_ids", [])
