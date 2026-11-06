@@ -233,6 +233,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--missingness-labels", default="", help="TSV with sample_id and independent outcome labels")
     parser.add_argument("--missingness-outcome-column", default="", help="Two-class biological outcome column in labels TSV")
     parser.add_argument("--missingness-top-k", type=int, default=20, help="Top absolute outcome effects to compare (default 20)")
+    parser.add_argument("--missingness-reference-mode", choices=["sample_paired", "group_aggregated_by_outcome"], default="sample_paired")
+    parser.add_argument("--missingness-expected-effects", default="", help="Optional feature-level known spike-in effects TSV")
+    parser.add_argument("--missingness-expected-effect-column", default="expected_log2fc_2x_vs_1x")
+    parser.add_argument("--missingness-effect-tolerance", type=float, default=0.25)
     parser.add_argument("--imputation-benchmark", default="", help="Run a reproducible MCAR/MAR/MNAR row-median imputation stress test on a complete matrix")
     parser.add_argument("--imputation-holdout", default="", help="Compare row/column/global median methods on masked observed cells of a complete matrix")
     parser.add_argument("--imputation-de-bias", default="", help="Evaluate downstream Welch/BH differential-expression sensitivity to row-median imputation")
@@ -309,6 +313,10 @@ def main() -> None:
                 args.missingness_imputed, args.missingness_labels,
                 outcome_column=args.missingness_outcome_column,
                 top_k=args.missingness_top_k,
+                reference_mode=args.missingness_reference_mode,
+                expected_effects_path=args.missingness_expected_effects or None,
+                expected_effect_column=args.missingness_expected_effect_column,
+                effect_tolerance=args.missingness_effect_tolerance,
             )
         except (OSError, ValueError, RuntimeError) as exc:
             raise SystemExit(f"Orthogonal missingness benchmark failed: {exc}") from exc
