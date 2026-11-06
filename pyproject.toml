@@ -9,6 +9,9 @@ description = "Offline-first autonomous scientific research and discovery framew
 requires-python = ">=3.10"
 dependencies = []
 
+[project.optional-dependencies]
+benchmark = ["pandas>=2.0", "openpyxl>=3.1"]
+
 [project.scripts]
 oracle = "oracle.cli:main"
 
