@@ -776,5 +776,60 @@ class OracleTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             manager.retry(run, task.task_id)
 
+
+    def test_hypothesis_evidence_linking_and_human_status_review(self):
+        from oracle.models import SourceRecord, HypothesisStatus
+        run = ResearchRun("Hypothesis evidence review")
+        source = SourceRecord(title="Independent paper", source_id="hyp-source")
+        run.sources.append(source)
+        supporting = Evidence(
+            "Independent source reports an increased measured outcome.", source.title,
+            source_id=source.source_id, locator="Results",
+        )
+        opposing = Evidence(
+            "Another source reports a decreased measured outcome.", source.title,
+            source_id=source.source_id, locator="Results 2",
+        )
+        inference = Evidence("A model guess.", "ORACLE", EvidenceKind.INFERENCE)
+        run.evidence.extend([supporting, opposing, inference])
+        hypothesis = Hypothesis("Pathway activation increases the measured outcome.", "Provisional model.")
+        run.hypotheses.append(hypothesis)
+        kb = KnowledgeBase()
+        with self.assertRaises(ValueError):
+            kb.link_hypothesis_evidence(
+                run, hypothesis.hypothesis_id, inference.evidence_id,
+                EvidenceStance.SUPPORTS, "Not a source.",
+            )
+        kb.link_hypothesis_evidence(
+            run, hypothesis.hypothesis_id, supporting.evidence_id,
+            EvidenceStance.SUPPORTS, "Source passage checked.",
+        )
+        kb.link_hypothesis_evidence(
+            run, hypothesis.hypothesis_id, opposing.evidence_id,
+            EvidenceStance.REFUTES, "Opposing source passage checked.",
+        )
+        self.assertEqual(hypothesis.status, HypothesisStatus.UNDER_REVIEW)
+        self.assertEqual(len(hypothesis.supporting_evidence_ids), 1)
+        self.assertEqual(len(hypothesis.opposing_evidence_ids), 1)
+        kb.review_hypothesis(
+            run, hypothesis.hypothesis_id, "weakened",
+            "Both directions exist; this evidence weakens the current model.",
+        )
+        self.assertEqual(hypothesis.status, HypothesisStatus.WEAKENED)
+        self.assertTrue(hypothesis.reviewed_at)
+        self.store.save_run(run)
+        loaded = self.store.load_run(run.run_id)
+        self.assertEqual(loaded.hypotheses[0].status, HypothesisStatus.WEAKENED)
+        self.assertEqual(loaded.hypotheses[0].opposing_evidence_ids, [opposing.evidence_id])
+
+    def test_hypothesis_cannot_be_promoted_without_relevant_evidence(self):
+        run = ResearchRun("Hypothesis promotion gate")
+        hypothesis = Hypothesis("A speculative mechanism.", "No evidence yet.")
+        run.hypotheses.append(hypothesis)
+        with self.assertRaises(ValueError):
+            KnowledgeBase().review_hypothesis(
+                run, hypothesis.hypothesis_id, "supported", "Insufficient evidence.",
+            )
+
 if __name__ == "__main__":
     unittest.main()
