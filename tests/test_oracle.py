@@ -1145,6 +1145,65 @@ class OracleTests(unittest.TestCase):
         self.assertEqual(command[-2:], ["control", "treated"])
         self.assertIn("DESeq2::DESeq", script_text[0])
 
+
+    def test_deseq2_supports_explicit_batch_covariates_and_reports_design(self):
+        from types import SimpleNamespace
+        from unittest.mock import patch
+        from oracle.geo_deseq2 import GEOCountAnalyzer
+        matrix = Path(self.tmp.name) / "counts_batch.tsv"
+        matrix.write_text(
+            "ID_REF\tC1\tC2\tT1\tT2\n"
+            "gene_a\t10\t12\t40\t44\n",
+            encoding="utf-8",
+        )
+        groups = {"C1": "control", "C2": "control", "T1": "treated", "T2": "treated"}
+        covariates = {"batch": {"C1": "b1", "C2": "b2", "T1": "b1", "T2": "b2"}}
+        captured = {}
+        def fake_run(command, **kwargs):
+            captured["metadata"] = Path(command[4]).read_text(encoding="utf-8")
+            captured["script"] = Path(command[2]).read_text(encoding="utf-8")
+            captured["covariate_arg"] = command[-1]
+            output = Path(command[5])
+            output.write_text(
+                "feature\tbaseMean\tlog2FoldChange\tlfcSE\tstat\tpvalue\tpadj\n"
+                "gene_a\t20\t1.5\t0.2\t7.5\t0.001\t0.01\n",
+                encoding="utf-8",
+            )
+            return SimpleNamespace(returncode=0, stdout="4.4.0\t1.42.0", stderr="")
+        with patch("oracle.geo_deseq2.shutil.which", return_value="/usr/bin/Rscript"), \\
+             patch("oracle.geo_deseq2.subprocess.run", side_effect=fake_run):
+            result = GEOCountAnalyzer().analyze(
+                matrix, groups, "control", "treated", covariates=covariates,
+            )
+        self.assertEqual(captured["covariate_arg"], "batch")
+        self.assertIn("batch", captured["metadata"])
+        self.assertIn("model.matrix", captured["script"])
+        self.assertIn("rank deficient", captured["script"])
+        self.assertEqual(result["contrast"]["design_formula"], "~ batch + group")
+        self.assertEqual(result["normalization"],
+                         "DESeq2 median-of-ratios size-factor normalization (DESeq2 default)")
+
+    def test_deseq2_rejects_incomplete_or_invalid_covariates(self):
+        from unittest.mock import patch
+        from oracle.geo_deseq2 import GEOCountAnalyzer
+        matrix = Path(self.tmp.name) / "counts_covariate_validation.tsv"
+        matrix.write_text(
+            "ID_REF\tC1\tC2\tT1\tT2\ngene\t1\t2\t3\t4\n",
+            encoding="utf-8",
+        )
+        groups = {"C1": "control", "C2": "control", "T1": "treated", "T2": "treated"}
+        with patch("oracle.geo_deseq2.shutil.which", return_value="/usr/bin/Rscript"):
+            with self.assertRaisesRegex(ValueError, "cover matrix samples exactly"):
+                GEOCountAnalyzer().analyze(
+                    matrix, groups, "control", "treated",
+                    covariates={"batch": {"C1": "b1"}},
+                )
+            with self.assertRaisesRegex(ValueError, "Invalid or reserved"):
+                GEOCountAnalyzer().analyze(
+                    matrix, groups, "control", "treated",
+                    covariates={"group": {"C1": "b1", "C2": "b2", "T1": "b1", "T2": "b2"}},
+                )
+
     def test_deseq2_adapter_rejects_noninteger_counts_missing_values_and_bad_design(self):
         from unittest.mock import patch
         from oracle.geo_deseq2 import GEOCountAnalyzer
