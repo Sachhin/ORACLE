@@ -1,0 +1,102 @@
+name: ORACLE PXD047528 real missingness preparation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/pxd047528-preparation.yml"
+      - "scripts/prepare_pxd047528_missingness.py"
+      - "oracle/missingness_validation.py"
+      - "oracle/cli.py"
+      - "docs/MISSINGNESS_VALIDATION.md"
+      - "tests/test_prepare_pxd047528_missingness.py"
+      - "tests/test_missingness_validation.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  prepare-and-score:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Range-download only the paired PEPerMINT TSV members from Zenodo
+        run: |
+          pip install "remotezip==0.12.6"
+          python - <<'PY'
+          from pathlib import Path
+          from remotezip import RemoteZip
+          import requests
+          url = "https://zenodo.org/records/11216899/files/data.zip?download=1"
+          probe = requests.get(url, headers={"Range": "bytes=0-0"}, stream=True, timeout=30)
+          try:
+              if probe.status_code != 206 or not probe.headers.get("Content-Range", "").startswith("bytes 0-0/"):
+                  raise SystemExit("Zenodo did not honor HTTP Range; refusing to download the full multi-GB archive")
+          finally:
+              probe.close()
+          out = Path("data/pxd047528/source")
+          wanted = [
+              "datasets/blood_hiv_dda_dia/dda/peptides.tsv",
+              "datasets/blood_hiv_dda_dia/dia/peptides.tsv",
+              "datasets/blood_hiv_dda_dia/dda/proteins.tsv",
+              "datasets/blood_hiv_dda_dia/dia/proteins.tsv",
+          ]
+          out.mkdir(parents=True, exist_ok=True)
+          with RemoteZip(url, timeout=120, initial_buffer_size=1024 * 1024,
+                         support_suffix_range=False) as zf:
+              names = set(zf.namelist())
+              missing = [name for name in wanted if name not in names]
+              if missing:
+                  raise SystemExit(f"Zenodo archive missing expected PXD047528 files: {missing}")
+              for name in wanted:
+                  info = zf.getinfo(name)
+                  target = out / name
+                  target.parent.mkdir(parents=True, exist_ok=True)
+                  with zf.open(name) as source, target.open("wb") as dest:
+                      while block := source.read(1024 * 1024):
+                          dest.write(block)
+                  if target.stat().st_size != info.file_size:
+                      raise SystemExit(f"Short extract for {name}: {target.stat().st_size} != {info.file_size}")
+                  print(f"Fetched {name}: {info.file_size} bytes via HTTP Range")
+          PY
+      - name: Prepare paired DDA/DIA matrices and provenance
+        run: |
+          python scripts/prepare_pxd047528_missingness.py \
+            --dda-peptides data/pxd047528/source/datasets/blood_hiv_dda_dia/dda/peptides.tsv \
+            --dia-peptides data/pxd047528/source/datasets/blood_hiv_dda_dia/dia/peptides.tsv \
+            --output-dir data/pxd047528/prepared
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          manifest = Path("data/pxd047528/prepared/preparation_manifest.json")
+          data = json.loads(manifest.read_text())
+          data["source_archive_url"] = "https://zenodo.org/records/11216899/files/data.zip?download=1"
+          data["source_access_mode"] = "HTTP Range; only four selected TSV members fetched"
+          data["source_protein_files"] = {
+              "dda": str(Path("data/pxd047528/source/datasets/blood_hiv_dda_dia/dda/proteins.tsv")),
+              "dia": str(Path("data/pxd047528/source/datasets/blood_hiv_dda_dia/dia/proteins.tsv")),
+          }
+          manifest.write_text(json.dumps(data, indent=2) + "\n")
+          PY
+      - name: Score real missing DDA cells against paired DIA (outcome labels pending)
+        run: |
+          python -m oracle.missingness_validation \
+            --observed data/pxd047528/prepared/observed_dda_log.tsv \
+            --orthogonal data/pxd047528/prepared/orthogonal_dia_log.tsv \
+            --imputed data/pxd047528/prepared/row_median_imputed_dda_log.tsv \
+            > data/pxd047528/prepared/reconstruction_report.json
+      - name: Upload frozen PXD047528 matrices, labels template, and reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: oracle-pxd047528-real-missingness-preparation
+          path: |
+            data/pxd047528/prepared/
+            data/pxd047528/source/datasets/blood_hiv_dda_dia/dda/proteins.tsv
+            data/pxd047528/source/datasets/blood_hiv_dda_dia/dia/proteins.tsv
+          if-no-files-found: error
+          retention-days: 90

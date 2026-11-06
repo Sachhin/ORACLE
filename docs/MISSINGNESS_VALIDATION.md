@@ -39,6 +39,59 @@ python -m oracle.missingness_validation \
   --outcome-column phenotype
 ```
 
+## PXD047528 processed DDA/DIA preparation
+
+The PEPerMINT authors' Zenodo archive (record 11216899) contains the
+processed peptide tables at:
+
+- `datasets/blood_hiv_dda_dia/dda/peptides.tsv`
+- `datasets/blood_hiv_dda_dia/dia/peptides.tsv`
+
+It also contains the paired `dda/proteins.tsv` and `dia/proteins.tsv`
+files. The PEPerMINT loader uses sample columns `1_Slot1` through
+`15_Slot1`, groups duplicate peptide sequences by summing available values,
+converts zero-sum values to missing, scales DIA to the DDA global mean, and
+log-transforms both matrices. ORACLE reproduces that preparation in
+`scripts/prepare_pxd047528_missingness.py`.
+
+After downloading and extracting the Zenodo `data.zip`, run:
+
+```bash
+python scripts/prepare_pxd047528_missingness.py \
+  --dda-peptides data/datasets/blood_hiv_dda_dia/dda/peptides.tsv \
+  --dia-peptides data/datasets/blood_hiv_dda_dia/dia/peptides.tsv \
+  --output-dir validation/pxd047528
+```
+
+This produces DDA observed, DIA orthogonal-reference, row-median-imputed DDA,
+a sample-map template, and a hashed preparation manifest. The deterministic
+row-median output is a baseline, not a claim that ORACLE has discovered a
+superior imputer. ORACLE can now score the real missing DDA cells before
+clinical labels are resolved:
+
+```bash
+python -m oracle.missingness_validation \
+  --observed validation/pxd047528/observed_dda_log.tsv \
+  --orthogonal validation/pxd047528/orthogonal_dia_log.tsv \
+  --imputed validation/pxd047528/row_median_imputed_dda_log.tsv
+```
+
+That reconstruction-only report is explicitly marked
+`RECONSTRUCTION_ONLY_LABELS_PENDING`. To add biological outcome concordance,
+first complete `sample_map_template.tsv` from source-level clinical metadata,
+resolve the 15 processed sample columns versus the original paper's 13
+participants, document excluded/QC/technical samples, then pass a complete
+two-class label file using `--labels` and `--outcome-column`.
+
+The original clinical paper describes 13 plasma samples (8 HIV and 5 herpes)
+and a within-HIV HAND comparison of 5 HAND cases versus 3 cognitively normal
+participants. The PEPerMINT benchmark table and loader use 15 sample columns.
+No sample-to-patient mapping is published in the processed table itself, so
+ORACLE must not assign HIV/herpes/HAND labels by column order or filename.
+Also, the original study used DDA to build the spectral library and DIA for
+identification/quantification; DIA is an orthogonal reference for this
+imputation benchmark, not error-free absolute truth.
+
 ## Candidate public data
 
 PEPerMINT (Bioinformatics, 2024; DOI 10.1093/bioinformatics/btae389)

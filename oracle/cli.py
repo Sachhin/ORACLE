@@ -230,7 +230,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--missingness-observed", default="", help="Original assay TSV containing real missing values")
     parser.add_argument("--missingness-orthogonal", default="", help="Paired orthogonal assay TSV, e.g. DIA")
     parser.add_argument("--missingness-imputed", default="", help="ORACLE-imputed matrix TSV")
-    parser.add_argument("--missingness-labels", default="", help="TSV with sample_id and independent outcome labels")
+    parser.add_argument("--missingness-labels", default="", help="Optional TSV with sample_id and independent outcome labels; omit for reconstruction-only scoring")
     parser.add_argument("--missingness-outcome-column", default="", help="Two-class biological outcome column in labels TSV")
     parser.add_argument("--missingness-top-k", type=int, default=20, help="Top absolute outcome effects to compare (default 20)")
     parser.add_argument("--imputation-benchmark", default="", help="Run a reproducible MCAR/MAR/MNAR row-median imputation stress test on a complete matrix")
@@ -298,16 +298,17 @@ def main() -> None:
         return
     if args.orthogonal_missingness_benchmark:
         required = [args.missingness_observed, args.missingness_orthogonal,
-                    args.missingness_imputed, args.missingness_labels,
-                    args.missingness_outcome_column]
+                    args.missingness_imputed]
         if not all(required):
-            raise SystemExit("--orthogonal-missingness-benchmark requires --missingness-observed, --missingness-orthogonal, --missingness-imputed, --missingness-labels, and --missingness-outcome-column.")
+            raise SystemExit("--orthogonal-missingness-benchmark requires --missingness-observed, --missingness-orthogonal, and --missingness-imputed.")
+        if bool(args.missingness_labels) != bool(args.missingness_outcome_column):
+            raise SystemExit("--missingness-labels and --missingness-outcome-column must be supplied together; omit both for reconstruction-only scoring.")
         from .missingness_validation import evaluate_orthogonal_missingness
         try:
             report = evaluate_orthogonal_missingness(
                 args.missingness_observed, args.missingness_orthogonal,
-                args.missingness_imputed, args.missingness_labels,
-                outcome_column=args.missingness_outcome_column,
+                args.missingness_imputed, args.missingness_labels or None,
+                outcome_column=args.missingness_outcome_column or None,
                 top_k=args.missingness_top_k,
             )
         except (OSError, ValueError, RuntimeError) as exc:
