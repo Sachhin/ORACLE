@@ -1,6 +1,7 @@
 #!/usr/bin/env Rscript
 # Independent GEO experiment validation against the published Smchd1 analysis.
 # Runtime uses the pinned Bioconductor 3.22 container.
+# Package-version diagnostics are string-coerced in CI.
 # Dataset: GSE64099; reference: Liu et al. (2014) supplementary analysis PDF.
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args) != 1) stop("Usage: validate_gse64099_voom.R OUTPUT_REPORT.json")
