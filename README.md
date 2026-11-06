@@ -93,7 +93,7 @@ For evidence attribution and entailment, `benchmarks/evidence_adjudication_templ
 python -m oracle --evidence-benchmark benchmarks/my_adjudicated_cases.json
 ```
 
-The evaluator reports stance confusion, per-class precision/recall/F1, source-ID attribution validity, and exact-quote validity. The checked-in template is intentionally empty: ORACLE does not fabricate expert gold labels. Split evaluation data by source/study to reduce leakage.
+The evaluator reports stance confusion, per-class precision/recall/F1, Cohen's kappa and observed agreement when individual `reviewer_labels` are supplied, plus source/quote validity and their coverage. The checked-in template is intentionally empty: ORACLE does not fabricate expert gold labels. Split evaluation data by source/study to reduce leakage. Kappa is a reviewer-consistency diagnostic, not proof that adjudicated labels are correct.
 
 ## Domain-specific experiment protocols
 
