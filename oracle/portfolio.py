@@ -175,6 +175,60 @@ class ResearchPortfolio:
             raise ValueError(f"Research run not found: {run_id}")
         return self.assessor.assess(run)
 
+
+    def cross_run_claim_candidates(self, run_id: str, limit: int = 50) -> list[dict]:
+        """Queue lexical claim pairs with source-backed links in separate runs."""
+        target = self.store.load_run(run_id)
+        if target is None:
+            raise ValueError(f"Research run not found: {run_id}")
+        existing = set()
+        for item in self.store.list_cross_run_claim_links():
+            existing.add((item["run_a_id"], item["claim_a_id"], item["run_b_id"], item["claim_b_id"]))
+            existing.add((item["run_b_id"], item["claim_b_id"], item["run_a_id"], item["claim_a_id"]))
+        def grounded(run, claim_id):
+            source_ids = {source.source_id for source in run.sources}
+            evidence = {item.evidence_id: item for item in run.evidence}
+            return sorted({
+                link.evidence_id for link in run.evidence_claim_links
+                if link.claim_id == claim_id and link.evidence_id in evidence
+                and evidence[link.evidence_id].source_id in source_ids
+                and evidence[link.evidence_id].source_id
+                and evidence[link.evidence_id].kind != EvidenceKind.INFERENCE
+            })
+        matches = []
+        for entry in self.store.list_runs(500):
+            if entry["run_id"] == run_id:
+                continue
+            other = self.store.load_run(entry["run_id"])
+            if other is None:
+                continue
+            for left in target.claims:
+                evidence_a = grounded(target, left.claim_id)
+                tokens_a = self._tokens(left.statement)
+                if not evidence_a or not tokens_a:
+                    continue
+                for right in other.claims:
+                    evidence_b = grounded(other, right.claim_id)
+                    if not evidence_b:
+                        continue
+                    key = (target.run_id, left.claim_id, other.run_id, right.claim_id)
+                    if key in existing:
+                        continue
+                    tokens_b = self._tokens(right.statement)
+                    union = tokens_a | tokens_b
+                    score = len(tokens_a & tokens_b) / len(union) if union else 0.0
+                    if score >= 0.20:
+                        matches.append({
+                            "run_a_id": target.run_id, "claim_a_id": left.claim_id,
+                            "claim_a": left.statement, "run_b_id": other.run_id,
+                            "claim_b_id": right.claim_id, "claim_b": right.statement,
+                            "lexical_similarity": round(score, 3),
+                            "evidence_a_ids": evidence_a, "evidence_b_ids": evidence_b,
+                            "classification": "unreviewed_candidate",
+                        })
+        matches.sort(key=lambda item: item["lexical_similarity"], reverse=True)
+        return matches[:max(1, min(limit, 200))]
+
     def related_runs(self, question: str, limit: int = 10) -> list[dict]:
         query_tokens = self._tokens(question)
         if not query_tokens:
