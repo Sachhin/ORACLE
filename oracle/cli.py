@@ -120,6 +120,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--deseq2-feature", default="", help="Exact feature/gene identifier to review")
     parser.add_argument("--deseq2-review-status", choices=["accepted", "rejected", "needs_context"])
     parser.add_argument("--deseq2-review-note", default="", help="Human rationale required for candidate review")
+    parser.add_argument("--screen-replication", metavar="RUN_ID", help="Screen a DESeq2 feature across distinct GEO datasets")
+    parser.add_argument("--replication-analysis-id", default="", help="Source DESeq2 analysis ID")
+    parser.add_argument("--replication-feature", default="", help="Exact gene/feature identifier to compare")
+    parser.add_argument("--replication-fdr", type=float, default=0.05, help="Adjusted p-value threshold for the directional consistency screen")
     return parser
 
 
@@ -232,6 +236,34 @@ def main() -> None:
             print("Limitations: " + result["limitations"])
         return
     store = ResearchStore(args.db)
+    if args.screen_replication:
+        if not args.replication_analysis_id or not args.replication_feature:
+            raise SystemExit("--screen-replication requires --replication-analysis-id and --replication-feature.")
+        run = store.load_run(args.screen_replication)
+        if run is None:
+            raise SystemExit(f"Research run not found: {args.screen_replication}")
+        from .replication import screen_independent_datasets
+        try:
+            report = screen_independent_datasets(
+                run.differential_expression_analyses,
+                args.replication_analysis_id,
+                args.replication_feature,
+                args.replication_fdr,
+            )
+        except ValueError as exc:
+            raise SystemExit(f"Replication screen failed: {exc}") from exc
+        if args.json:
+            print(json.dumps(report, indent=2, ensure_ascii=False))
+        else:
+            print(f"Feature: {report['feature']} | Screen: {report['summary']}")
+            print(f"Source: {report['source_dataset_accession']} | Direction: {report['source_direction']}")
+            if not report["independent_dataset_comparisons"]:
+                print("No eligible independent dataset comparisons were available.")
+            for item in report["independent_dataset_comparisons"]:
+                print(f"- {item['dataset_accession']} | {item['classification']} | "
+                      f"log2FC={item['log2_fold_change']} | BH-FDR={item['adjusted_p_value']}")
+            print("Interpretation: " + report["interpretation"])
+        return
     if args.show_deseq2:
         run = store.load_run(args.show_deseq2)
         if run is None:
