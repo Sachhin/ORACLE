@@ -1,4 +1,4 @@
-"""Resumable offline research-cycle orchestrator."""
+"""Resumable research-cycle orchestrator with measured progress and safe stopping."""
 from __future__ import annotations
 
 from copy import deepcopy
@@ -15,8 +15,12 @@ from .storage import ResearchStore
 
 
 class OracleOrchestrator:
-    def __init__(self, store: ResearchStore | None = None) -> None:
+    def __init__(self, store: ResearchStore | None = None,
+                 max_no_progress_cycles: int = 2) -> None:
+        if not 1 <= max_no_progress_cycles <= 10:
+            raise ValueError("max_no_progress_cycles must be between 1 and 10.")
         self.store = store or ResearchStore()
+        self.max_no_progress_cycles = max_no_progress_cycles
         self.planner = PlannerAgent()
         self.researcher = ResearcherAgent()
         self.explorer = ExplorerAgent()
@@ -32,6 +36,79 @@ class OracleOrchestrator:
         self.store.log_event(run.run_id, kind, payload, event_key=event_key)
         if checkpoint:
             self.store.save_run(run)
+
+    @staticmethod
+    def _normalise(value: str) -> str:
+        return " ".join(value.casefold().split())
+
+    def _add_unique_evidence(self, run: ResearchRun, evidence_items: list) -> int:
+        added = 0
+        known = {
+            (item.kind.value, item.source_id, self._normalise(item.source),
+             self._normalise(item.locator), self._normalise(item.claim))
+            for item in run.evidence
+        }
+        for item in evidence_items:
+            key = (item.kind.value, item.source_id, self._normalise(item.source),
+                   self._normalise(item.locator), self._normalise(item.claim))
+            if key in known:
+                continue
+            run.evidence.append(item)
+            known.add(key)
+            added += 1
+        return added
+
+    def _add_unique_strings(self, target: list[str], values: list[str]) -> int:
+        known = {self._normalise(value) for value in target}
+        added = 0
+        for value in values:
+            key = self._normalise(value)
+            if key and key not in known:
+                target.append(value)
+                known.add(key)
+                added += 1
+        return added
+
+    def _add_unique_experiments(self, run: ResearchRun, items: list) -> int:
+        known = {
+            (self._normalise(item.question),
+             tuple(self._normalise(x) for x in item.protocol),
+             tuple(self._normalise(x) for x in item.predictions))
+            for item in run.experiments
+        }
+        added = 0
+        for item in items:
+            key = (self._normalise(item.question),
+                   tuple(self._normalise(x) for x in item.protocol),
+                   tuple(self._normalise(x) for x in item.predictions))
+            if key not in known:
+                run.experiments.append(item)
+                known.add(key)
+                added += 1
+        return added
+
+    def _critical_integrity_warnings(self, run: ResearchRun) -> list[str]:
+        """Check structural invariants; never infer scientific truth here."""
+        warnings: list[str] = []
+        claim_ids = {claim.claim_id for claim in run.claims}
+        evidence_ids = {item.evidence_id for item in run.evidence}
+        source_ids = {source.source_id for source in run.sources}
+        for link in run.evidence_claim_links:
+            if link.claim_id not in claim_ids or link.evidence_id not in evidence_ids:
+                warnings.append("Evidence graph contains a dangling claim/evidence link.")
+                break
+            if not 0.0 <= link.strength <= 1.0:
+                warnings.append("Evidence link strength is outside the permitted 0..1 range.")
+                break
+        for item in run.evidence:
+            if item.source_id and item.source_id not in source_ids:
+                warnings.append("Evidence references a source absent from the run's provenance store.")
+                break
+        for experiment in run.experiments:
+            if experiment.status.value == "performed" and not experiment.results.strip():
+                warnings.append("An experiment is marked performed without recorded results.")
+                break
+        return warnings
 
     def run(self, question: str, mode: ResearchMode = ResearchMode.BOTH,
             max_cycles: int = 3) -> ResearchRun:
@@ -52,16 +129,19 @@ class OracleOrchestrator:
         run = self.store.load_run(run_id)
         if run is None:
             raise ValueError(f"Research run not found: {run_id}")
-        if run.status not in (RunStatus.RUNNING, RunStatus.PAUSED, RunStatus.FAILED):
+        if run.status not in (RunStatus.RUNNING, RunStatus.PAUSED, RunStatus.FAILED, RunStatus.STOPPED):
             raise ValueError(f"Run cannot be resumed from status: {run.status.value}")
         run.max_cycles = min(100, run.max_cycles + additional_cycles)
         run.status = RunStatus.RUNNING
+        # An explicit resume is a user-authorised fresh attempt, not an endless retry.
+        run.consecutive_no_progress_cycles = 0
         self._event(run, "run_resumed", {"from_cycle": run.current_cycle,
                                          "new_cycle_limit": run.max_cycles}, event_key=f"resume:{run.current_cycle}:{run.max_cycles}")
         return self._execute(run)
 
     def _execute(self, run: ResearchRun) -> ResearchRun:
         checkpoint = deepcopy(run)
+        final_action = "conclude"
         try:
             if not run.tasks:
                 plan = self.planner.run(AgentContext(run.question, 0, run.mode.value))
@@ -70,55 +150,94 @@ class OracleOrchestrator:
 
             for cycle in range(run.current_cycle + 1, run.max_cycles + 1):
                 checkpoint = deepcopy(run)
+                before = (len(run.evidence), len(run.hypotheses), len(run.experiments),
+                          len(run.sources), len(run.claims), len(run.findings),
+                          len(run.evidence_comparisons))
                 context = AgentContext(run.question, cycle, run.mode.value,
                                        run.evidence, run.hypotheses, run.findings)
+
                 research = self.researcher.run(context)
-                run.evidence.extend(research.items)
-                for evidence in research.items:
-                    claim = self.knowledge.add_claim(run, evidence.claim, "inference")
-                    self.knowledge.link_evidence(
-                        run, claim.claim_id, evidence.evidence_id,
-                        EvidenceStance.CONTEXTUAL, 0.0,
-                        "Generated by offline question decomposition; not external evidence.",
-                    )
-                self._event(run, "research_completed", {"summary": research.summary}, False, f"cycle:{cycle}:research")
+                self._add_unique_evidence(run, research.items)
+                for evidence in run.evidence:
+                    if evidence in research.items:
+                        claim = self.knowledge.add_claim(run, evidence.claim, "inference")
+                        if not any(link.claim_id == claim.claim_id and link.evidence_id == evidence.evidence_id
+                                   for link in run.evidence_claim_links):
+                            self.knowledge.link_evidence(
+                                run, claim.claim_id, evidence.evidence_id,
+                                EvidenceStance.CONTEXTUAL, 0.0,
+                                "Generated by the deterministic offline scaffold; not external evidence.",
+                            )
+                self._event(run, "research_completed", {"summary": research.summary}, False,
+                            f"cycle:{cycle}:research")
 
                 if run.mode in (ResearchMode.AUTONOMOUS_DISCOVERY, ResearchMode.BOTH):
                     discovery = self.explorer.run(context)
-                    run.findings.extend(discovery.items)
-                    self._event(run, "discovery_completed", {"directions": discovery.items}, False, f"cycle:{cycle}:discovery")
+                    self._add_unique_strings(run.findings, discovery.items)
+                    self._event(run, "discovery_completed", {"directions": discovery.items}, False,
+                                f"cycle:{cycle}:discovery")
 
                 if not run.hypotheses:
                     hypotheses = self.hypothesizer.run(context)
                     for hypothesis in hypotheses.items:
                         self.knowledge.add_hypothesis(run, hypothesis)
-                    self._event(run, "hypotheses_created", {"count": len(hypotheses.items)}, False, f"cycle:{cycle}:hypotheses")
+                    self._event(run, "hypotheses_created", {"count": len(hypotheses.items)}, False,
+                                f"cycle:{cycle}:hypotheses")
 
                 skeptic = self.skeptic.run(context)
                 audit = self.auditor.run(context)
                 design = self.experiment_designer.run(context)
-                if design.items:
-                    run.experiments.extend(design.items)
+                self._add_unique_experiments(run, design.items)
                 novelty = self.novelty.run(context)
                 warnings = skeptic.warnings + audit.warnings + novelty.warnings
-                run.findings.extend(["Skeptic review: " + warning for warning in skeptic.warnings])
-                run.findings.append("Novelty assessment: " + novelty.summary)
-                decision = choose_next_action(cycle, run.max_cycles, progress=True)
+                self._add_unique_strings(
+                    run.findings,
+                    ["Skeptic review: " + warning for warning in skeptic.warnings]
+                    + ["Novelty assessment: " + novelty.summary],
+                )
+
+                after = (len(run.evidence), len(run.hypotheses), len(run.experiments),
+                         len(run.sources), len(run.claims), len(run.findings),
+                         len(run.evidence_comparisons))
+                progress = after != before
+                if progress:
+                    run.consecutive_no_progress_cycles = 0
+                else:
+                    run.consecutive_no_progress_cycles += 1
+
+                critical = self._critical_integrity_warnings(run)
+                decision = choose_next_action(
+                    cycle, run.max_cycles, progress=progress,
+                    critical_warnings=len(critical),
+                    consecutive_no_progress=max(0, run.consecutive_no_progress_cycles - 1),
+                    max_no_progress=self.max_no_progress_cycles,
+                )
+                final_action = decision.action
                 run.decisions.append(f"{decision.action}: {decision.reason}")
                 run.current_cycle = cycle
                 self._event(run, "cycle_decided", {
                     "cycle": cycle, "action": decision.action,
-                    "reason": decision.reason, "warnings": warnings,
+                    "reason": decision.reason, "progress": progress,
+                    "consecutive_no_progress_cycles": run.consecutive_no_progress_cycles,
+                    "warnings": warnings, "critical_integrity_warnings": critical,
                 }, event_key=f"cycle:{cycle}:decision")
-                if decision.action == "conclude":
+                if decision.action in {"conclude", "stop"}:
                     break
-            run.status = RunStatus.COMPLETED
-            run.findings.append(
-                "Offline baseline limitation: no external sources, real AI model, or physical experiment was used."
-            )
-            self._event(run, "run_completed", {"cycles": run.current_cycle}, event_key="run_completed")
+
+            if final_action == "stop":
+                run.status = RunStatus.STOPPED
+                run.findings.append("Run stopped safely. Existing findings are retained; no unsupported conclusion was made.")
+                self._event(run, "run_stopped", {
+                    "cycles": run.current_cycle,
+                    "no_progress_cycles": run.consecutive_no_progress_cycles,
+                }, event_key=f"run_stopped:{run.current_cycle}")
+            else:
+                run.status = RunStatus.COMPLETED
+                run.findings.append(
+                    "Offline baseline limitation: no external sources, live AI reasoning, or physical experiment was used by this cycle."
+                )
+                self._event(run, "run_completed", {"cycles": run.current_cycle}, event_key="run_completed")
         except Exception as exc:
-            # Restore the last fully completed cycle; partial work is not committed as a checkpoint.
             run = checkpoint
             run.status = RunStatus.FAILED
             self.store.log_event(run.run_id, "run_failed", {"error": str(exc)})
