@@ -26,6 +26,19 @@ The normal run remains deterministic and offline. To explicitly opt in to Gemini
 
 The Gemini agent suite uses the same `run(context) -> result` contract as the deterministic agents. Model-generated research statements are stored only as INFERENCE, never as source evidence. Hypotheses remain provisional and experiment designs remain PROPOSED. The Gemini auditor emits review warnings only and cannot alter evidence stance or claim status. Cross-domain proposals cite at least two existing source IDs, remain pending human review, and can be accepted/rejected/deferred through the CLI. The Gemini novelty assessor runs only when source-backed literature evidence is present, validates cited source IDs, and reports provisional prior-art triage rather than a novelty guarantee. These provider-backed review agents and cross-domain proposal gates have unit-level contract tests; live scientific quality has not yet been independently validated. The default provider is still `deterministic`; Gemini is never called unless explicitly selected. Transient Gemini HTTP/network failures receive a small bounded retry; explicit quota-exhaustion responses stop immediately. Other provider errors fail and checkpoint the run rather than silently pretending that deterministic output came from Gemini.
 
+## Shared cross-run knowledge graph
+
+Saved runs can be searched for lexically similar claim pairs, but only when each claim has at least one source-backed evidence link. The candidate queue is a retrieval heuristic, not a semantic verdict. Inspect candidates, then persist a relationship explicitly:
+
+```bash
+python -m oracle --cross-run-candidates RUN_ID
+python -m oracle --link-cross-run-claims RUN_A --other-run-id RUN_B --claim-a-id CLAIM_A --claim-b-id CLAIM_B --cross-run-relation supports --cross-run-rationale "Explain why the source contexts support this relation"
+python -m oracle --show-cross-run-links
+python -m oracle --review-cross-run-link LINK_ID --cross-run-status accepted --cross-run-note "Reviewed both source records and claim scope"
+```
+
+Links are stored in a dedicated SQLite table with both run IDs, claim IDs, and evidence IDs. Evidence provenance is revalidated at review time. All links begin as `pending_review`; accepting, rejecting, or requesting context requires a non-empty human note. A cross-run relation does not automatically merge claims or promote either claim to fact.
+
 ## Modes
 
 - `deep_research`: prioritize structured investigation and evidence assessment.
