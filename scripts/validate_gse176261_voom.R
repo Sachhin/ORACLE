@@ -84,7 +84,7 @@ if (!setequal(sample_ids, colnames(counts)) || length(sample_ids) != ncol(counts
     "; validation_metadata_values=", paste(names(table(validation_values)), as.integer(table(validation_values)), collapse = ";")
   ))
 }
-selected <- selected[match(colnames(counts), selected$title), , drop = FALSE]
+selected <- selected[match(colnames(counts), sample_ids), , drop = FALSE]
 selected_meta <- selected_meta[match(colnames(counts), sample_ids)]
 phenotype <- vapply(selected_meta, get_field, character(1), key = "phenotype")
 gender <- vapply(selected_meta, get_field, character(1), key = "gender")
