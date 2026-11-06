@@ -20,7 +20,7 @@ def _table_text(text: str) -> str:
     if begin is not None:
         end = next((i for i in range(begin + 1, len(lines))
                     if lines[i].strip().lower() == "!series_matrix_table_end"), len(lines))
-        return "\\n".join(lines[begin + 1:end])
+        return "\n".join(lines[begin + 1:end])
     return "\\n".join(line for line in lines if line.strip()
                        and not line.lstrip().startswith(("!", "#")))
 
@@ -35,7 +35,7 @@ def _read_matrix(path: Path, max_cells: int) -> tuple[list[str], list[str], list
     if not table.strip():
         raise ValueError("No tabular expression matrix was found.")
     first = table.splitlines()[0]
-    delimiter = "\\t" if first.count("\\t") >= first.count(",") else ","
+    delimiter = "\t" if first.count("\\t") >= first.count(",") else ","
     reader = csv.reader(table.splitlines(), delimiter=delimiter)
     header = next(reader, [])
     samples = [value.strip() for value in header[1:]]
@@ -138,7 +138,7 @@ def normalize_geo_matrix(
 
     destination.parent.mkdir(parents=True, exist_ok=True)
     with destination.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.writer(handle, delimiter="\\t", lineterminator="\\n")
+        writer = csv.writer(handle, delimiter="\t", lineterminator="\n")
         writer.writerow(["feature", *samples])
         for feature, row in zip(features, normalized):
             writer.writerow([feature, *(format(value, ".12g") for value in row)])
