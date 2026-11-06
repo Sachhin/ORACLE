@@ -588,6 +588,16 @@ class OracleTests(unittest.TestCase):
         self.assertTrue(performed.executed_at)
 
         manager.mark_evaluated(run, simulated.experiment_id, "Simulation checked against expected toy behavior.")
+        with self.assertRaisesRegex(ValueError, "requires accepted human execution review"):
+            manager.mark_evaluated(run, performed.experiment_id, "Attempt evaluation before review.")
+        with self.assertRaisesRegex(ValueError, "different from the recorded operator"):
+            manager.review_performed_execution(
+                run, performed.experiment_id, "accepted", "Lab operator", "Self-review is not independent.",
+            )
+        manager.review_performed_execution(
+            run, performed.experiment_id, "accepted", "Independent reviewer",
+            "Verified the notebook, sample identifiers, and raw result files.",
+        )
         manager.mark_evaluated(run, performed.experiment_id, "Observed results compared with preregistered predictions.")
         self.assertEqual(simulated.status, ExperimentStatus.EVALUATED)
         self.assertEqual(simulated.execution_kind, "simulated")
@@ -597,6 +607,8 @@ class OracleTests(unittest.TestCase):
         loaded = self.store.load_run(run.run_id)
         self.assertEqual(loaded.experiments[0].execution_kind, "simulated")
         self.assertEqual(loaded.experiments[1].execution_kind, "performed")
+        self.assertEqual(loaded.experiments[1].execution_review_status, "accepted")
+        self.assertEqual(loaded.experiments[1].execution_reviewed_by, "Independent reviewer")
 
     def test_experiment_lifecycle_requires_provenance(self):
         from oracle.experiment_manager import ExperimentManager
@@ -609,6 +621,58 @@ class OracleTests(unittest.TestCase):
                 run, experiment.experiment_id, "", "Operator", "Results",
             )
 
+
+
+    def test_high_impact_claim_review_requires_independent_source_groups(self):
+        from oracle.knowledge import KnowledgeBase
+        from oracle.models import Claim, Evidence, EvidenceStance, SourceRecord
+        run = ResearchRun("High-impact claim review")
+        claim = Claim("A mechanism is necessary for organism development.")
+        claim.impact_level = "high"
+        run.claims.append(claim)
+        kb = KnowledgeBase()
+        for suffix in ("one", "two"):
+            source = SourceRecord(f"Independent paper {suffix}", source_id=f"src-{suffix}")
+            evidence = Evidence(
+                f"Source-backed observation {suffix}", source.title,
+                source_id=source.source_id, evidence_id=f"ev-{suffix}",
+            )
+            run.sources.append(source)
+            run.evidence.append(evidence)
+            kb.link_evidence(run, claim.claim_id, evidence.evidence_id,
+                             EvidenceStance.SUPPORTS, rationale="Primary source observation.")
+        with self.assertRaisesRegex(ValueError, "requires 2 independent source group"):
+            kb.review_claim(
+                run, claim.claim_id, "supported", "Reviewer A",
+                "Evidence is relevant.", impact_level="critical",
+            )
+        reviewed = kb.review_claim(
+            run, claim.claim_id, "supported", "Reviewer A",
+            "Both independent primary sources support the narrowly stated claim.",
+            impact_level="high",
+        )
+        self.assertEqual(reviewed.status, "supported")
+        self.assertEqual(reviewed.impact_level, "high")
+        self.assertEqual(reviewed.reviewed_by, "Reviewer A")
+        self.store.save_run(run)
+        loaded = self.store.load_run(run.run_id)
+        self.assertEqual(loaded.claims[0].reviewed_by, "Reviewer A")
+
+    def test_claim_review_rejects_unprovenanced_support(self):
+        from oracle.knowledge import KnowledgeBase
+        from oracle.models import Claim, Evidence, EvidenceStance
+        run = ResearchRun("Claim review provenance")
+        claim = Claim("A claim without source evidence.")
+        run.claims.append(claim)
+        evidence = Evidence("Inference only", "ORACLE", kind=__import__(
+            "oracle.models", fromlist=["EvidenceKind"]).EvidenceKind.INFERENCE)
+        run.evidence.append(evidence)
+        KnowledgeBase().link_evidence(run, claim.claim_id, evidence.evidence_id,
+                                      EvidenceStance.SUPPORTS)
+        with self.assertRaisesRegex(ValueError, "requires linked source-backed"):
+            KnowledgeBase().review_claim(
+                run, claim.claim_id, "supported", "Reviewer", "No source evidence.",
+            )
 
     def test_review_decisions_require_a_human_note(self):
         from oracle.models import SourceRecord
