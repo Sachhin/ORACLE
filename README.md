@@ -77,14 +77,14 @@ Compare ORACLE TMM normalization factors with a local edgeR installation on the 
 python -m oracle --compare-tmm-edger counts.tsv --rscript Rscript
 ```
 
-Run a deterministic MCAR masking stress test for row-median imputation:
+Run deterministic MCAR, MAR, or MNAR masking stress tests for row-median imputation:
 
 ```bash
 python -m oracle --imputation-benchmark complete-matrix.tsv \
-  --imputation-missing-fraction 0.1 --imputation-replicates 50 --imputation-seed 1729
+  --imputation-missing-fraction 0.1 --imputation-replicates 50 --imputation-seed 1729 \\\n  --imputation-mechanism MNAR
 ```
 
-This diagnostic measures reconstruction error only under simulated MCAR missingness. It does not establish performance under MAR/MNAR or downstream statistical bias.
+MCAR uses random masking, MAR depends on an observed sample-position covariate, and MNAR preferentially masks low values. These synthetic sensitivity tests do not identify a dataset’s actual missingness mechanism or establish downstream statistical bias.
 
 For evidence attribution and entailment, `benchmarks/evidence_adjudication_template.json` defines a human-label schema. Populate it only after at least two reviewers independently check each source and disagreements are adjudicated. Score a completed file with:
 
