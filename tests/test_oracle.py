@@ -267,6 +267,49 @@ class OracleTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 GeminiClaimExtractor(api_key="")
 
+    def test_cross_paper_comparisons_require_two_exact_quotes_and_persist(self):
+        from unittest.mock import patch
+        from oracle.comparison import CrossPaperComparator
+        from oracle.models import SourceRecord
+        run = ResearchRun("Do two papers agree about signaling and cell fate?")
+        source_a = SourceRecord(title="Paper A", source_id="paper-a", doi="10.1000/a")
+        source_b = SourceRecord(title="Paper B", source_id="paper-b", doi="10.1000/b")
+        run.sources.extend([source_a, source_b])
+        text_a = "In this study, pathway activation increased the fraction of cells adopting the neuronal fate."
+        text_b = "Our results show that pathway activation increased neuronal cell fate under the tested conditions."
+        ev_a = Evidence(text_a, source_a.title, source_id=source_a.source_id, locator="Abstract")
+        ev_b = Evidence(text_b, source_b.title, source_id=source_b.source_id, locator="Abstract")
+        run.evidence.extend([ev_a, ev_b])
+        kb = KnowledgeBase()
+        claim_a = kb.add_claim(run, "Pathway activation increases neuronal cell fate.")
+        claim_b = kb.add_claim(run, "Pathway activation increases neuronal fate in tested conditions.")
+        claim_a.status = claim_b.status = "unreviewed_candidate"
+        kb.link_evidence(run, claim_a.claim_id, ev_a.evidence_id, EvidenceStance.CONTEXTUAL, 0.0)
+        kb.link_evidence(run, claim_b.claim_id, ev_b.evidence_id, EvidenceStance.CONTEXTUAL, 0.0)
+        comparator = CrossPaperComparator(api_key="test-key")
+        response = {"claims": [
+            {"pair_index": 0, "relation": "corroborates",
+             "rationale": "Both abstracts report an increase under pathway activation.",
+             "quote_a": text_a, "quote_b": text_b},
+            {"pair_index": 0, "relation": "contrasts",
+             "rationale": "Invalid duplicate pair.",
+             "quote_a": "not in source", "quote_b": text_b},
+        ]}
+        with patch.object(comparator.extractor, "_generate_json", return_value=response):
+            report = comparator.compare(run)
+        self.assertEqual(report.pairs_submitted, 1)
+        self.assertEqual(report.comparisons_created, 1)
+        self.assertEqual(report.comparisons_rejected, 1)
+        comparison = run.evidence_comparisons[0]
+        self.assertEqual(comparison.relation, "corroborates")
+        self.assertEqual(comparison.status, "pending_review")
+        self.assertEqual(comparison.source_a_id, source_a.source_id)
+        self.assertEqual(comparison.quote_b, text_b)
+        self.store.save_run(run)
+        loaded = self.store.load_run(run.run_id)
+        self.assertEqual(len(loaded.evidence_comparisons), 1)
+        self.assertEqual(loaded.evidence_comparisons[0].status, "pending_review")
+
     def test_resume_interrupted_run_without_resetting_history(self):
         run = OracleOrchestrator(self.store).run("Resume this", max_cycles=1)
         run.status = RunStatus.PAUSED
