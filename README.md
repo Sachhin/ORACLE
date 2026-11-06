@@ -26,11 +26,12 @@ The normal run remains deterministic and offline. To explicitly opt in to Gemini
 
 The Gemini agent suite uses the same `run(context) -> result` contract as the deterministic agents. Model-generated research statements are stored only as INFERENCE, never as source evidence. Hypotheses remain provisional and experiment designs remain PROPOSED. The Gemini auditor emits review warnings only and cannot alter evidence stance or claim status. Cross-domain proposals cite at least two existing source IDs, remain pending human review, and can be accepted/rejected/deferred through the CLI. The Gemini novelty assessor runs only when source-backed literature evidence is present, validates cited source IDs, and reports provisional prior-art triage rather than a novelty guarantee. These provider-backed review agents and cross-domain proposal gates have unit-level contract tests; live scientific quality has not yet been independently validated. The default provider is still `deterministic`; no model provider is called unless explicitly selected. `--agent-provider gemini` uses Gemini only. Opt-in `--agent-provider auto` enables ordered Gemini → Groq → OpenRouter fallback when credentials are configured. Set `GROQ_API_KEY` with `ORACLE_GROQ_MODEL`, and/or `OPENROUTER_API_KEY` with `ORACLE_OPENROUTER_MODEL`; provider keys are read only from environment variables and are never stored. Routing advances only for quota/rate-limit, network/timeout, and transient server failures; authentication/configuration errors stop rather than silently switching accounts. The active model is recorded on generated inference metadata. This is ordered failover, not automatic quality/cost optimization. Transient Gemini HTTP/network failures receive a small bounded retry; explicit quota-exhaustion responses stop immediately. Other provider errors fail and checkpoint the run rather than silently pretending that deterministic output came from Gemini.
 
-Citation graph ranking is available for DOI-resolved links between papers already present in one saved run:
+Citation graph ranking and bounded multi-hop traversal are available for DOI-resolved links between papers already present in one saved run:
 ```bash
 python -m oracle --rank-citation-graph RUN_ID
+python -m oracle --traverse-citation-graph RUN_ID --citation-start-source SOURCE_ID --citation-direction both --citation-depth 3
 ```
-The report includes directed in/out degree and a bounded PageRank score. Unresolved DOI targets are not fabricated as graph nodes; connectivity is not evidence quality or scientific truth.
+Traversal supports `outgoing` (works cited by the start paper), `incoming` (works citing it), or `both`, with depth capped at six and result count bounded by `--limit`. Each result includes its shortest source-ID path. Unresolved DOI targets are not fabricated as graph nodes; citation connectivity is not evidence quality, agreement, or scientific truth.
 
 ## Domain-specific experiment protocols
 
