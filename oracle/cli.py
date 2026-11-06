@@ -68,6 +68,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--compare-papers", action="store_true", help="Compare extracted claims across distinct papers")
     parser.add_argument("--review-evidence", action="store_true",
                         help="Ask Gemini for quote-grounded support/refute/contextual suggestions; requires human review")
+    parser.add_argument("--propose-protocol", metavar="RUN_ID",
+                        help="Add a domain-specific proposed experiment protocol to a saved run")
+    parser.add_argument("--protocol-domain",
+                        choices=["plant_biology", "molecular_biology", "cell_biology", "computational_biology"],
+                        default="")
+    parser.add_argument("--protocol-hypothesis-id", default="",
+                        help="Optional hypothesis ID to target with the protocol")
     parser.add_argument("--experiment-action", choices=["simulate", "perform", "evaluate"],
                         help="Record a simulation, a real performed experiment, or its evaluation")
     parser.add_argument("--experiment-run", help="Research run ID containing the experiment")
@@ -376,6 +383,26 @@ def main() -> None:
             print("Limitations: " + result["limitations"])
         return
     store = ResearchStore(args.db)
+    if args.propose_protocol:
+        if not args.protocol_domain:
+            raise SystemExit("--propose-protocol requires --protocol-domain.")
+        run = store.load_run(args.propose_protocol)
+        if run is None:
+            raise SystemExit(f"Research run not found: {args.propose_protocol}")
+        from .protocols import ExperimentProtocolBuilder
+        experiment = ExperimentProtocolBuilder().build(
+            run, args.protocol_domain, args.protocol_hypothesis_id,
+        )
+        store.save_run(run)
+        store.log_event(
+            run.run_id, "domain_protocol_proposed",
+            {"experiment_id": experiment.experiment_id, "domain": args.protocol_domain,
+             "hypothesis_id": args.protocol_hypothesis_id},
+            event_key=f"domain-protocol:{experiment.experiment_id}",
+        )
+        print(json.dumps(experiment.__dict__, indent=2, ensure_ascii=False) if args.json
+              else f"Proposed {args.protocol_domain} protocol {experiment.experiment_id}; status remains PROPOSED.")
+        return
     if args.screen_replication:
         if not args.replication_analysis_id or not args.replication_feature:
             raise SystemExit("--screen-replication requires --replication-analysis-id and --replication-feature.")
