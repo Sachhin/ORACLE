@@ -14,7 +14,7 @@ on:
       - ".github/workflows/limma-external-reference.yml"
       - "scripts/validate_gse176260_voom.R"
       - "scripts/validate_gse176261_voom.R"
-      - "scripts/validate_gse158765_voom.R"
+      - "scripts/validate_gse64099_voom.R"
   workflow_dispatch:
 
 permissions:
