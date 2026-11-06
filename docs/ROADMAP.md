@@ -27,7 +27,7 @@ Status reflects code currently present on the main branch. Checked items are imp
 - [x] Literature-grounded novelty triage with validated source IDs (provisional; never a priority claim)
 - [x] Gemini-proposed cross-domain connections with validated source IDs and a human review gate
 - [x] Research portfolio for saved runs and lexical retrieval of related prior questions
-- [ ] Shared cross-run scientific knowledge graph with reviewed cross-run claim/evidence reuse
+- [x] Shared cross-run scientific knowledge graph with source-backed claim-pair retrieval, dedicated SQLite persistence, provenance revalidation, and human review gates
 - [x] Task acceptance criteria, source-backed completion, blocked/retry states, and bounded attempt counts
 
 ## Milestone 4 — Real research capabilities
