@@ -36,44 +36,17 @@ class GeminiClaimExtractor:
 
     def __init__(self, api_key: str | None = None,
                  model: str = "gemini-2.5-flash", timeout: float = 45.0):
-        self.api_key = (api_key or os.environ.get("GEMINI_API_KEY", "")).strip()
+        from .model_agents import GeminiJSONProvider
         self.model = model.strip()
-        self.timeout = float(timeout)
-        if not self.api_key:
-            raise ValueError("GEMINI_API_KEY is not set. Add it to the environment; never commit it.")
-        if not re.fullmatch(r"[A-Za-z0-9._-]{1,100}", self.model):
-            raise ValueError("Invalid Gemini model name.")
-        if self.timeout <= 0:
-            raise ValueError("timeout must be positive.")
+        self.provider = GeminiJSONProvider(api_key=api_key, model=self.model, timeout=timeout)
 
     def _generate_json(self, prompt: str) -> dict[str, Any]:
-        url = ("https://generativelanguage.googleapis.com/v1beta/models/"
-               + quote(self.model, safe="") + ":generateContent")
-        body = {
-            "contents": [{"role": "user", "parts": [{"text": prompt}]}],
-            "generationConfig": {"temperature": 0.1, "responseMimeType": "application/json"},
-        }
-        request = Request(url, data=json.dumps(body).encode("utf-8"), method="POST",
-                          headers={"Content-Type": "application/json", "Accept": "application/json",
-                                   "x-goog-api-key": self.api_key})
+        from .model_agents import GeminiAgentError
         try:
-            with urlopen(request, timeout=self.timeout) as response:
-                payload = json.loads(response.read(2_000_000).decode("utf-8"))
-        except HTTPError as exc:
-            # Do not include request URL: it contains the API key.
-            detail = exc.read(2000).decode("utf-8", "replace")
-            raise ClaimExtractionError(
-                f"Gemini HTTP {exc.code}: {detail[:1000]}"
-            ) from exc
-        except (URLError, TimeoutError, json.JSONDecodeError, UnicodeDecodeError) as exc:
-            raise ClaimExtractionError(f"Gemini request failed: {exc}") from exc
-        try:
-            text = "".join(part.get("text", "") for part in
-                           payload["candidates"][0]["content"]["parts"])
-            result = json.loads(text)
-        except (KeyError, IndexError, TypeError, json.JSONDecodeError) as exc:
-            raise ClaimExtractionError("Gemini returned no valid JSON candidate object.") from exc
-        if not isinstance(result, dict) or not isinstance(result.get("claims"), list):
+            result = self.provider.generate_json(prompt)
+        except GeminiAgentError as exc:
+            raise ClaimExtractionError(str(exc)) from exc
+        if not isinstance(result.get("claims"), list):
             raise ClaimExtractionError("Gemini JSON must contain a 'claims' array.")
         return result
 
