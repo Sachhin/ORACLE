@@ -6,7 +6,7 @@ novelty, or probability. Similar-question matching is lexical only.
 from __future__ import annotations
 
 import re
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 
 from .models import EvidenceKind, EvidenceStance, ResearchRun
 from .storage import ResearchStore
@@ -40,13 +40,15 @@ class KnowledgeGapAssessor:
             if item.kind != EvidenceKind.INFERENCE
             and item.source_id and item.source_id in source_ids
         ]
+        source_evidence_ids = {item.evidence_id for item in source_evidence}
         candidate_claims = [
             claim for claim in run.claims
             if claim.status in {"unreviewed_candidate", "unassessed"}
         ]
         reviewed_claim_ids = {
             link.claim_id for link in run.evidence_claim_links
-            if link.stance in {EvidenceStance.SUPPORTS, EvidenceStance.REFUTES}
+            if link.evidence_id in source_evidence_ids
+            and link.stance in {EvidenceStance.SUPPORTS, EvidenceStance.REFUTES}
             and link.strength > 0
         }
         reviewed_candidates = sum(
@@ -54,7 +56,8 @@ class KnowledgeGapAssessor:
         )
         hypotheses_with_evidence = sum(
             1 for hypothesis in run.hypotheses
-            if hypothesis.supporting_evidence_ids or hypothesis.opposing_evidence_ids
+            if (set(hypothesis.supporting_evidence_ids)
+                | set(hypothesis.opposing_evidence_ids)) & source_evidence_ids
         )
         unresolved_contradictions = sum(
             1 for item in run.contradiction_candidates
