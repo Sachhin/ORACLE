@@ -113,6 +113,11 @@ if (!setequal(rownames(all_counts), rownames(counts))) {
   stop("All-samples and validation count matrices have different feature identifiers.")
 }
 all_counts <- all_counts[rownames(counts), , drop = FALSE]
+validation_from_all <- all_counts[, colnames(counts), drop = FALSE]
+if (!isTRUE(all.equal(validation_from_all, counts, tolerance = 0,
+                      check.attributes = FALSE))) {
+  stop("Validation counts differ from the corresponding columns in the all-samples count matrix.")
+}
 
 dge_all <- edgeR::DGEList(counts = all_counts)
 dge_all <- edgeR::calcNormFactors(dge_all, method = "TMM")
