@@ -70,7 +70,7 @@ class GEOReferenceTests(unittest.TestCase):
         self.assertEqual(mar["missingness_mechanism"], "MAR")
         self.assertEqual(mnar["missingness_mechanism"], "MNAR")
         incomplete = Path(self.tmp.name) / "incomplete.tsv"
-        incomplete.write_text("gene\\tA\\tB\\ng1\\t1\\tNA\\ng2\\t2\\t3\\n", encoding="utf-8")
+        incomplete.write_text("gene\tA\tB\ng1\t1\tNA\ng2\t2\t3\n", encoding="utf-8")
         with self.assertRaisesRegex(ValueError, "complete numeric matrix"):
             evaluate_imputation_holdout(incomplete)
 
