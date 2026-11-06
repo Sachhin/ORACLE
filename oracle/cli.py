@@ -33,8 +33,10 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> None:
     args = build_parser().parse_args()
     store = ResearchStore(args.db)
-    if args.extract_claims and args.literature is None:
-        raise SystemExit("--extract-claims requires --literature.")
+    if (args.extract_claims or args.compare_papers) and args.literature is None:
+        raise SystemExit("--extract-claims and --compare-papers require --literature.")
+    if args.compare_papers and not args.extract_claims:
+        raise SystemExit("--compare-papers also requires --extract-claims.")
     if args.literature is not None:
         run = ResearchRun(question=args.literature)
         providers = {"both": ("europepmc", "crossref"), "all": ("europepmc", "crossref", "geo"), "europepmc": ("europepmc",), "crossref": ("crossref",), "geo": ("geo",)}[args.provider]
@@ -42,9 +44,10 @@ def main() -> None:
         report = client.search(args.literature, limit=args.limit, providers=providers)
         client.ingest(run, report)
         extraction_report = GeminiClaimExtractor(model=args.gemini_model).extract(run) if args.extract_claims else None
+        comparison_report = CrossPaperComparator(model=args.gemini_model).compare(run) if args.compare_papers else None
         store.save_run(run)
         if args.json:
-            print(json.dumps({"run": run.to_dict(), "literature_report": report.__dict__, "claim_extraction_report": (extraction_report.__dict__ if extraction_report else None)}, indent=2, ensure_ascii=False))
+            print(json.dumps({"run": run.to_dict(), "literature_report": report.__dict__, "claim_extraction_report": (extraction_report.__dict__ if extraction_report else None), "comparison_report": (comparison_report.__dict__ if comparison_report else None)}, indent=2, ensure_ascii=False))
             return
         print(f"ORACLE literature run: {run.run_id}")
         print(f"Retrieved: {report.retrieved} | Sources: {report.ingested_sources} | Abstracts: {report.evidence_records} | Candidate statements: {report.candidate_statements}")
@@ -58,6 +61,9 @@ def main() -> None:
         if extraction_report:
             print(f"Gemini: {extraction_report.candidates_created} quote-validated candidates; {extraction_report.candidates_rejected} rejected.")
             print("Gemini candidates remain contextual, zero-weight, and unreviewed.")
+        if comparison_report:
+            print(f"Cross-paper comparison: {comparison_report.comparisons_created} review candidates from {comparison_report.pairs_submitted} pairs; {comparison_report.comparisons_rejected} rejected.")
+            print("Comparisons are pending review; no claim status or evidence stance was changed.")
         return
     orchestrator = OracleOrchestrator(store)
     if args.resume_id:
