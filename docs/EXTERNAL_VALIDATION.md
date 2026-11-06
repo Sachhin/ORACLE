@@ -4,6 +4,47 @@ ORACLE can compare its tab-separated outputs with a separately generated,
 trusted reference without inventing or silently downloading reference labels.
 The comparator records SHA-256 hashes and requires reference provenance.
 
+## Real external limma-voom reference: GSE176260
+
+A reproducible live validation workflow is provided at
+`.github/workflows/limma-external-reference.yml`. It downloads the three
+submitter-supplied discovery-cohort files from NCBI GEO:
+
+- `GSE176260_QCed_counts_discovery.txt.gz` — processed integer count matrix
+- `GSE176260_Log2_normalized_expression_discovery.txt.gz` — published
+  `limma::voom` expression matrix (`E`)
+- `GSE176260_Voom_weights_discovery.txt.gz` — published observation-level
+  precision weights
+
+The workflow retrieves the GEO sample metadata, selects only samples marked
+`discovery_analysis_sample: Yes`, verifies exact sample identity/order, and
+recomputes the published design `~ 0 + phenotype + gender` with edgeR TMM and
+limma voom. It then compares the recomputed expression matrix and precision
+weights with the independently submitted GEO outputs. The report records
+input SHA-256 hashes, R/GEOquery/edgeR/limma versions, cohort dimensions, and
+MAE/RMSE/bias/Pearson correlation for both matrices. Raw files and the JSON
+report are retained as a GitHub Actions artifact.
+
+Run it from GitHub Actions using the workflow-dispatch control, or let the
+path-filtered workflow run after changes to the workflow or R script:
+
+https://github.com/Sachhin/ORACLE/actions/workflows/limma-external-reference.yml
+
+Dataset and source provenance:
+
+- GEO series: https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE176260
+- Associated publication: PMID 34225776
+- Platform: GPL24676, human whole-blood RNA-seq
+- Published analysis design: `~ 0 + phenotype + gender`
+
+This is an external real-dataset reproducibility check of the published voom
+expression and precision-weight outputs. It is not evidence that the adapter
+is accurate on every dataset, that the original biological labels are correct,
+or that ORACLE has discovered causal mechanisms. The roadmap item remains
+pending until a successful run and artifact inspection establish exact sample,
+feature, and numerical agreement. A second independent dataset is still
+needed before claiming general external validation.
+
 ## Required provenance
 
 Create a JSON file such as `reference-provenance.json`:
