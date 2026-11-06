@@ -9,6 +9,7 @@ from typing import Any
 
 from .models import (
     Claim, ClaimRevision, ContradictionCandidate, Evidence, EvidenceClaimLink, EvidenceComparison,
+    EvidenceReviewCandidate,
     EvidenceKind, EvidenceStance, Experiment, ExperimentStatus, Hypothesis,
     HypothesisGroup, HypothesisStatus, ResearchMode, ResearchRun, ResearchTask,
     RunStatus, SourceRecord, UncertaintyAssessment, utc_now,
@@ -151,6 +152,10 @@ class ResearchStore:
             evidence_claim_links=[EvidenceClaimLink(**{**x, "stance": EvidenceStance(x["stance"])})
                                   for x in data.get("evidence_claim_links", [])],
             evidence_comparisons=[EvidenceComparison(**x) for x in data.get("evidence_comparisons", [])],
+            evidence_review_candidates=[
+                EvidenceReviewCandidate(**{**x, "proposed_stance": EvidenceStance(x["proposed_stance"])})
+                for x in data.get("evidence_review_candidates", [])
+            ],
             contradiction_candidates=[ContradictionCandidate(**x) for x in data.get("contradiction_candidates", [])],
             hypotheses=[Hypothesis(**{**x, "status": enum_value(HypothesisStatus, x.get("status", "proposed"))})
                         for x in data.get("hypotheses", [])],
