@@ -1,10 +1,6 @@
 name: ORACLE SciFact prediction benchmark
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/scifact-predictions.yml"
   workflow_dispatch:
     inputs:
       split:
@@ -42,13 +38,27 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
-      - name: Verify model credential
+      - name: Check model credential
+        id: credential
+        shell: bash
         run: |
           if [ -z "$GEMINI_API_KEY" ]; then
-            echo "::error::Add GEMINI_API_KEY as a repository Actions secret before dispatching this workflow."
-            exit 1
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Prediction generation skipped: add GEMINI_API_KEY as a repository Actions secret, then dispatch this workflow again."
+          else
+            echo "available=true" >> "$GITHUB_OUTPUT"
           fi
+      - name: Explain skipped live prediction run
+        if: steps.credential.outputs.available != 'true'
+        run: |
+          {
+            echo "## SciFact prediction benchmark"
+            echo "No Gemini API credential is configured in GitHub Actions."
+            echo "No model predictions or benchmark metrics were generated."
+            echo "Add the repository secret GEMINI_API_KEY and manually dispatch this workflow to run the benchmark."
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Download official SciFact data
+        if: steps.credential.outputs.available == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -63,6 +73,7 @@ jobs:
           echo "CLAIMS_PATH=$claims" >> "$GITHUB_ENV"
           echo "CORPUS_PATH=$corpus" >> "$GITHUB_ENV"
       - name: Generate frozen ORACLE predictions
+        if: steps.credential.outputs.available == 'true'
         timeout-minutes: 100
         shell: bash
         run: |
@@ -73,12 +84,14 @@ jobs:
           if [ "$MAX_CLAIMS" != "0" ]; then args+=(--max-claims "$MAX_CLAIMS"); fi
           python -m oracle.scifact_predict "${args[@]}"
       - name: Score frozen predictions
+        if: steps.credential.outputs.available == 'true'
         run: |
           python -m oracle.scifact_benchmark \
             --claims "$CLAIMS_PATH" --corpus "$CORPUS_PATH" \
             --predictions "data/scifact/oracle_predictions_${SPLIT}.jsonl" \
             --split "$SPLIT" > "data/scifact/oracle_scifact_report_${SPLIT}.json"
       - name: Upload predictions, provenance, and report
+        if: steps.credential.outputs.available == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: oracle-scifact-${{ env.SPLIT }}-${{ github.run_id }}
