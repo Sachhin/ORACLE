@@ -59,6 +59,31 @@ python -m oracle --geo-affymetrix-rma sample1.CEL --geo-affymetrix-rma sample2.C
 
 The adapter records every CEL SHA-256, file size, R/package versions, output checksum, and bounded runtime. It preserves feature/probe-set identifiers but does not perform annotation mapping, batch correction, differential testing, or biological interpretation. Install the selected Bioconductor package and its platform-specific annotation/CDF dependencies separately. CI tests the adapter contract with a mocked R subprocess; real CEL execution and comparison with trusted platform reference outputs remain unvalidated.
 
+## Independent preprocessing and evidence benchmarks
+
+Compare ORACLE TMM normalization factors with a local edgeR installation on the exact same raw-count matrix:
+
+```bash
+python -m oracle --compare-tmm-edger counts.tsv --rscript Rscript
+```
+
+Run a deterministic MCAR masking stress test for row-median imputation:
+
+```bash
+python -m oracle --imputation-benchmark complete-matrix.tsv \
+  --imputation-missing-fraction 0.1 --imputation-replicates 50 --imputation-seed 1729
+```
+
+This diagnostic measures reconstruction error only under simulated MCAR missingness. It does not establish performance under MAR/MNAR or downstream statistical bias.
+
+For evidence attribution and entailment, `benchmarks/evidence_adjudication_template.json` defines a human-label schema. Populate it only after at least two reviewers independently check each source and disagreements are adjudicated. Score a completed file with:
+
+```bash
+python -m oracle --evidence-benchmark benchmarks/my_adjudicated_cases.json
+```
+
+The evaluator reports stance confusion, per-class precision/recall/F1, source-ID attribution validity, and exact-quote validity. The checked-in template is intentionally empty: ORACLE does not fabricate expert gold labels. Split evaluation data by source/study to reduce leakage.
+
 ## Domain-specific experiment protocols
 
 ORACLE can append a conservative protocol scaffold to a saved run. Supported templates: `plant_biology`, `molecular_biology`, `cell_biology`, and `computational_biology`.
