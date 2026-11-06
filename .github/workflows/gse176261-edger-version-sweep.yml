@@ -1,0 +1,58 @@
+name: GSE176261 edgeR version sensitivity audit
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/gse176261-edger-version-sweep.yml"
+      - "scripts/validate_gse176261_voom.R"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compare-edgeR-releases:
+    name: GSE176261 on Bioconductor ${{ matrix.release }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        release: ["3.13", "3.22"]
+    container:
+      image: bioconductor/bioconductor_docker:RELEASE_${{ matrix.release }}
+      options: --user root
+    timeout-minutes: 60
+    steps:
+      - name: Check out ORACLE
+        uses: actions/checkout@v4
+      - name: Install and record Bioconductor packages
+        run: |
+          Rscript -e 'BiocManager::install(c("GEOquery", "edgeR", "limma"), ask=FALSE, update=FALSE)'
+          Rscript -e 'if (!requireNamespace("digest", quietly=TRUE)) install.packages("digest"); if (!requireNamespace("jsonlite", quietly=TRUE)) install.packages("jsonlite")'
+          Rscript -e 'stopifnot(requireNamespace("GEOquery"), requireNamespace("edgeR"), requireNamespace("limma"), requireNamespace("digest"), requireNamespace("jsonlite"))'
+          Rscript -e 'cat("R=", as.character(getRversion()), "\nBioconductor=", as.character(BiocManager::version()), "\nGEOquery=", as.character(packageVersion("GEOquery")), "\nedgeR=", as.character(packageVersion("edgeR")), "\nlimma=", as.character(packageVersion("limma")), "\n", sep="")' | tee runtime-versions.txt
+      - name: Download frozen GSE176261 reference matrices
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p validation-artifacts
+          base="https://ftp.ncbi.nlm.nih.gov/geo/series/GSE176nnn/GSE176261/suppl"
+          for file in GSE176261_QCed_counts_batch2_validationsamples.txt.gz GSE176261_Log2_normalized_expression_batch2_validationsamples.txt.gz GSE176261_Voom_weights_batch2_validationsamples.txt.gz; do
+            curl --fail --location --retry 4 --retry-all-errors --connect-timeout 20 --max-time 900 "$base/$file" -o "validation-artifacts/$file"
+            gzip -t "validation-artifacts/$file"
+          done
+          sha256sum validation-artifacts/*.gz | tee validation-artifacts/SHA256SUMS.txt
+      - name: Recompute GSE176261 voom
+        run: |
+          Rscript scripts/validate_gse176261_voom.R validation-artifacts/GSE176261_QCed_counts_batch2_validationsamples.txt.gz validation-artifacts/GSE176261_Log2_normalized_expression_batch2_validationsamples.txt.gz validation-artifacts/GSE176261_Voom_weights_batch2_validationsamples.txt.gz validation-artifacts/gse176261-reference-report.json
+      - name: Upload version-specific audit evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oracle-gse176261-edger-version-${{ matrix.release }}
+          path: |
+            runtime-versions.txt
+            validation-artifacts/
+          if-no-files-found: warn
+          retention-days: 30
