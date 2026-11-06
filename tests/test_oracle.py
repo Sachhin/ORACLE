@@ -928,5 +928,98 @@ class OracleTests(unittest.TestCase):
         self.assertEqual(loaded.citation_links[0].source_id, source.source_id)
         self.assertEqual(loaded.citation_links[0].target_doi, "10.1000/ref-a")
 
+
+    def test_geo_series_matrix_parser_records_descriptive_dataset_evidence(self):
+        import gzip
+        import hashlib
+        from oracle.geo_analysis import GEOExpressionAnalyzer
+        from oracle.models import DatasetFileRecord, SourceRecord
+
+        run = ResearchRun("GEO matrix parsing")
+        source = SourceRecord(
+            title="GEO expression study", source_id="geo-matrix-source",
+            dataset_accession="GSE123456",
+        )
+        run.sources.append(source)
+        matrix = (
+            "!Series_title = \"A test series\"\\n"
+            "!series_matrix_table_begin\\n"
+            "ID_REF\\tGSM_A\\tGSM_B\\n"
+            "probe_1\\t1.0\\t2.0\\n"
+            "probe_2\\t3.0\\tNA\\n"
+            "!series_matrix_table_end\\n"
+        ).encode()
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "GSE123456_series_matrix.txt.gz"
+            path.write_bytes(gzip.compress(matrix))
+            checksum = hashlib.sha256(path.read_bytes()).hexdigest()
+            dataset_file = DatasetFileRecord(
+                accession="GSE123456", source_id=source.source_id,
+                filename=path.name, url="https://ftp.ncbi.nlm.nih.gov/example",
+                status="downloaded", local_path=str(path), sha256=checksum,
+            )
+            run.dataset_files.append(dataset_file)
+            report = GEOExpressionAnalyzer().analyze(run)
+            self.assertEqual(report.files_analyzed, 1)
+            self.assertEqual(report.files_skipped, 0)
+            analysis = run.dataset_analyses[0]
+            self.assertEqual(analysis.feature_rows, 2)
+            self.assertEqual(analysis.sample_count, 2)
+            self.assertEqual(analysis.numeric_cells, 3)
+            self.assertEqual(analysis.missing_cells, 1)
+            self.assertAlmostEqual(analysis.mean, 2.0)
+            self.assertEqual(analysis.minimum, 1.0)
+            self.assertEqual(analysis.maximum, 3.0)
+            self.assertEqual(analysis.sample_summaries[0]["sample"], "GSM_A")
+            evidence = next(item for item in run.evidence if item.evidence_id == analysis.evidence_id)
+            self.assertEqual(evidence.kind, EvidenceKind.DATASET)
+            self.assertEqual(evidence.source_id, source.source_id)
+            self.assertIn("No normalization", evidence.limitations)
+            self.store.save_run(run)
+            loaded = self.store.load_run(run.run_id)
+            self.assertEqual(loaded.dataset_analyses[0].sha256, checksum)
+            self.assertEqual(loaded.dataset_analyses[0].evidence_id, analysis.evidence_id)
+
+    def test_geo_matrix_parser_rejects_checksum_mismatch_and_unsupported_files(self):
+        from oracle.geo_analysis import GEOExpressionAnalyzer
+        from oracle.models import DatasetFileRecord, SourceRecord
+
+        run = ResearchRun("GEO parser safety")
+        source = SourceRecord(title="Dataset", source_id="geo-safe")
+        run.sources.append(source)
+        with tempfile.TemporaryDirectory() as directory:
+            matrix = Path(directory) / "matrix.tsv"
+            matrix.write_text("ID_REF\\tGSM1\\ng1\\t1.0\\n", encoding="utf-8")
+            run.dataset_files.append(DatasetFileRecord(
+                accession="GSE1", source_id=source.source_id, filename="matrix.tsv",
+                url="https://ftp.ncbi.nlm.nih.gov/file", status="downloaded",
+                local_path=str(matrix), sha256="0" * 64,
+            ))
+            run.dataset_files.append(DatasetFileRecord(
+                accession="GSE1", source_id=source.source_id, filename="raw_data.tar",
+                url="https://ftp.ncbi.nlm.nih.gov/raw_data.tar", status="downloaded",
+                local_path=str(matrix),
+            ))
+            report = GEOExpressionAnalyzer().analyze(run)
+            self.assertEqual(report.files_analyzed, 0)
+            self.assertEqual(report.files_skipped, 2)
+            self.assertTrue(any("SHA-256" in warning for warning in report.warnings))
+            self.assertTrue(any("not yet supported" in warning for warning in report.warnings))
+            self.assertEqual(run.evidence, [])
+
+    def test_geo_matrix_parser_enforces_cell_and_uncompressed_size_limits(self):
+        from oracle.geo_analysis import GEOExpressionAnalyzer
+        with self.assertRaises(ValueError):
+            GEOExpressionAnalyzer(max_cells=1)._parse(
+                "ID_REF\\tGSM1\\tGSM2\\ng1\\t1\\t2\\n"
+            )
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "large.tsv"
+            path.write_text("ID_REF\\tGSM1\\ng1\\t123456789\\n", encoding="utf-8")
+            analyzer = GEOExpressionAnalyzer(max_uncompressed_bytes=1024)
+            self.assertTrue(analyzer._supported("large.tsv"))
+            with self.assertRaises(ValueError):
+                analyzer._read_text(path)
+
 if __name__ == "__main__":
     unittest.main()
