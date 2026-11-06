@@ -242,6 +242,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--imputation-missing-fraction", type=float, default=0.1)
     parser.add_argument("--imputation-replicates", type=int, default=20)
     parser.add_argument("--imputation-seed", type=int, default=1729)
+    parser.add_argument("--scifact-benchmark", action="store_true", help="Score frozen model predictions against the external SciFact labelled benchmark")
+    parser.add_argument("--scifact-claims", default="", help="SciFact claims_dev.jsonl or claims_train.jsonl")
+    parser.add_argument("--scifact-corpus", default="", help="SciFact corpus.jsonl")
+    parser.add_argument("--scifact-predictions", default="", help="Model predictions in official SciFact JSONL format")
+    parser.add_argument("--scifact-split", choices=["train", "dev"], default="dev")
     parser.add_argument("--evidence-benchmark", default="", help="Score predictions against a human-adjudicated evidence benchmark JSON file")
     parser.add_argument("--paired-answer-benchmark", default="", help="Compare paired human rubric scores for a candidate model and deterministic baseline")
     parser.add_argument("--benchmark-results", default="", help="DESeq2 result JSON/TSV to score against a curated known-positive set")
@@ -259,6 +264,20 @@ def main() -> None:
             report = run_paired_answer_benchmark(args.paired_answer_benchmark)
         except (OSError, ValueError, RuntimeError) as exc:
             raise SystemExit(f"Paired answer benchmark failed: {exc}") from exc
+        print(json.dumps(report, indent=2, ensure_ascii=False))
+        return
+    if args.scifact_benchmark:
+        required = [args.scifact_claims, args.scifact_corpus, args.scifact_predictions]
+        if not all(required):
+            raise SystemExit("--scifact-benchmark requires --scifact-claims, --scifact-corpus, and --scifact-predictions.")
+        from .scifact_benchmark import evaluate_scifact
+        try:
+            report = evaluate_scifact(
+                args.scifact_claims, args.scifact_corpus,
+                args.scifact_predictions, split=args.scifact_split,
+            )
+        except (OSError, ValueError, RuntimeError) as exc:
+            raise SystemExit(f"SciFact benchmark failed: {exc}") from exc
         print(json.dumps(report, indent=2, ensure_ascii=False))
         return
     if args.evidence_benchmark:
