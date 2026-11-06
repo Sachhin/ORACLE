@@ -57,7 +57,8 @@ Status reflects code currently present on the main branch. Checked items are imp
 - [ ] Human-scored scientific answer-quality benchmark set
 - [ ] Benchmarked evidence attribution, entailment, contradiction, and hallucination evaluations (model review suggestions are implemented but not validated as accurate)
 - [x] Reproducibility and regression suite across Python 3.10–3.14 CI matrix
-- [ ] Human review gates for high-impact claims and real experiments
+- [x] High-impact claim review requires independent source groups, reviewer identity, and rationale
+- [x] Performed-experiment execution provenance requires independent human acceptance before evaluation
 - [ ] Independent validation that model outputs improve scientific reasoning over deterministic baselines
 
 ## Explicit non-goals until validated
