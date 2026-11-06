@@ -282,3 +282,147 @@ class GEOSupplementaryClient:
             except Exception as exc:
                 report["warnings"].append(f"{accession}: {exc}")
         return report
+
+
+    def download_series_raw_archive(
+        self,
+        accession: str,
+        output_dir: str | Path = "data/geo",
+        max_file_bytes: int = 50_000_000,
+    ) -> dict:
+        """Download a single official NCBI *_RAW.tar archive for a GSE accession."""
+        import re
+        if not re.fullmatch(r"GSE\d+", accession.upper()):
+            raise ValueError("Only GEO Series accessions in GSE format are supported.")
+        if not 1_000_000 <= max_file_bytes <= 1_000_000_000:
+            raise ValueError("max_file_bytes must be between 1 MB and 1 GB.")
+        accession = accession.upper()
+        base_url = self.series_directory(accession)
+        files = self.parse_listing(self._fetch_listing(base_url), base_url)
+        archives = [(name, url) for name, url in files
+                    if name.upper() == f"{accession}_RAW.TAR"]
+        if len(archives) != 1:
+            raise RuntimeError(
+                f"Expected exactly one {accession}_RAW.tar archive; found {len(archives)}."
+            )
+        filename, url = archives[0]
+        target_dir = Path(output_dir) / accession
+        target_dir.mkdir(parents=True, exist_ok=True)
+        target = target_dir / filename
+        temporary = target.with_name(target.name + ".part")
+        digest = hashlib.sha256()
+        written = 0
+        try:
+            request = Request(url, headers={"User-Agent": "ORACLE-GEO-Series-Downloader/1.0"})
+            with urlopen(request, timeout=self.timeout) as response:
+                length = response.headers.get("Content-Length")
+                if length and int(length) > max_file_bytes:
+                    raise RuntimeError(
+                        f"Archive size {length} exceeds the {max_file_bytes}-byte cap."
+                    )
+                with temporary.open("wb") as output:
+                    while True:
+                        chunk = response.read(1024 * 1024)
+                        if not chunk:
+                            break
+                        written += len(chunk)
+                        if written > max_file_bytes:
+                            raise RuntimeError(
+                                f"Archive exceeded the {max_file_bytes}-byte cap."
+                            )
+                        digest.update(chunk)
+                        output.write(chunk)
+            temporary.replace(target)
+        except Exception:
+            temporary.unlink(missing_ok=True)
+            raise
+        return {
+            "accession": accession, "filename": filename,
+            "url": url, "local_path": str(target),
+            "size_bytes": written, "sha256": digest.hexdigest(),
+        }
+
+    @staticmethod
+    def extract_raw_archive(
+        archive_path: str | Path,
+        output_dir: str | Path | None = None,
+        *,
+        max_members: int = 5000,
+        max_member_bytes: int = 50_000_000,
+        max_total_bytes: int = 250_000_000,
+    ) -> dict:
+        """Safely extract regular files from a GEO tar archive with strict limits."""
+        import tarfile
+        source = Path(archive_path)
+        target_dir = Path(output_dir) if output_dir else source.parent / (source.stem + "_extracted")
+        if not source.is_file():
+            raise FileNotFoundError(source)
+        if not 1 <= max_members <= 100_000:
+            raise ValueError("max_members must be between 1 and 100000.")
+        if not 1 <= max_member_bytes <= 1_000_000_000:
+            raise ValueError("max_member_bytes must be between 1 and 1GB.")
+        if not 1 <= max_total_bytes <= 2_000_000_000:
+            raise ValueError("max_total_bytes must be between 1 and 2GB.")
+        extracted, skipped, total = [], [], 0
+        seen = set()
+        target_dir.mkdir(parents=True, exist_ok=True)
+        with tarfile.open(source, mode="r:*") as archive:
+            members = archive.getmembers()
+            if len(members) > max_members:
+                raise RuntimeError(f"Archive contains {len(members)} members; cap is {max_members}.")
+            for member in members:
+                name = member.name
+                parts = Path(name).parts
+                if (not member.isfile() or Path(name).is_absolute()
+                        or any(part in {"..", ""} for part in parts)
+                        or "\\" in name or not parts):
+                    skipped.append({"name": name, "reason": "not a safe regular file"})
+                    continue
+                filename = parts[-1]
+                if filename in seen:
+                    raise RuntimeError(f"Archive contains duplicate output filename: {filename}")
+                seen.add(filename)
+                if not filename.upper().startswith("GSM"):
+                    skipped.append({"name": name, "reason": "not a GSM sample file"})
+                    continue
+                if member.size < 0 or member.size > max_member_bytes:
+                    skipped.append({"name": name, "reason": "member exceeds size limit"})
+                    continue
+                if total + member.size > max_total_bytes:
+                    raise RuntimeError("Archive extraction would exceed total uncompressed size cap.")
+                extracted_file = archive.extractfile(member)
+                if extracted_file is None:
+                    skipped.append({"name": name, "reason": "could not read member"})
+                    continue
+                destination = target_dir / filename
+                temporary = destination.with_name(destination.name + ".part")
+                copied = 0
+                try:
+                    with extracted_file, temporary.open("wb") as output:
+                        while True:
+                            chunk = extracted_file.read(1024 * 1024)
+                            if not chunk:
+                                break
+                            copied += len(chunk)
+                            if copied > member.size or copied > max_member_bytes:
+                                raise RuntimeError(f"Member size mismatch or limit exceeded: {name}")
+                            output.write(chunk)
+                    if copied != member.size:
+                        raise RuntimeError(f"Member size mismatch for {name}")
+                    temporary.replace(destination)
+                except Exception:
+                    temporary.unlink(missing_ok=True)
+                    raise
+                total += copied
+                extracted.append({
+                    "archive_name": name, "filename": filename,
+                    "local_path": str(destination), "size_bytes": copied,
+                    "sha256": hashlib.sha256(destination.read_bytes()).hexdigest(),
+                })
+        return {
+            "archive_path": str(source), "output_dir": str(target_dir),
+            "files_extracted": len(extracted), "bytes_extracted": total,
+            "files": extracted, "skipped": skipped,
+            "limitations": "Only regular GSM-prefixed members were extracted. "
+                           "Archive metadata and filenames do not establish biological groups.",
+        }

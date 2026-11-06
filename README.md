@@ -353,3 +353,29 @@ python -m oracle --merge-geo-counts \
 **Do not assume the illustrative column positions are correct without inspecting the files.** The GSM records describe tab-delimited gene-level raw counts, aligned to TAIR10 and generated with HTSeq, but the actual downloaded header/columns must be checked before merging. If there are extra annotation columns, configure the correct count column. GEO sample records: [GSM3021223](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSM3021223), [GSM3021224](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSM3021224), [GSM3021235](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSM3021235), [GSM3021236](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSM3021236).
 
 After confirming sample identities, file format, count semantics, and biological replicate design, use the explicit `--geo-group` assignments documented above to run DESeq2. This downloader does not infer treatment groups, and downloading files is not itself a biological analysis.
+
+
+### Preferred GSE archive workflow (GSE111062)
+
+The GSE111062 GEO Series record advertises one supplementary archive, `GSE111062_RAW.tar` (about 3.2 MB), containing TXT sample files. Prefer the Series archive for this dataset; per-GSM supplementary directories are not guaranteed to contain the files. The direct GSM downloader above is useful only when a GSM directory actually lists a supplementary file.
+
+Download the official Series archive:
+
+```bash
+python -m oracle --download-geo-series-archive GSE111062 --dataset-max-mb 10
+```
+
+Safely extract GSM-prefixed regular files (path traversal, links, non-sample files, excessive member counts and oversized extraction are rejected or skipped):
+
+```bash
+python -m oracle --extract-geo-archive data/geo/GSE111062/GSE111062_RAW.tar
+```
+
+Then inspect the extracted filenames and one file's contents before selecting the correct count columns:
+
+```bash
+find data/geo/GSE111062/GSE111062_RAW_extracted -maxdepth 1 -type f -printf '%f\n'
+gzip -cd data/geo/GSE111062/GSE111062_RAW_extracted/GSM3021223* | head
+```
+
+Use the actual extracted paths with `--merge-geo-counts`. Do not assume column positions until inspecting the file. The archive's existence and sample names do not themselves validate sample group labels or replicate independence. The GEO Series record documents the study's sample design and the archive: [GSE111062](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE111062).
