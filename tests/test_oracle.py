@@ -45,7 +45,10 @@ class OracleTests(unittest.TestCase):
 
     def test_experiment_is_proposed_not_performed(self):
         run = OracleOrchestrator(self.store).run("Test question", max_cycles=1)
+        # The experiment designer must see hypotheses created earlier in this same cycle.
+        self.assertGreaterEqual(len(run.experiments), 1)
         self.assertTrue(all(e.status == ExperimentStatus.PROPOSED for e in run.experiments))
+        self.assertTrue(all(e.execution_kind == "proposed" for e in run.experiments))
 
     def test_research_only_mode_skips_discovery_directions(self):
         run = OracleOrchestrator(self.store).run(
