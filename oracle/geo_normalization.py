@@ -109,7 +109,7 @@ def normalize_geo_matrix(
     max_cells: int = 2_000_000,
 ) -> dict:
     """Normalize a rectangular GEO matrix and write a new TSV plus provenance report."""
-    if method not in {"quantile", "cpm", "log2-cpm"}:
+    if method not in {"quantile", "quantile-row-median", "cpm", "log2-cpm", "tmm-cpm", "tmm-log2-cpm"}:
         raise ValueError("method must be quantile, cpm, or log2-cpm.")
     if not math.isfinite(prior_count) or prior_count <= 0:
         raise ValueError("prior_count must be a finite positive number.")
@@ -133,7 +133,7 @@ def normalize_geo_matrix(
             imputation_values[features[index]] = median
             matrix[index] = [median if value is None else value for value in row]
     totals = [sum(row[column] for row in matrix) for column in range(len(samples))]
-    if method in {"cpm", "log2-cpm"}:
+    if method in {"cpm", "log2-cpm", "tmm-cpm", "tmm-log2-cpm"}:
         for row_index, row in enumerate(matrix):
             for column, value in enumerate(row):
                 if value < 0 or not value.is_integer():
@@ -144,11 +144,17 @@ def normalize_geo_matrix(
         if any(total <= 0 for total in totals):
             raise ValueError("Every sample must have a positive library size.")
         normalized = []
+        effective_totals = list(totals)
+        tmm_factors = [1.0] * len(samples)
+        if method in {"tmm-cpm", "tmm-log2-cpm"}:
+            tmm_factors = _tmm_factors(matrix, totals)
+            effective_totals = [n * f for n, f in zip(totals, tmm_factors)]
         for row in matrix:
             values = []
             for column, value in enumerate(row):
-                cpm = value / totals[column] * 1_000_000.0
-                values.append(math.log2(cpm + prior_count) if method == "log2-cpm" else cpm)
+                cpm = value / effective_totals[column] * 1_000_000.0
+                use_log = method in {"log2-cpm", "tmm-log2-cpm"}
+                values.append(math.log2(cpm + prior_count) if use_log else cpm)
             normalized.append(values)
     else:
         normalized = _quantile_normalize(matrix)
@@ -185,7 +191,9 @@ def normalize_geo_matrix(
         "row_median_imputation_values": imputation_values if method == "quantile-row-median" else None,
         "samples": len(samples),
         "sample_library_sizes": dict(zip(samples, totals)),
-        "prior_count": prior_count if method == "log2-cpm" else None,
+        "tmm_normalization_factors": dict(zip(samples, tmm_factors)) if method.startswith("tmm-") else None,
+        "effective_library_sizes": dict(zip(samples, effective_totals)),
+        "prior_count": prior_count if method in {"log2-cpm", "tmm-log2-cpm"} else None,
         "limitations": (
             "Row-median imputation is explicit and emits a hashed missingness mask; it can bias distributions and is not a substitute for a missing-data model. Quantile normalization assumes comparable sample distributions and is intended for "
             "continuous microarray-like measurements; do not apply it blindly to raw RNA-seq counts. "
