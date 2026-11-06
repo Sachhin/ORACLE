@@ -1015,7 +1015,7 @@ class OracleTests(unittest.TestCase):
             )
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "large.tsv"
-            path.write_text("ID_REF\tGSM1\ng1\t123456789\n", encoding="utf-8")
+            path.write_text("x" * 2048, encoding="utf-8")
             analyzer = GEOExpressionAnalyzer(max_uncompressed_bytes=1024)
             self.assertTrue(analyzer._supported("large.tsv"))
             with self.assertRaises(ValueError):
