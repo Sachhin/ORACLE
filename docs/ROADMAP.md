@@ -35,7 +35,8 @@ Status reflects code currently present on the main branch; checked items are imp
 - [ ] Provider-backed auditor and literature-grounded novelty assessment
 - [ ] Adaptive model routing with quota-aware retries and fallback policy (Gemini request timeout is implemented)
 - [x] Bounded Europe PMC open-access full-text retrieval with strict Creative Commons licence checks
-- [ ] GEO supplementary/raw data discovery and safe dataset ingestion
+- [x] GEO Series supplementary file discovery and size-capped download with SHA-256 checksums
+- [ ] Automatic parsing/normalization of downloaded GEO matrices and raw data into scientific evidence
 - [ ] Citation-network exploration and source-level quality assessment
 - [x] Explicit experiment lifecycle recording for proposed, simulated, performed, and evaluated states with execution provenance
 - [ ] Domain-specific experiment protocols and reproducible analysis adapters
