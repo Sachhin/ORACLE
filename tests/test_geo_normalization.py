@@ -1,5 +1,6 @@
 """Tests for explicit GEO matrix normalization methods."""
 import csv
+import math
 import tempfile
 import unittest
 from pathlib import Path
@@ -57,7 +58,7 @@ class GEONormalizationTests(unittest.TestCase):
         normalize_geo_matrix(source, log_path, "log2-cpm", prior_count=1.0)
         with log_path.open(encoding="utf-8") as handle:
             log_rows = list(csv.reader(handle, delimiter="\t"))
-        self.assertAlmostEqual(float(log_rows[1][1]), 18.0, places=5)
+        self.assertAlmostEqual(float(log_rows[1][1]), math.log2(250001.0), places=5)
 
         continuous = self.write("continuous.tsv", "gene\tA\tB\ng1\t1.5\t2\n")
         with self.assertRaisesRegex(ValueError, "non-negative integer raw counts"):
