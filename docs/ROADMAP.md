@@ -34,7 +34,7 @@ Status reflects code currently present on the main branch. Checked items are imp
 - [x] Common run(context) -> result contract with optional Gemini suite for planner, researcher, explorer, hypothesis, skeptic, experiment, auditor, and novelty agents
 - [x] Provider-backed provisional auditor and literature-grounded novelty triage
 - [x] Bounded transient retries, timeouts, and quota-exhaustion detection for Gemini
-- [ ] Adaptive routing across multiple model providers and explicit fallback policy
+- [x] Ordered Gemini/Groq/OpenRouter routing with explicit transient-failure fallback policy and environment-only credentials
 - [x] Bounded Europe PMC open-access full-text retrieval with strict Creative Commons licence checks
 - [x] GEO Series supplementary file discovery and size-capped download with SHA-256 checksums
 - [x] Bounded descriptive parsing of downloaded GEO TSV/CSV expression matrices with checksums, per-sample summaries, and source-linked dataset records
