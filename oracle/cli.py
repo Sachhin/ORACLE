@@ -39,6 +39,14 @@ def build_parser() -> argparse.ArgumentParser:
                         help="Discover and download GEO supplementary files within the configured size cap")
     parser.add_argument("--analyze-geo-files", action="store_true",
                         help="Download and parse supported GEO TSV/CSV expression matrices (descriptive only)")
+    parser.add_argument("--normalize-geo-matrix", metavar="MATRIX_PATH",
+                        help="Normalize a GEO matrix into a separate output file")
+    parser.add_argument("--normalization-method", choices=["quantile", "cpm", "log2-cpm"], default="",
+                        help="quantile for continuous microarray-like data; cpm/log2-cpm for raw integer counts")
+    parser.add_argument("--normalization-output", default="",
+                        help="Required output TSV path; raw input is never overwritten")
+    parser.add_argument("--normalization-prior-count", type=float, default=0.5,
+                        help="Positive log2-CPM prior count (default 0.5)")
     parser.add_argument("--geo-deseq2", metavar="MATRIX_PATH",
                         help="Run optional DESeq2 negative-binomial analysis on raw integer RNA-seq counts")
     parser.add_argument("--geo-run-id", default="", help="Persist this DESeq2 result into an existing ORACLE research run")
@@ -205,6 +213,19 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main() -> None:
     args = build_parser().parse_args()
+    if args.normalize_geo_matrix:
+        if not args.normalization_method or not args.normalization_output:
+            raise SystemExit("--normalize-geo-matrix requires --normalization-method and --normalization-output.")
+        from .geo_normalization import normalize_geo_matrix
+        try:
+            report = normalize_geo_matrix(
+                args.normalize_geo_matrix, args.normalization_output,
+                args.normalization_method, prior_count=args.normalization_prior_count,
+            )
+        except (OSError, ValueError, RuntimeError) as exc:
+            raise SystemExit(f"GEO matrix normalization failed: {exc}") from exc
+        print(json.dumps(report, indent=2, ensure_ascii=False))
+        return
     if args.download_geo_series_archive:
         from .geo_data import GEOSupplementaryClient
         try:
