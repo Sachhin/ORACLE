@@ -67,12 +67,12 @@ class GEONormalizationTests(unittest.TestCase):
 
 
     def test_tmm_methods_emit_effective_library_size_provenance(self):
-        rows = ["gene\\tA\\tB"]
+        rows = ["gene\tA\tB"]
         for i in range(1, 41):
             a = i * 10 + (i % 3)
             b = i * 8 + (i % 5)
-            rows.append(f"g{i}\\t{a}\\t{b}")
-        source = self.write("tmm.tsv", "\\n".join(rows) + "\\n")
+            rows.append(f"g{i}\t{a}\t{b}")
+        source = self.write("tmm.tsv", "\n".join(rows) + "\n")
         output = self.root / "tmm-log.tsv"
         report = normalize_geo_matrix(source, output, "tmm-log2-cpm")
         self.assertEqual(set(report["tmm_normalization_factors"]), {"A", "B"})
@@ -83,14 +83,14 @@ class GEONormalizationTests(unittest.TestCase):
         self.assertTrue(output.exists())
 
     def test_explicit_row_median_imputation_writes_missingness_mask(self):
-        source = self.write("sparse.tsv", "gene\\tA\\tB\\ng1\\t2\\tNA\\ng2\\t4\\t6\\n")
+        source = self.write("sparse.tsv", "gene\tA\tB\ng1\t2\tNA\ng2\t4\t6\n")
         output = self.root / "imputed.tsv"
         report = normalize_geo_matrix(source, output, "quantile-row-median")
         self.assertEqual(report["missing_cells"], 1)
         self.assertTrue(Path(report["missing_mask_path"]).is_file())
         self.assertEqual(len(report["missing_mask_sha256"]), 64)
         mask = Path(report["missing_mask_path"]).read_text(encoding="utf-8")
-        self.assertIn("g1\\t0\\t1", mask)
+        self.assertIn("g1\t0\t1", mask)
 
     def test_rerun_verification_compares_output_checksums(self):
         source = self.write(
