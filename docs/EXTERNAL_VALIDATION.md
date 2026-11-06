@@ -106,6 +106,29 @@ precision, recall, F1, Jaccard, and confusion counts. P-values can differ
 legitimately across statistical models; do not interpret disagreement alone
 as evidence that one method is wrong.
 
+## Live GEO limma-voom reference checks
+
+The `limma-external-reference.yml` workflow downloads and hashes the
+submitter-published count, log2-expression, and voom-weight matrices for
+GSE176260, reconstructs the published discovery-sample design
+`~ 0 + phenotype + gender`, and compares recomputed expression and precision
+weights against the frozen GEO matrices. It resolves the short sample aliases
+from the leading token of each GEO title (for example, `9A4D98` from
+`9A4D98 RNA-seq [discovery cohort]`) and requires exact one-to-one identity
+matching. It does not infer missing phenotype or gender labels.
+
+GSE176261 is a separate validation cohort from the same publication and
+SuperSeries, not an independent study. It is run only after GSE176260 passes.
+A passing result on these two cohorts strengthens within-study replication but
+does not satisfy the roadmap requirement for a second independent publication
+or laboratory. That additional external study remains required.
+
+Artifacts include source matrices, SHA-256 checksums, software versions,
+sample accession mapping, cohort composition, numerical comparison metrics,
+and explicit acceptance thresholds. A failed sample mapping or numerical
+threshold blocks the job; it must not be bypassed by loosening tolerances
+without documented scientific justification.
+
 ## Expert answer and evidence benchmark data
 
 Human benchmark scores must come from independent reviewers, not generated
