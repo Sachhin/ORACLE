@@ -285,9 +285,9 @@ fit <- eBayes(fit)
 tab <- topTable(fit, number=Inf, sort.by="none", adjust.method="BH")
 tab$feature <- rownames(tab)
 tab <- tab[,c("feature","logFC","AveExpr","t","P.Value","adj.P.Val","B")]
-write.table(tab, file=args[3], sep="\\t", quote=FALSE, row.names=FALSE, na="NA")
-cat(as.character(getRversion()), "\\t", as.character(packageVersion("edgeR")),
-    "\\t", as.character(packageVersion("limma")), sep="")
+write.table(tab, file=args[3], sep="\t", quote=FALSE, row.names=FALSE, na="NA")
+cat(as.character(getRversion()), "\t", as.character(packageVersion("edgeR")),
+    "\t", as.character(packageVersion("limma")), sep="")
 '''
 
 
@@ -320,14 +320,14 @@ def compare_voom_to_limma_reference(
         counts_path, meta_path = root / "counts.tsv", root / "meta.tsv"
         script_path, output_path = root / "reference.tsv", root / "reference.R"
         with counts_path.open("w", encoding="utf-8", newline="") as handle:
-            writer = csv.writer(handle, delimiter="\\t", lineterminator="\\n")
+            writer = csv.writer(handle, delimiter="\t", lineterminator="\n")
             writer.writerow(["feature", *samples])
             for feature, row in zip(features, matrix):
                 if any(value is None or value < 0 or not value.is_integer() for value in row):
                     raise ValueError("limma-voom reference requires complete non-negative integer counts.")
                 writer.writerow([feature, *[int(value) for value in row]])
         with meta_path.open("w", encoding="utf-8", newline="") as handle:
-            writer = csv.writer(handle, delimiter="\\t", lineterminator="\\n")
+            writer = csv.writer(handle, delimiter="\t", lineterminator="\n")
             writer.writerow(["sample", "group"])
             for sample in samples:
                 writer.writerow([sample, group_labels[sample]])
@@ -345,12 +345,12 @@ def compare_voom_to_limma_reference(
                                (run.stderr or run.stdout or "R failed")[-3000:])
         if not output_path.is_file():
             raise RuntimeError("limma reference script did not write a result.")
-        versions = (run.stdout or "").strip().split("\\t")
+        versions = (run.stdout or "").strip().split("\t")
         if len(versions) != 3 or not all(versions):
             raise RuntimeError("limma reference version provenance is missing.")
         reference = {}
         with output_path.open("r", encoding="utf-8", newline="") as handle:
-            for row in csv.DictReader(handle, delimiter="\\t"):
+            for row in csv.DictReader(handle, delimiter="\t"):
                 feature = row["feature"]
                 if feature in reference:
                     raise RuntimeError("Reference returned duplicate feature IDs.")
