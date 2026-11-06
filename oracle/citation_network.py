@@ -50,9 +50,11 @@ class CrossrefCitationClient:
 
     def discover(self, run: ResearchRun) -> CitationNetworkReport:
         report = CitationNetworkReport()
-        existing = {(item.source_id, item.target_doi.casefold(),
-                     self._clean(item.target_title).casefold())
-                    for item in run.citation_links}
+        existing = {
+            (item.source_id, item.target_doi.casefold() if item.target_doi else "",
+             "" if item.target_doi else self._clean(item.target_title).casefold())
+            for item in run.citation_links
+        }
         sources = [item for item in run.sources if item.doi][:self.max_sources]
         for source in sources:
             report.sources_examined += 1
@@ -73,7 +75,8 @@ class CrossrefCitationClient:
                         report.references_without_doi += 1
                     if not doi and not title:
                         continue
-                    key = (source.source_id, doi.casefold(), title.casefold())
+                    key = (source.source_id, doi.casefold() if doi else "",
+                           "" if doi else title.casefold())
                     if key in existing:
                         continue
                     run.citation_links.append(CitationLink(
