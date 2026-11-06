@@ -31,6 +31,7 @@ class BioconductorIntegrationTests(unittest.TestCase):
             raise
         self.assertEqual(report["comparison"], "ORACLE TMM vs edgeR::calcNormFactors(method='TMM')")
         self.assertGreaterEqual(report["max_absolute_difference"], 0)
+        self.assertTrue(report["within_tolerance"], report)
         self.assertEqual(len(report["edgeR_factors"]), 6)
     def test_live_limma_voom_execution(self):
         groups = {"C1":"control","C2":"control","C3":"control",
