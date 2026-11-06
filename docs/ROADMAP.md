@@ -14,7 +14,7 @@ Status reflects code currently present on the main branch; checked items are imp
 - [x] Evidence graph with claim-to-source relationships
 - [x] Hypothesis ledger, source-backed support/opposition links, and human-gated status transitions
 - [x] Explicit uncertainty assessments and contradiction review candidates
-- [x] Provenance, claim revisions, and dependence-aware evidence accounting
+- [x] Provenance, claim revisions, dependence-aware evidence accounting, and human source-quality review
 - [x] Literature retrieval from Europe PMC, Crossref, and NCBI GEO metadata
 - [x] Optional source ingestion into the full autonomous research cycle
 - [x] Quote-validated Gemini claim extraction and cross-paper comparison candidates
@@ -38,7 +38,7 @@ Status reflects code currently present on the main branch; checked items are imp
 - [x] Bounded Europe PMC open-access full-text retrieval with strict Creative Commons licence checks
 - [x] GEO Series supplementary file discovery and size-capped download with SHA-256 checksums
 - [ ] Automatic parsing/normalization of downloaded GEO matrices and raw data into scientific evidence
-- [ ] Citation-network exploration and source-level quality assessment
+- [ ] Citation-network exploration
 - [x] Explicit experiment lifecycle recording for proposed, simulated, performed, and evaluated states with execution provenance
 - [ ] Domain-specific experiment protocols and reproducible analysis adapters
 
