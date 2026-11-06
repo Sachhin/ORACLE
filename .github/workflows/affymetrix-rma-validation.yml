@@ -80,7 +80,7 @@ jobs:
           report = json.loads(Path("data/affymetrix/GSE40839_GPL96_RMA_report.json").read_text())
           matrix = Path(report["output_path"])
           with matrix.open(encoding="utf-8", newline="") as handle:
-              rows = csv.reader(handle, delimiter="\\t")
+              rows = csv.reader(handle, delimiter="\t")
               header = next(rows)
               first = next(rows, None)
           assert report["platform"].casefold() == "hgu133a", report
