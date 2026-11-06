@@ -4,7 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 
-from .models import ResearchMode, ResearchRun
+from .models import ExperimentStatus, ResearchMode, ResearchRun
 from .literature import LiteratureClient
 from .llm import GeminiClaimExtractor
 from .comparison import CrossPaperComparator
@@ -195,7 +195,7 @@ def main() -> None:
     print(f"Claims: {len(run.claims)} | Evidence: {len(run.evidence)} | Links: {len(run.evidence_claim_links)}")
     print(f"Hypothesis groups: {len(run.hypothesis_groups)} | Hypotheses: {len(run.hypotheses)}")
     experiment_counts = {status.value: sum(1 for item in run.experiments if item.status == status)
-                         for status in __import__("oracle.models", fromlist=["ExperimentStatus"]).ExperimentStatus}
+                         for status in ExperimentStatus}
     print("Experiments: " + " | ".join(f"{name}: {count}" for name, count in experiment_counts.items()))
     print("\nFindings and limitations:")
     for finding in run.findings:
