@@ -12,6 +12,7 @@ on:
     paths:
       - ".github/workflows/limma-external-reference.yml"
       - "scripts/validate_gse176260_voom.R"
+      - "scripts/validate_gse176261_voom.R"
   workflow_dispatch:
 
 permissions:
@@ -72,7 +73,7 @@ jobs:
           retention-days: 30
 
   gse176261-validation-cohort:
-    name: GSE176261 independent validation cohort
+    name: GSE176261 same-study validation cohort
     needs: gse176260-reference
     runs-on: ubuntu-latest
     timeout-minutes: 45
