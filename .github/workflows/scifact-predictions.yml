@@ -1,6 +1,10 @@
 name: ORACLE SciFact prediction benchmark
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/scifact-predictions.yml"
   workflow_dispatch:
     inputs:
       split:
@@ -29,9 +33,9 @@ jobs:
     timeout-minutes: 120
     env:
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-      SPLIT: ${{ inputs.split }}
-      MODEL: ${{ inputs.model }}
-      MAX_CLAIMS: ${{ inputs.max_claims }}
+      SPLIT: ${{ github.event_name == 'workflow_dispatch' && inputs.split || 'dev' }}
+      MODEL: ${{ github.event_name == 'workflow_dispatch' && inputs.model || 'gemini-2.5-flash' }}
+      MAX_CLAIMS: ${{ github.event_name == 'workflow_dispatch' && inputs.max_claims || '20' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
