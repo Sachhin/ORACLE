@@ -6,7 +6,7 @@ ORACLE combines Deep Research and Autonomous Discovery under a balanced operatin
 
 ## Current build status
 
-The offline research foundation remains usable without credentials. Optional network literature retrieval uses public scholarly APIs; optional Gemini extraction uses a real model only when explicitly enabled. Deterministic local agents remain scaffolding, not claims of autonomous AI-level scientific reasoning.
+The offline research foundation remains usable without credentials. Optional network literature retrieval uses public scholarly APIs; optional Gemini extraction and cross-paper comparison use a real model only when explicitly enabled. The baseline agents remain deterministic scaffolding. The orchestrator now measures whether unique research information was added, suppresses repeated scaffold records, checks core graph invariants, and stops after repeated no-progress cycles. This is safer lifecycle control, not proof of autonomous scientific reasoning.
 
 ## Quick start
 
@@ -42,7 +42,7 @@ ORACLE can search Europe PMC and Crossref public REST APIs without API keys or t
 
 Each work is stored with DOI/PMID when available, authors, journal, date, provider, landing URL, licence/open-access metadata, and abstract text. Abstracts are source evidence with the exact "Abstract" locator. Sentence splitting produces unreviewed statement candidates only: it does not prove a claim or decide whether a paper supports/refutes it. Initial evidence links are contextual with zero weight until reviewed.
 
-Optional Gemini claim extraction is available with --extract-claims. It creates source-quoted, unreviewed candidates only; it does not determine truth, entailment, contradiction, or whether a paper supports a hypothesis. Full-text retrieval, raw GEO matrix downloads, other dataset repositories, semantic evidence review, citation-network exploration, and autonomous LLM reasoning are not yet included. Publisher copyright may apply to abstract text.
+Optional Gemini claim extraction is available with --extract-claims. It creates source-quoted, unreviewed candidates only; it does not determine truth, entailment, contradiction, or whether a paper supports a hypothesis. Full-text retrieval, raw GEO matrix downloads, other dataset repositories, semantic evidence review of support/refutation, citation-network exploration, and LLM-driven planning/reasoning across all agents are not yet included. Publisher copyright may apply to abstract text.
 
 ### Optional Gemini claim extraction
 
@@ -63,6 +63,6 @@ Add --compare-papers together with --extract-claims to compare candidate stateme
 
 Gemini proposes one of four relations: corroborates, contrasts, contextual, or not_comparable. Every saved comparison must include exact quotations found in BOTH source abstracts/summaries. Comparisons retain both source and evidence IDs, model, rationale, and pending_review status. These are review candidates, not verified contradictions or proof of agreement. ORACLE does not change claim status, evidence stance, or uncertainty scores based on these model suggestions. At most 30 claim pairs are sent per run by default.
 
-## Scope of this milestone
+## Current limitations
 
-Included: offline research foundation, provenance-aware SQLite knowledge graph, public scholarly metadata/abstract search, deterministic candidate sentence extraction, and offline tests. Real LLM providers and autonomous scientific discovery are not claimed.
+The Gemini adapter currently extracts quote-grounded candidate claims and proposes cross-paper relationships; it does not perform complete entailment verification or update scientific truth status. The autonomous cycle still uses deterministic baseline agents unless a future provider-backed agent implementation is explicitly selected. The decision engine's progress signal measures newly persisted unique records, not scientific quality. A stopped run can be explicitly resumed; repeated no-progress cycles will stop it again unless a provider or new input produces new information.

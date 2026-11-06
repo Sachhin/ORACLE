@@ -141,6 +141,7 @@ class ResearchStore:
             max_cycles=data.get("max_cycles", 3), run_id=data["run_id"],
             status=RunStatus(data.get("status", "created")),
             current_cycle=data.get("current_cycle", 0),
+            consecutive_no_progress_cycles=data.get("consecutive_no_progress_cycles", 0),
             tasks=[ResearchTask(**x) for x in data.get("tasks", [])],
             sources=[SourceRecord(**x) for x in data.get("sources", [])],
             evidence=[Evidence(**{**x, "kind": enum_value(EvidenceKind, x.get("kind", "source"))})
@@ -183,6 +184,6 @@ class ResearchStore:
     def list_resumable_runs(self) -> list[dict[str, Any]]:
         with self._connect() as db:
             rows = db.execute(
-                "SELECT run_id,question,status,updated_at FROM runs WHERE status IN ('running','paused','failed') ORDER BY updated_at DESC"
+                "SELECT run_id,question,status,updated_at FROM runs WHERE status IN ('running','paused','failed','stopped') ORDER BY updated_at DESC"
             ).fetchall()
         return [dict(row) for row in rows]

@@ -1,34 +1,49 @@
 # Implementation Roadmap
 
-## Milestone 1 — Offline foundation (current)
+Status reflects code currently present on the main branch plus the adaptive-cycle work in review. A checked item means implemented and covered by tests; it does not imply scientific validity or live-provider verification.
+
+## Milestone 1 — Offline foundation
 - [x] Domain models and integrity-oriented statuses
-- [x] SQLite run persistence and event log
+- [x] SQLite run persistence, normalized knowledge records, and event log
 - [x] Replaceable agent contract and deterministic baseline agents
 - [x] Integrated research/discovery orchestration
-- [x] Bounded decision policy
+- [x] Bounded cycle policy and resumable checkpoints
 - [x] CLI and offline integration tests
 
 ## Milestone 2 — Research intelligence
-- [ ] Evidence graph with claim-to-source relationships
-- [ ] Hypothesis ledger with support/opposition links
-- [ ] Explicit uncertainty and contradiction tracking
-- [ ] Task-level progress and no-progress detection
-- [ ] Resume from persisted checkpoints
+- [x] Evidence graph with claim-to-source relationships
+- [x] Hypothesis ledger and support/opposition link model
+- [x] Explicit uncertainty assessments and contradiction review candidates
+- [x] Provenance, claim revisions, and dependence-aware evidence accounting
+- [x] Literature retrieval from Europe PMC, Crossref, and NCBI GEO metadata
+- [x] Quote-validated Gemini claim extraction and cross-paper comparison candidates
+- [x] Measured progress, duplicate suppression, critical integrity checks, and safe no-progress stopping
+- [x] Persisted no-progress state and explicit resume of safely stopped runs
 
 ## Milestone 3 — Discovery quality
-- [ ] Knowledge-gap scoring with transparent criteria
-- [ ] Novelty assessment against retrieved literature
-- [ ] Cross-domain connection proposals with provenance
-- [ ] Research portfolio for multiple concurrent questions
+- [ ] Transparent knowledge-gap scoring based on evidence coverage
+- [ ] Literature-grounded novelty assessment (provisional; never a priority claim)
+- [ ] Provenance-backed cross-domain connection proposals
+- [ ] Research portfolio and shared cross-run memory
+- [ ] Task-level completion criteria and task-budget enforcement
 
 ## Milestone 4 — Real research capabilities
-- [ ] Pluggable literature and dataset connectors
-- [ ] Source extraction and citation validation
-- [ ] Model-provider adapter interface (only after offline tests)
-- [ ] Rate-limit, timeout, retry, and quota-aware routing
+- [ ] Common model-provider interface for planner, researcher, explorer, hypothesis, skeptic, auditor, and experiment agents
+- [ ] Adaptive model routing with rate limits, timeouts, retries, and quota awareness
+- [ ] Legal open-access full-text retrieval with licence checks
+- [ ] GEO supplementary/raw data discovery and safe dataset ingestion
+- [ ] Citation-network exploration and source-level quality assessment
+- [ ] Domain-specific experiment protocols and reproducible analysis adapters
 
-## Milestone 5 — Evaluation
+## Milestone 5 — Evaluation and scientific validation
 - [ ] Golden research-question benchmark set
-- [ ] Evidence attribution and hallucination checks
-- [ ] Reproducibility and regression suite
+- [ ] Evidence attribution, entailment, contradiction, and hallucination evaluations
+- [ ] Reproducibility and regression suite across supported Python versions
 - [ ] Human review gates for high-impact claims and real experiments
+- [ ] Independent validation that model outputs improve scientific reasoning over deterministic baselines
+
+## Explicit non-goals until validated
+- No automatic promotion of model-generated candidates to facts.
+- No simulated or proposed experiment is represented as performed.
+- No novelty or scientific-priority guarantee.
+- No calibrated probability is inferred from the evidence-balance indicator.

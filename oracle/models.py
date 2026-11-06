@@ -232,6 +232,7 @@ class ResearchRun:
     run_id: str = field(default_factory=lambda: new_id("run"))
     status: RunStatus = RunStatus.CREATED
     current_cycle: int = 0
+    consecutive_no_progress_cycles: int = 0
     tasks: list[ResearchTask] = field(default_factory=list)
     sources: list[SourceRecord] = field(default_factory=list)
     evidence: list[Evidence] = field(default_factory=list)
