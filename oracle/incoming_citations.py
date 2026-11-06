@@ -61,7 +61,7 @@ class OpenAlexIncomingCitationClient:
         for source in [item for item in run.sources if item.doi][:self.max_sources]:
             report.sources_examined += 1
             try:
-                encoded_doi = quote(source.doi, safe="")
+                encoded_doi = quote(source.doi.removeprefix("https://doi.org/").removeprefix("http://doi.org/"), safe="/.")
                 work_url = f"https://api.openalex.org/works/https://doi.org/{encoded_doi}"
                 if self.mailto:
                     work_url += "?" + urlencode({"mailto": self.mailto})
