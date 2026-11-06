@@ -33,6 +33,10 @@ def build_parser() -> argparse.ArgumentParser:
                         help="Discover and download GEO supplementary files within the configured size cap")
     parser.add_argument("--analyze-geo-files", action="store_true",
                         help="Download and parse supported GEO TSV/CSV expression matrices (descriptive only)")
+    parser.add_argument("--geo-deseq2", metavar="MATRIX_PATH",
+                        help="Run optional DESeq2 negative-binomial analysis on raw integer RNA-seq counts")
+    parser.add_argument("--rscript", default="Rscript", help="Rscript executable for the optional DESeq2 backend")
+    parser.add_argument("--deseq2-timeout", type=int, default=900, help="Maximum DESeq2 runtime in seconds")
     parser.add_argument("--geo-contrast", metavar="MATRIX_PATH",
                         help="Run an explicit two-group Welch contrast on declared log2-continuous GEO matrix data")
     parser.add_argument("--geo-group", action="append", default=[], metavar="SAMPLE=GROUP",
@@ -111,6 +115,35 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main() -> None:
     args = build_parser().parse_args()
+    if args.geo_deseq2:
+        if not args.geo_group_a or not args.geo_group_b or not args.geo_group:
+            raise SystemExit("--geo-deseq2 requires --geo-group for every sample, --geo-group-a, and --geo-group-b.")
+        labels = {}
+        for assignment in args.geo_group:
+            sample, separator, group = assignment.partition("=")
+            if not separator or not sample.strip() or not group.strip() or sample.strip() in labels:
+                raise SystemExit(f"Invalid or duplicate --geo-group assignment: {assignment!r}")
+            labels[sample.strip()] = group.strip()
+        from .geo_deseq2 import GEOCountAnalyzer
+        try:
+            result = GEOCountAnalyzer().analyze(
+                args.geo_deseq2, labels, args.geo_group_a, args.geo_group_b,
+                rscript=args.rscript, timeout_seconds=args.deseq2_timeout,
+            )
+        except (OSError, ValueError, RuntimeError) as exc:
+            raise SystemExit(f"DESeq2 analysis failed: {exc}") from exc
+        if args.json:
+            print(json.dumps(result, indent=2, ensure_ascii=False))
+        else:
+            print(f"Method: {result['method']}")
+            print(f"Contrast: {args.geo_group_b} vs {args.geo_group_a}; "
+                  f"{result['features_returned']} result rows from {result['features_input']} input features")
+            print(f"R {result['software']['r']} | DESeq2 {result['software']['deseq2']}")
+            for item in result["results"][:20]:
+                print(f"{item['feature']}: log2FC={item['log2_fold_change']}, "
+                      f"p={item['p_value']}, BH-FDR={item['p_value_adjusted_bh']}")
+            print("Limitations: " + result["limitations"])
+        return
     if args.geo_contrast:
         if not args.geo_scale or not args.geo_group_a or not args.geo_group_b or not args.geo_group:
             raise SystemExit("--geo-contrast requires --geo-scale log2_continuous, --geo-group (for every sample), --geo-group-a, and --geo-group-b.")
