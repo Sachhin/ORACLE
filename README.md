@@ -78,6 +78,20 @@ Add --compare-papers together with --extract-claims to compare candidate stateme
 
 Gemini can propose one of four cross-paper relations: corroborates, contrasts, contextual, or not_comparable. Separately, --review-evidence asks Gemini to propose supports, refutes, or contextual for a candidate claim against an independent source passage. Both workflows require exact source quotations and preserve pending human review; model suggestions never change evidence stance or weight automatically. Inspect candidates with `python -m oracle --show-reviews RUN_ID`, then explicitly decide one with `python -m oracle --review-run RUN_ID --review-candidate CANDIDATE_ID --review-status accepted --review-note "Checked the source context." --review-strength 0.6`. Use `rejected` or `needs_context` when appropriate. Every saved comparison must include exact quotations found in BOTH source abstracts, GEO summaries, or retrieved full-text passages. Comparisons retain both source and evidence IDs, model, rationale, and pending_review status. These are review candidates, not verified contradictions or proof of agreement. ORACLE does not change claim status, evidence stance, or uncertainty scores based on these model suggestions. At most 30 claim pairs are sent per run by default.
 
+### Cross-domain connection proposals
+
+When at least two source-backed literature records are available, the optional Gemini agent can propose cross-domain connections. Each proposal must cite at least two source IDs and remains pending human review:
+
+```bash
+python -m oracle "How do feedback principles connect developmental biology and control theory?" \
+  --research-literature --agent-provider gemini --cycles 3
+python -m oracle --show-connections RUN_ID
+python -m oracle --review-connection RUN_ID --connection-id CONNECTION_ID \
+  --connection-status accepted --connection-note "Reviewed both source contexts and the proposed prediction."
+```
+
+Statuses are `pending_review`, `accepted`, `rejected`, and `needs_context`. Acceptance records a human review decision on the proposal; it does not establish that the proposed connection is true or novel. Every cited source ID must already exist in the run's provenance store.
+
 ### Citation network
 
 Retrieve first-degree reference metadata for DOI-backed sources:
