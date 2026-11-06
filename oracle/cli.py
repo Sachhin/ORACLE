@@ -229,6 +229,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--imputation-replicates", type=int, default=20)
     parser.add_argument("--imputation-seed", type=int, default=1729)
     parser.add_argument("--evidence-benchmark", default="", help="Score predictions against a human-adjudicated evidence benchmark JSON file")
+    parser.add_argument("--paired-answer-benchmark", default="", help="Compare paired human rubric scores for a candidate model and deterministic baseline")
     parser.add_argument("--benchmark-results", default="", help="DESeq2 result JSON/TSV to score against a curated known-positive set")
     parser.add_argument("--benchmark-manifest", default="", help="JSON manifest with dataset_accession, HTTPS reference, and known_positive_features")
     parser.add_argument("--benchmark-fdr", type=float, default=0.05, help="Adjusted p-value threshold for benchmark hit selection")
@@ -238,6 +239,14 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main() -> None:
     args = build_parser().parse_args()
+    if args.paired_answer_benchmark:
+        from .model_comparison import run_paired_answer_benchmark
+        try:
+            report = run_paired_answer_benchmark(args.paired_answer_benchmark)
+        except (OSError, ValueError, RuntimeError) as exc:
+            raise SystemExit(f"Paired answer benchmark failed: {exc}") from exc
+        print(json.dumps(report, indent=2, ensure_ascii=False))
+        return
     if args.evidence_benchmark:
         from .evidence_benchmark import run_evidence_benchmark
         try:
