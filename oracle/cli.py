@@ -25,6 +25,12 @@ def build_parser() -> argparse.ArgumentParser:
                         help="Retrieve scholarly literature as the evidence input to a full research cycle")
     parser.add_argument("--full-text", action="store_true",
                         help="Retrieve licence-eligible Europe PMC open-access full text for PMCID records")
+    parser.add_argument("--discover-geo-files", action="store_true",
+                        help="List supplementary files for GEO Series records; does not download them")
+    parser.add_argument("--download-geo-files", action="store_true",
+                        help="Discover and download GEO supplementary files within the configured size cap")
+    parser.add_argument("--dataset-max-mb", type=int, default=50,
+                        help="Maximum size of each GEO supplementary download in MB (1-1000)")
     parser.add_argument("--limit", type=int, default=10, help="Maximum literature records (1-50)")
     parser.add_argument("--provider", choices=["both", "all", "europepmc", "crossref", "geo"], default="both")
     parser.add_argument("--mailto", default="", help="Optional contact email for Crossref polite pool")
@@ -189,8 +195,10 @@ def main() -> None:
         return
     if args.research_literature and args.literature is not None:
         raise SystemExit("Use either --literature or --research-literature, not both.")
-    if args.full_text and args.literature is None and not args.research_literature:
-        raise SystemExit("--full-text requires --literature or --research-literature.")
+    if (args.full_text or args.discover_geo_files or args.download_geo_files) and args.literature is None and not args.research_literature:
+        raise SystemExit("--full-text and GEO file options require --literature or --research-literature.")
+    if not 1 <= args.dataset_max_mb <= 1000:
+        raise SystemExit("--dataset-max-mb must be between 1 and 1000.")
     if (args.extract_claims or args.compare_papers) and args.literature is None and not args.research_literature:
         raise SystemExit("--extract-claims and --compare-papers require --literature or --research-literature.")
     if (args.compare_papers or args.review_evidence) and not args.extract_claims:
@@ -203,13 +211,23 @@ def main() -> None:
         client.ingest(run, report)
         from .fulltext import OpenAccessFullTextClient
         full_text_report = OpenAccessFullTextClient().ingest(run) if args.full_text else None
+        geo_discovery_report = None
+        geo_download_report = None
+        if args.discover_geo_files or args.download_geo_files:
+            from .geo_data import GEOSupplementaryClient
+            geo_client = GEOSupplementaryClient()
+            geo_discovery_report = geo_client.discover(run)
+            if args.download_geo_files:
+                geo_download_report = geo_client.download(
+                    run, max_file_bytes=args.dataset_max_mb * 1_000_000
+                )
         extraction_report = GeminiClaimExtractor(model=args.gemini_model).extract(run) if args.extract_claims else None
         comparison_report = CrossPaperComparator(model=args.gemini_model).compare(run) if args.compare_papers else None
         from .evidence_review import GeminiEvidenceReviewer
         evidence_review_report = GeminiEvidenceReviewer(model=args.gemini_model).review(run) if args.review_evidence else None
         store.save_run(run)
         if args.json:
-            print(json.dumps({"run": run.to_dict(), "literature_report": report.__dict__, "claim_extraction_report": (extraction_report.__dict__ if extraction_report else None), "comparison_report": (comparison_report.__dict__ if comparison_report else None), "evidence_review_report": (evidence_review_report.__dict__ if evidence_review_report else None), "full_text_report": (full_text_report.__dict__ if full_text_report else None)}, indent=2, ensure_ascii=False))
+            print(json.dumps({"run": run.to_dict(), "literature_report": report.__dict__, "claim_extraction_report": (extraction_report.__dict__ if extraction_report else None), "comparison_report": (comparison_report.__dict__ if comparison_report else None), "evidence_review_report": (evidence_review_report.__dict__ if evidence_review_report else None), "full_text_report": (full_text_report.__dict__ if full_text_report else None), "geo_discovery_report": (geo_discovery_report.__dict__ if geo_discovery_report else None), "geo_download_report": (geo_download_report.__dict__ if geo_download_report else None)}, indent=2, ensure_ascii=False))
             return
         print(f"ORACLE literature run: {run.run_id}")
         print(f"Retrieved: {report.retrieved} | Sources: {report.ingested_sources} | Abstracts: {report.evidence_records} | Candidate statements: {report.candidate_statements}")
@@ -231,6 +249,10 @@ def main() -> None:
             print("Evidence review suggestions are pending human review; no evidence stance or weight was changed.")
         if full_text_report:
             print(f"Open-access full text: {full_text_report.full_text_records} retrieved; {full_text_report.skipped_license} skipped by licence; {full_text_report.skipped_no_pmcid} without PMCID.")
+        if geo_discovery_report:
+            print(f"GEO files: {geo_discovery_report.files_discovered} supplementary file records discovered.")
+        if geo_download_report:
+            print(f"GEO downloads: {geo_download_report.files_downloaded} downloaded; {geo_download_report.files_skipped_size} skipped by size cap.")
         return
     agent_suite = None
     if args.agent_provider == "gemini":
@@ -247,6 +269,9 @@ def main() -> None:
         compare_literature_papers=args.compare_papers,
         review_literature_evidence=args.review_evidence,
         full_text_enabled=args.full_text,
+        geo_files_enabled=args.discover_geo_files or args.download_geo_files,
+        geo_download_enabled=args.download_geo_files,
+        geo_max_file_bytes=args.dataset_max_mb * 1_000_000,
         gemini_model=args.gemini_model,
     )
     if args.resume_id:
