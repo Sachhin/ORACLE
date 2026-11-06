@@ -443,5 +443,66 @@ class OracleTests(unittest.TestCase):
         self.assertEqual(run.evidence[0].locator, "Abstract")
         self.assertIn("literature_ingested", [e["event_type"] for e in self.store.list_events(run.run_id)])
 
+
+    def test_gemini_evidence_review_is_quote_grounded_and_requires_human_acceptance(self):
+        from unittest.mock import patch
+        from oracle.evidence_review import GeminiEvidenceReviewer
+        from oracle.models import SourceRecord
+
+        run = ResearchRun("Does pathway activation change cell fate?")
+        source_a = SourceRecord(title="Paper A", source_id="paper-a")
+        source_b = SourceRecord(title="Paper B", source_id="paper-b")
+        run.sources.extend([source_a, source_b])
+        own_text = "Pathway activation increased the neuronal cell fraction in this assay."
+        other_text = "The measured neuronal fraction decreased after pathway activation in this tissue."
+        own_evidence = Evidence(own_text, source_a.title, source_id=source_a.source_id, locator="Abstract")
+        other_evidence = Evidence(other_text, source_b.title, source_id=source_b.source_id, locator="Abstract")
+        run.evidence.extend([own_evidence, other_evidence])
+        kb = KnowledgeBase()
+        claim = kb.add_claim(run, "Pathway activation increases neuronal cell fraction.")
+        claim.status = "unreviewed_candidate"
+        kb.link_evidence(run, claim.claim_id, own_evidence.evidence_id, EvidenceStance.CONTEXTUAL, 0.0)
+
+        reviewer = GeminiEvidenceReviewer(api_key="test-key")
+        reviewer.provider.generate_json = lambda prompt: {"reviews": [
+            {"pair_index": 0, "stance": "refutes",
+             "rationale": "The other paper reports the opposite direction in its stated tissue.",
+             "source_quote": other_text},
+            {"pair_index": 0, "stance": "supports",
+             "rationale": "Invalid duplicate pair and quote.",
+             "source_quote": "not present"},
+        ]}
+        report = reviewer.review(run)
+        self.assertEqual(report.pairs_submitted, 1)
+        self.assertEqual(report.candidates_created, 1)
+        self.assertEqual(report.candidates_rejected, 1)
+        candidate = run.evidence_review_candidates[0]
+        self.assertEqual(candidate.status, "pending_review")
+        self.assertEqual(candidate.proposed_stance, EvidenceStance.REFUTES)
+        self.assertEqual(len(run.evidence_claim_links), 1)  # model suggestion did not change evidence links
+
+        kb.review_evidence_candidate(
+            run, candidate.candidate_id, "accepted", "Human checked the source context.", strength=0.6
+        )
+        self.assertEqual(candidate.status, "accepted")
+        self.assertEqual(len(run.evidence_claim_links), 2)
+        self.assertEqual(run.evidence_claim_links[-1].stance, EvidenceStance.REFUTES)
+        self.store.save_run(run)
+        loaded = self.store.load_run(run.run_id)
+        self.assertEqual(loaded.evidence_review_candidates[0].status, "accepted")
+        self.assertEqual(loaded.evidence_review_candidates[0].proposed_stance, EvidenceStance.REFUTES)
+
+    def test_evidence_review_rejects_inference_as_source_evidence(self):
+        run = ResearchRun("Review integrity")
+        kb = KnowledgeBase()
+        claim = kb.add_claim(run, "A sufficiently long scientific candidate statement.")
+        evidence = Evidence("A model inference passage.", "ORACLE", EvidenceKind.INFERENCE)
+        run.evidence.append(evidence)
+        with self.assertRaises(ValueError):
+            kb.add_evidence_review_candidate(
+                run, claim.claim_id, evidence.evidence_id, EvidenceStance.SUPPORTS,
+                "A rationale.", "model inference", "test-model",
+            )
+
 if __name__ == "__main__":
     unittest.main()
