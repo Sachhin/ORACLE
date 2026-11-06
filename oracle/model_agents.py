@@ -413,8 +413,8 @@ class GeminiCrossDomainConnectionAgent(_GeminiAgent):
                     or len(domain_a) > 120 or len(domain_b) > 120
                     or domain_a.strip().casefold() == domain_b.strip().casefold()):
                 continue
-            if (len(set(source_ids)) < 2 or any(not isinstance(value, str) or value not in eligible
-                                                for value in source_ids)):
+            if (any(not isinstance(value, str) or value not in eligible for value in source_ids)
+                    or len(set(source_ids)) < 2):
                 raise GeminiAgentError("Cross-domain proposal used invalid or insufficient source IDs.")
             proposals.append(CrossDomainConnection(
                 statement.strip(), domain_a.strip(), domain_b.strip(), rationale.strip(),
