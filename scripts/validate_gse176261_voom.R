@@ -160,6 +160,8 @@ sample_diagnostics <- lapply(seq_len(ncol(voom_result$E)), function(j) {
     library_size = as.character(dge$samples$lib.size[j]),
     norm_factor = as.character(dge$samples$norm.factors[j]),
     mean_signed_error = as.character(mean(delta)),
+    centered_error_sd = as.character(sd(delta - mean(delta))),
+    max_abs_centered_error = as.character(max(abs(delta - mean(delta)))),
     mae = as.character(mean(abs(delta))),
     rmse = as.character(sqrt(mean(delta^2))),
     pearson_r = as.character(suppressWarnings(cor(voom_result$E[, j], reference_e[, j])))
@@ -197,6 +199,16 @@ report <- list(
     reference_weights = digest::digest(file = reference_w_path, algo = "sha256")
   ),
   expression_matrix_metrics = as.list(e_metrics),
+  expression_residual_structure = list(
+    interpretation = paste(
+      "Per-sample residuals are decomposed into a sample-wide additive offset",
+      "and gene-specific residual variation. Near-zero centered residual SD",
+      "indicates a sample-wise offset rather than gene-specific disagreement."
+    ),
+    max_per_sample_centered_error_sd = max(as.numeric(sample_diagnostics$centered_error_sd)),
+    median_per_sample_centered_error_sd = median(as.numeric(sample_diagnostics$centered_error_sd)),
+    max_abs_centered_error_max = max(as.numeric(sample_diagnostics$max_abs_centered_error))
+  ),
   precision_weight_metrics = as.list(w_metrics),
   design_columns = colnames(design),
   normalization = list(
