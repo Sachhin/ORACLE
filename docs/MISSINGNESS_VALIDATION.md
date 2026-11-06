@@ -175,8 +175,11 @@ for the real-missing-cell HIV benchmark.
 A second, complementary validation path uses the MaxQuant
 `proteinGroups.txt` output from the public PXD000279
 `proteomebenchmark.zip` archive. The Cox et al. experiment mixed a fixed
-60 micrograms of HeLa lysate with either 10 or 30 micrograms of E. coli
-lysate, with three replicates per mixture. Therefore the expected Ecoli30
+a fixed HeLa background with either 10 or 30 micrograms of E. coli
+lysate, with three replicates per mixture. The raw run names contain
+"HeLa60", while the DEqMS vignette describes 50 micrograms of human extract;
+the benchmark therefore relies on the independently documented relative
+E. coli spike-in ratio rather than assuming the HeLa mass from the filename. Therefore the expected Ecoli30
 versus Ecoli10 log2 fold change is 0 for unambiguous human proteins and
 log2(3) for unambiguous E. coli proteins. The publication describes
 protein-level inclusion requiring non-zero intensity in at least two of
@@ -186,14 +189,18 @@ The archive's LFQ headers are run identifiers rather than mixture labels.
 ORACLE uses explicit condition labels when available; otherwise it applies
 the published PXD000279 DEqMS column contract: proteinGroups columns 89–91
 are the first three H replicates and columns 92–94 are the final three L
-replicates. For this fixed-ratio mixture, H corresponds to Ecoli10 and L
-corresponds to Ecoli30. The report records this source-backed assignment;
-if the six-column contract is absent, the evaluator stops instead of
-guessing. Reference:
+replicates. The published DEqMS contrast is H-L, and its example reports
+positive E. coli log2 fold changes (for example, P0A8V2 logFC +1.291).
+Therefore H is the high-spike Ecoli30 group and L is the low-spike Ecoli10
+group. ORACLE's initial run #21 had this mapping reversed; its negative
+E. coli effects exposed the sign inconsistency. The implementation has now
+been corrected and the benchmark must be rerun before numerical results are
+accepted. If the six-column contract is absent, the evaluator stops instead
+of guessing. Reference:
 https://rdrr.io/github/yafeng/DEqMS/f/vignettes/DEqMS-package-vignette.Rmd
 
 
-The new reproducible runner evaluates the same eligible protein universe
+The corrected runner evaluates the same eligible protein universe
 using three downstream-effect strategies:
 
 - observed-only log2 LFQ values (no imputation);
@@ -213,7 +220,11 @@ python scripts/benchmark_pxd000279_mixture.py \
 ```
 
 GitHub Actions downloads the published archive, runs the evaluator and
-offline tests, then uploads a frozen report and source archive. The workflow
+offline tests, then uploads a frozen report and source archive. The first
+live run (2026-11-06, run 42251562908) completed technically but revealed the
+H/L direction error described above; it is not an accepted benchmark result.
+The corrected run must be inspected for the expected positive E. coli effect
+and near-zero human effect before the benchmark can be marked validated. The workflow
 is defined in `.github/workflows/pxd000279-known-mixture.yml`.
 
 This is a known biological mixture-ratio check under real deposited LFQ
