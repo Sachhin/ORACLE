@@ -117,6 +117,10 @@ class Claim:
     source_quote: str = ""
     extraction_model: str = ""
     extraction_method: str = ""
+    impact_level: str = "normal"
+    reviewer_note: str = ""
+    reviewed_by: str = ""
+    reviewed_at: str = ""
 
 
 @dataclass
@@ -268,6 +272,10 @@ class Experiment:
     operator: str = ""
     executed_at: str = ""
     evaluation_note: str = ""
+    execution_review_status: str = "not_required"
+    execution_review_note: str = ""
+    execution_reviewed_by: str = ""
+    execution_reviewed_at: str = ""
 
 
 @dataclass
