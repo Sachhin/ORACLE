@@ -101,6 +101,31 @@ def _quantile_normalize(matrix: list[list[float]]) -> list[list[float]]:
     return normalized
 
 
+
+def _tmm_factors(matrix, totals):
+    def q(values, p):
+        v = sorted(values); x = (len(v)-1)*p; lo=int(math.floor(x)); hi=int(math.ceil(x))
+        return v[lo] + (v[hi]-v[lo])*(x-lo)
+    upper=[q([r[j]/totals[j]*1e6 for r in matrix], .75) for j in range(len(totals))]
+    ref=min(range(len(totals)), key=lambda j: abs(upper[j]-sum(upper)/len(upper)))
+    factors=[1.0]*len(totals)
+    for j in range(len(totals)):
+        if j==ref: continue
+        vals=[]
+        for r in matrix:
+            a,b=r[ref],r[j]
+            if a<=0 or b<=0: continue
+            m=math.log2((b/totals[j])/(a/totals[ref]))
+            v=(totals[j]-b)/(totals[j]*b)+(totals[ref]-a)/(totals[ref]*a)
+            if v>0 and math.isfinite(m): vals.append((m,1.0/v))
+        if len(vals)<3: raise ValueError('TMM requires three shared positive-count features.')
+        vals.sort(key=lambda x:x[0]); lo=int(len(vals)*.30); hi=int(math.ceil(len(vals)*.70))
+        kept=vals[lo:hi]
+        if not kept: raise ValueError('TMM trimming removed all features; matrix too small.')
+        factors[j]=2**(sum(m*w for m,w in kept)/sum(w for _,w in kept))
+    gm=math.exp(sum(math.log(x) for x in factors)/len(factors))
+    return [x/gm for x in factors]
+
 def normalize_geo_matrix(
     input_path: str | Path,
     output_path: str | Path,
