@@ -35,6 +35,19 @@ python -m oracle --literature "embryo development" --incoming-citations --incomi
 ```
 Traversal supports `outgoing` (works cited by the start paper), `incoming` (works citing it), or `both`, with depth capped at six and result count bounded by `--limit`. Each result includes its shortest source-ID path. Unresolved DOI targets are not fabricated as graph nodes; citation connectivity is not evidence quality, agreement, or scientific truth.
 
+## Optional limma-voom analysis
+
+For raw integer RNA-seq counts with an explicitly declared two-group design, ORACLE can call the installed R/Bioconductor stack (edgeR + limma). It does not infer sample groups; both groups need biological replicates. The result includes R/edgeR/limma versions, input checksum, BH-adjusted p-values, and can be persisted as pending-review candidates in a saved run.
+
+```bash
+python -m oracle --geo-voom counts.tsv \
+  --geo-group GSM1=control --geo-group GSM2=control \
+  --geo-group GSM3=treated --geo-group GSM4=treated \
+  --geo-group-a control --geo-group-b treated --json
+```
+
+Install R, edgeR and limma separately. CI mocks the R subprocess; the adapter still needs independent comparison against trusted limma/edgeR reference outputs before production scientific use. It currently supports only a two-group design without additional covariates.
+
 ## Domain-specific experiment protocols
 
 ORACLE can append a conservative protocol scaffold to a saved run. Supported templates: `plant_biology`, `molecular_biology`, `cell_biology`, and `computational_biology`.
@@ -43,7 +56,7 @@ ORACLE can append a conservative protocol scaffold to a saved run. Supported tem
 python -m oracle --propose-protocol RUN_ID --protocol-domain plant_biology --protocol-hypothesis-id HYPOTHESIS_ID
 ```
 
-Templates prompt for controls, biological replication, randomization, batch metadata, pre-specified analysis, raw-data preservation, software versions, and checksums. They remain `PROPOSED`; they are not validated SOPs, do not execute experiments, and require qualified domain/ethics/biosafety review. Reproducible analysis adapters are still a separate pending milestone.
+Templates prompt for controls, biological replication, randomization, batch metadata, pre-specified analysis, raw-data preservation, software versions, and checksums. They remain `PROPOSED`; they are not validated SOPs, do not execute experiments, and require qualified domain/ethics/biosafety review. Optional count-aware DESeq2 and limma-voom adapters are available when their R/Bioconductor packages are installed; independent reference validation and platform-specific raw-probe background correction remain pending.
 
 ## Human review for high-impact claims and performed experiments
 
