@@ -68,7 +68,7 @@ class GEONormalizationTests(unittest.TestCase):
     def test_rerun_verification_compares_output_checksums(self):
         source = self.write(
             "repeat.tsv",
-            "gene\\tA\\tB\\ng1\\t1\\t3\\ng2\\t4\\t2\\n",
+            "gene\tA\tB\ng1\t1\t3\ng2\t4\t2\n",
         )
         report = verify_geo_normalization_rerun(
             source, self.root / "repeat.normalized.tsv", "quantile",
