@@ -99,24 +99,25 @@ publication from a genuinely independent study:
 A dataset is not marked passed until its live Actions run completes and the
 JSON report artifact has been inspected.
 
-## External limma-voom numerical runs (2026-11-06)
+## External limma-voom numerical runs (2026-11-06, refreshed)
 
-The final pinned Bioconductor 3.22 / R 4.5.2 workflow completed all three
-jobs successfully in GitHub Actions run
-[42233635227](https://github.com/Sachhin/ORACLE/actions/runs/42233635227).
-The run uploaded three frozen evidence artifacts with input hashes.
+The refreshed external-reference workflow completed all three dataset jobs
+successfully in GitHub Actions run
+[42248659262](https://github.com/Sachhin/ORACLE/actions/runs/42248659262).
+The report artifacts include the downloaded source matrices, SHA-256 checksums,
+and machine-readable comparison JSON.
 
 - **GSE176260 discovery cohort — PASS** (138 samples, 11,111 features):
-  expression matrix versus submitter-published GEO matrix: RMSE 4.31e-15,
-  MAE 2.68e-15, Pearson r 1.0000. Voom weights: RMSE 0.0478,
-  Pearson r 0.9998.
-- **GSE176261 validation cohort — FAIL_NUMERICAL_TOLERANCE** (53 samples,
-  11,111 features): expression RMSE 0.0580 versus pre-set maximum 0.0500,
-  MAE 0.0512, Pearson r 0.9999. Voom weights RMSE 0.0471,
-  Pearson r 0.9997. The CI job succeeds because it correctly preserves and
-  uploads the diagnostic report; the dataset comparison itself remains a
-  tolerance failure. It belongs to the same publication as GSE176260 and is
-  not an independent study.
+  expression RMSE 4.311e-15, MAE 2.677e-15, Pearson r 1.0000;
+  voom weights RMSE 0.0478, Pearson r 0.9998.
+- **GSE176261 same-study validation cohort — PASS** (53 samples,
+  11,111 features; 588,883 matched values): expression RMSE 0.0397,
+  MAE 0.0315, Pearson r 0.9999; voom weights RMSE 0.0412,
+  MAE 0.0338, Pearson r 0.9998. The original thresholds remain unchanged:
+  expression RMSE <=0.0500 and Pearson >=0.999; weights RMSE <=0.1000
+  and Pearson >=0.99. The fix uses TMM factors estimated on the documented
+  full batch-2 cohort, then subsets factors to the 53 validation samples.
+  This is same-publication validation, not independent-study replication.
 - **GSE64099 — PASS, independent experiment** (7 samples, 12,303 features
   after the published CPM filter): top-10 stable GeneID recall 1.00,
   logFC RMSE 0.0021, direction agreement 1.00, and FDR<0.05 / FDR<0.01
@@ -124,10 +125,18 @@ The run uploaded three frozen evidence artifacts with input hashes.
   differential-expression table comparison, not a submitter-published
   full E/weights matrix comparison.
 
-The numerical checks are complete and frozen. The unresolved GSE176261
-expression discrepancy must be investigated without relaxing thresholds.
+The GSE176261 version-sensitivity audit also completed in Actions run
+[42248659455](https://github.com/Sachhin/ORACLE/actions/runs/42248659455):
+both Bioconductor 3.13 and 3.22 independently report PASS for the same
+53-sample cohort and unchanged expression thresholds. Bioconductor 3.13
+voom weights RMSE was 0.0188 (Pearson 0.9998); Bioconductor 3.22 weights
+RMSE was 0.0412 (Pearson 0.9998). Both satisfy the declared weights
+thresholds. The report records runtime/package versions and source hashes.
+
 These reproducibility checks do not establish biological correctness,
-generalization to all RNA-seq workflows, or model superiority.
+generalization to all RNA-seq workflows, or model superiority. GSE176260
+and GSE176261 are related cohorts from the same study; GSE64099 supplies
+the independent-study check.
 
 ## What this tooling does not claim
 
