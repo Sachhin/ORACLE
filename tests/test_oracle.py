@@ -1442,5 +1442,82 @@ class OracleTests(unittest.TestCase):
             with self.assertRaisesRegex(SystemExit, "already reviewed"):
                 main()
 
+
+    def test_literature_enabled_cycles_execute_bounded_source_backed_tasks(self):
+        from types import SimpleNamespace
+        from oracle.models import Evidence, EvidenceKind, SourceRecord
+
+        class FakeLiteratureClient:
+            def __init__(self):
+                self.calls = 0
+            def search(self, query, limit, providers):
+                self.calls += 1
+                return SimpleNamespace(records=[{
+                    "title": f"Relevant paper {self.calls}",
+                    "doi": f"10.1234/task{self.calls}",
+                    "pmid": "", "url": f"https://example.org/task{self.calls}",
+                    "abstract": "This study reports a measurable biological observation across independent samples and describes the experimental methods used.",
+                }], retrieved=1, warnings=[])
+            def ingest(self, run, report):
+                item = report.records[0]
+                source = SourceRecord(
+                    title=item["title"], doi=item["doi"], url=item["url"],
+                    source_type="journal article", source_id=f"src-task-{self.calls}",
+                )
+                run.sources.append(source)
+                run.evidence.append(Evidence(
+                    claim=item["abstract"], source=source.title,
+                    kind=EvidenceKind.SOURCE, source_id=source.source_id,
+                    locator="Abstract", limitations="Abstract only; methods not independently reviewed.",
+                ))
+
+        client = FakeLiteratureClient()
+        orchestrator = OracleOrchestrator(
+            self.store, literature_enabled=True, literature_client=client,
+            literature_limit=5,
+        )
+        run = orchestrator.run("How do cells coordinate tissue development?", max_cycles=1)
+        self.assertEqual(client.calls, 2, "Task retrieval must be bounded to two tasks per cycle.")
+        completed = [task for task in run.tasks if task.status == "completed"]
+        pending = [task for task in run.tasks if task.status == "pending"]
+        self.assertEqual(len(completed), 2)
+        self.assertEqual(len(pending), 2)
+        for task in completed:
+            self.assertTrue(task.evidence_ids)
+            self.assertTrue(task.completion_note.startswith("Retrieved "))
+            self.assertTrue(all(
+                evidence.source_id in {source.source_id for source in run.sources}
+                and evidence.kind != EvidenceKind.INFERENCE
+                for evidence in run.evidence if evidence.evidence_id in task.evidence_ids
+            ))
+        events = self.store.list_events(run.run_id)
+        self.assertTrue(any(event["event_type"] == "research_task_finished" for event in events))
+
+    def test_metadata_only_task_search_is_blocked_not_completed(self):
+        from types import SimpleNamespace
+        from oracle.models import SourceRecord
+
+        class MetadataOnlyClient:
+            def search(self, query, limit, providers):
+                return SimpleNamespace(records=[{
+                    "title": "Metadata-only record", "doi": "10.1234/metadata",
+                    "pmid": "", "url": "https://example.org/metadata", "abstract": "",
+                }], retrieved=1, warnings=[])
+            def ingest(self, run, report):
+                run.sources.append(SourceRecord(
+                    title="Metadata-only record", doi="10.1234/metadata",
+                    url="https://example.org/metadata", source_id="src-metadata-only",
+                ))
+
+        orchestrator = OracleOrchestrator(
+            self.store, literature_enabled=True, literature_client=MetadataOnlyClient(),
+        )
+        run = orchestrator.run("How do cells coordinate tissue development?", max_cycles=1)
+        attempted = [task for task in run.tasks if task.attempts == 1]
+        self.assertEqual(len(attempted), 2)
+        self.assertTrue(all(task.status == "blocked" for task in attempted))
+        self.assertTrue(all("no abstract-backed" in task.blocked_reason for task in attempted))
+        self.assertTrue(all(not task.evidence_ids for task in attempted))
+
 if __name__ == "__main__":
     unittest.main()
