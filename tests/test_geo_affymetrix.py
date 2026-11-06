@@ -43,16 +43,52 @@ class AffymetrixRMATests(unittest.TestCase):
                     writer = csv.writer(handle, delimiter="\t", lineterminator="\n")
                     writer.writerow(["feature", *[Path(p).stem for p in cel_paths]])
                     writer.writerow(["probe_set_1", "5.2", "5.8"])
-                return SimpleNamespace(returncode=0, stdout="4.5.0\t1.70.0", stderr="")
+                return SimpleNamespace(returncode=0, stdout="R version 4.5.0\t1.70.0\thgu133a", stderr="")
             with patch("oracle.geo_affymetrix.shutil.which", return_value="/usr/bin/Rscript"), \
                  patch("oracle.geo_affymetrix.subprocess.run", side_effect=fake_run):
                 report = AffymetrixRMAAnalyzer().analyze(
-                    paths, Path(tmp) / "normalized.tsv", backend="affy")
+                    paths, Path(tmp) / "normalized.tsv", backend="affy",
+                    expected_platform="hgu133a")
             self.assertEqual(report["features"], 1)
             self.assertEqual(report["software"]["affy"], "1.70.0")
+            self.assertEqual(report["platform"], "hgu133a")
+            self.assertEqual(report["expected_platform"], "hgu133a")
             self.assertEqual(len(report["input_files"]), 2)
             self.assertTrue((Path(tmp) / "normalized.tsv").is_file())
             self.assertIn("No platform detection", report["limitations"])
+
+
+    def test_rejects_duplicate_sample_basenames(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            left = Path(tmp) / "left"
+            right = Path(tmp) / "right"
+            left.mkdir()
+            right.mkdir()
+            a = left / "sample.CEL"
+            b = right / "sample.CEL"
+            a.write_bytes(b"a")
+            b.write_bytes(b"b")
+            with self.assertRaisesRegex(ValueError, "unique basenames"):
+                AffymetrixRMAAnalyzer().analyze([a, b], Path(tmp) / "out.tsv", backend="affy")
+
+    def test_rejects_platform_mismatch_before_publishing_output(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            paths = []
+            for name in ("a.CEL", "b.CEL"):
+                path = Path(tmp) / name
+                path.write_bytes(name.encode())
+                paths.append(path)
+            def fake_run(command, **kwargs):
+                output = Path(command[5])
+                output.write_text("feature\ta\tb\nprobe_1\t5.0\t6.0\n", encoding="utf-8")
+                return SimpleNamespace(returncode=0, stdout="R 4.5.0\t1.70.0\thgu133a", stderr="")
+            destination = Path(tmp) / "out.tsv"
+            with patch("oracle.geo_affymetrix.shutil.which", return_value="/usr/bin/Rscript"), \\
+                 patch("oracle.geo_affymetrix.subprocess.run", side_effect=fake_run):
+                with self.assertRaisesRegex(RuntimeError, "does not match expected platform"):
+                    AffymetrixRMAAnalyzer().analyze(
+                        paths, destination, backend="affy", expected_platform="hgu133plus2")
+            self.assertFalse(destination.exists())
 
 if __name__ == "__main__":
     unittest.main()

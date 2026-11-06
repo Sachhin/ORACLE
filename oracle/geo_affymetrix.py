@@ -17,22 +17,29 @@ backend <- args[1]
 manifest <- read.delim(args[2], stringsAsFactors=FALSE, check.names=FALSE)
 cel <- as.character(manifest$path)
 if (!length(cel) || any(!file.exists(cel))) stop("A CEL input is missing.")
+if (!requireNamespace("Biobase", quietly=TRUE)) stop("Bioconductor package Biobase is not installed.")
 if (backend == "affy") {
  if (!requireNamespace("affy", quietly=TRUE)) stop("Bioconductor package affy is not installed.")
  raw <- affy::ReadAffy(filenames=cel)
- eset <- affy::rma(raw)
  package_version <- as.character(packageVersion("affy"))
 } else if (backend == "oligo") {
  if (!requireNamespace("oligo", quietly=TRUE)) stop("Bioconductor package oligo is not installed.")
  raw <- oligo::read.celfiles(cel, verbose=FALSE)
- eset <- oligo::rma(raw)
  package_version <- as.character(packageVersion("oligo"))
 } else stop("Unsupported backend.")
+sampleNames <- tools::file_path_sans_ext(basename(cel))
+if (anyDuplicated(sampleNames)) stop("CEL filenames must have unique sample basenames.")
+Biobase::sampleNames(raw) <- sampleNames
+array_design <- as.character(Biobase::annotation(raw))
+if (length(array_design) != 1L || is.na(array_design) || !nzchar(array_design))
+ stop("Could not determine a single array design from CEL inputs.")
+eset <- if (backend == "affy") affy::rma(raw) else oligo::rma(raw)
 expr <- Biobase::exprs(eset)
 if (is.null(rownames(expr)) || is.null(colnames(expr))) stop("RMA output identifiers are missing.")
+if (!identical(colnames(expr), sampleNames)) stop("RMA output sample names do not match CEL input filenames.")
 out <- data.frame(feature=rownames(expr), expr, check.names=FALSE)
 write.table(out, file=args[3], sep="\t", quote=FALSE, row.names=FALSE, na="NA")
-cat(as.character(getRversion()), "\t", package_version, sep="")
+cat(as.character(getRversion()), "\t", package_version, "\t", array_design, sep="")
 '''
 
 def _sha256(path: Path) -> str:
@@ -45,8 +52,9 @@ def _sha256(path: Path) -> str:
 class AffymetrixRMAAnalyzer:
     """Run explicit affy or oligo RMA on caller-supplied CEL files."""
     def analyze(self, cel_files: Sequence[str | Path], output_path: str | Path, *,
-                backend: str, rscript: str = "Rscript", timeout_seconds: int = 1800,
-                max_files: int = 200, max_total_bytes: int = 2_000_000_000) -> dict:
+                backend: str, expected_platform: str = "", rscript: str = "Rscript",
+                timeout_seconds: int = 1800, max_files: int = 200,
+                max_total_bytes: int = 2_000_000_000) -> dict:
         if backend not in {"affy", "oligo"}:
             raise ValueError("backend must be explicitly selected as affy or oligo.")
         if timeout_seconds < 1 or max_files < 2 or max_total_bytes < 1:
@@ -58,6 +66,11 @@ class AffymetrixRMAAnalyzer:
             raise ValueError(f"CEL input count exceeds the {max_files}-file limit.")
         if len({str(path) for path in paths}) != len(paths):
             raise ValueError("Duplicate CEL input paths are not allowed.")
+        sample_names = [path.stem for path in paths]
+        if len(set(sample_names)) != len(sample_names):
+            raise ValueError("CEL filenames must have unique basenames.")
+        if expected_platform and (not expected_platform.strip() or len(expected_platform) > 200):
+            raise ValueError("expected_platform must be a non-empty value up to 200 characters.")
         if any(not path.is_file() for path in paths):
             raise ValueError("Every CEL input must be an existing regular file.")
         sizes = [path.stat().st_size for path in paths]
@@ -93,8 +106,13 @@ class AffymetrixRMAAnalyzer:
                     raise AffymetrixUnavailableError(detail[-2000:])
                 raise RuntimeError(f"Affymetrix RMA failed: {detail[-4000:]}")
             versions = (process.stdout or "").strip().split("\t")
-            if len(versions) != 2 or not all(versions):
-                raise RuntimeError("R/Bioconductor package version provenance is missing.")
+            if len(versions) != 3 or not all(versions):
+                raise RuntimeError("R/Bioconductor package and array-design provenance is missing.")
+            if expected_platform and versions[2].casefold() != expected_platform.strip().casefold():
+                raise RuntimeError(
+                    f"CEL array design {versions[2]!r} does not match expected platform "
+                    f"{expected_platform!r}; refusing to label this as a platform-matched RMA run."
+                )
             if not result.is_file():
                 raise RuntimeError("RMA did not produce an expression matrix.")
             with result.open("r", encoding="utf-8", newline="") as handle:
@@ -102,6 +120,10 @@ class AffymetrixRMAAnalyzer:
                 header = next(reader, [])
                 if len(header) != len(paths) + 1 or header[0] != "feature":
                     raise RuntimeError("RMA output sample columns do not match CEL inputs.")
+                if header[1:] != sample_names:
+                    raise RuntimeError(
+                        "RMA output sample identities do not match the input CEL filenames."
+                    )
                 rows = 0
                 for row in reader:
                     if len(row) != len(header) or not row[0]:
@@ -116,7 +138,9 @@ class AffymetrixRMAAnalyzer:
             destination.write_bytes(result.read_bytes())
         return {
             "method": "Affymetrix RMA background correction + quantile normalization + summarization",
-            "backend": backend, "input_files": input_records, "input_file_count": len(paths),
+            "backend": backend, "platform": versions[2],
+            "expected_platform": expected_platform.strip() or None,
+            "input_files": input_records, "input_file_count": len(paths),
             "output_path": str(destination), "output_sha256": _sha256(destination),
             "features": rows, "samples": len(paths),
             "software": {"r": versions[0], backend: versions[1]},

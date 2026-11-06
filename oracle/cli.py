@@ -61,6 +61,8 @@ def build_parser() -> argparse.ArgumentParser:
                         help="Add one CEL file to an explicit Affymetrix RMA run; repeat per sample")
     parser.add_argument("--affy-backend", choices=["affy", "oligo"], default="",
                         help="Required explicit Bioconductor package family for CEL inputs")
+    parser.add_argument("--affy-platform", default="",
+                        help="Optional expected Bioconductor array-design/CDF package identifier; mismatch aborts RMA")
     parser.add_argument("--affy-output", default="", help="Required output TSV path for --geo-affymetrix-rma")
     parser.add_argument("--affy-timeout", type=int, default=1800, help="Maximum Affymetrix RMA runtime in seconds")
     parser.add_argument("--geo-voom", metavar="MATRIX_PATH",
@@ -435,6 +437,7 @@ def main() -> None:
         try:
             report = AffymetrixRMAAnalyzer().analyze(
                 args.geo_affymetrix_rma, args.affy_output, backend=args.affy_backend,
+                expected_platform=args.affy_platform,
                 rscript=args.rscript, timeout_seconds=args.affy_timeout,
             )
         except (OSError, ValueError, RuntimeError) as exc:
