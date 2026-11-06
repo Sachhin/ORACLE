@@ -182,6 +182,17 @@ log2(3) for unambiguous E. coli proteins. The publication describes
 protein-level inclusion requiring non-zero intensity in at least two of
 three replicates in each condition.
 
+The archive's LFQ headers are run identifiers rather than mixture labels.
+ORACLE uses explicit condition labels when available; otherwise it applies
+the published PXD000279 DEqMS column contract: proteinGroups columns 89–91
+are the first three H replicates and columns 92–94 are the final three L
+replicates. For this fixed-ratio mixture, H corresponds to Ecoli10 and L
+corresponds to Ecoli30. The report records this source-backed assignment;
+if the six-column contract is absent, the evaluator stops instead of
+guessing. Reference:
+https://rdrr.io/github/yafeng/DEqMS/f/vignettes/DEqMS-package-vignette.Rmd
+
+
 The new reproducible runner evaluates the same eligible protein universe
 using three downstream-effect strategies:
 
