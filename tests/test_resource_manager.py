@@ -307,6 +307,51 @@ class ResourceManagerTests(unittest.TestCase):
         self.assertEqual(records[0]["dataset_accession"], "42")
         self.assertIn("/d/42", records[0]["url"])
 
+
+    def test_nasa_earthdata_search_normalizes_collection(self):
+        client = LiteratureClient()
+        payload = {"feed": {"entry": [{"id": "C123", "title": "Climate collection",
+                    "summary": "Satellite observations", "links": []}]}}
+        with patch.object(client, "_get_json", return_value=payload):
+            records = client._search_nasa_earthdata("climate", 2)
+        self.assertEqual(records[0]["dataset_accession"], "C123")
+        self.assertIn("Earthdata", records[0]["provider"])
+
+    def test_usgs_search_normalizes_sciencebase_item(self):
+        client = LiteratureClient()
+        with patch.object(client, "_get_json", return_value={"items": [
+            {"id": "abc123", "title": "River flow dataset", "summary": "Streamflow observations"}
+        ]}):
+            records = client._search_usgs("river flow", 2)
+        self.assertEqual(records[0]["dataset_accession"], "abc123")
+
+    def test_figshare_search_preserves_doi_and_download_url(self):
+        client = LiteratureClient()
+        with patch.object(client, "_get_json", return_value=[
+            {"id": 8, "doi": "10.6084/m9.figshare.8", "title": "Open data",
+             "url_public_html": "https://figshare.com/articles/dataset/8",
+             "download_url": "https://ndownloader.figshare.com/files/8"}
+        ]):
+            records = client._search_figshare("open data", 2)
+        self.assertEqual(records[0]["doi"], "10.6084/m9.figshare.8")
+        self.assertTrue(records[0]["download_url"])
+
+    def test_internet_archive_search_normalizes_item(self):
+        client = LiteratureClient()
+        with patch.object(client, "_get_json", return_value={"response": {"docs": [
+            {"identifier": "historic-book", "title": "Historic book"}
+        ]}}):
+            records = client._search_internet_archive("history", 2)
+        self.assertIn("archive.org/details/historic-book", records[0]["url"])
+
+    def test_loc_search_normalizes_collection_item(self):
+        client = LiteratureClient()
+        with patch.object(client, "_get_json", return_value={"results": [
+            {"id": "https://loc.gov/item/1", "title": "Primary source"}
+        ]}):
+            records = client._search_loc("history", 2)
+        self.assertEqual(records[0]["provider"], "Library of Congress")
+
 if __name__ == "__main__":
     unittest.main()
 
