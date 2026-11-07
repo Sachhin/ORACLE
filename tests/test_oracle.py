@@ -748,6 +748,31 @@ class OracleTests(unittest.TestCase):
         self.assertFalse(OpenAccessFullTextClient.license_allowed("CC BY-ND 4.0"))
         self.assertFalse(OpenAccessFullTextClient.license_allowed("unknown"))
 
+    def test_open_access_license_gate_recognizes_canonical_creative_commons_urls(self):
+        from oracle.fulltext import OpenAccessFullTextClient
+        allowed = OpenAccessFullTextClient.license_allowed
+        self.assertTrue(allowed("http://creativecommons.org/licenses/by/4.0/"))
+        self.assertTrue(allowed("https://creativecommons.org/licenses/by-sa/4.0/"))
+        self.assertTrue(allowed("https://creativecommons.org/publicdomain/zero/1.0/"))
+        self.assertFalse(allowed("https://creativecommons.org/licenses/by-nc/4.0/"))
+        self.assertFalse(allowed("https://creativecommons.org/licenses/by-nd/4.0/"))
+
+    def test_literature_search_ranks_relevant_records_and_enriches_exact_identifier(self):
+        from oracle.literature import LiteratureClient
+        client = LiteratureClient(max_abstract_enrichments=1)
+        client._search_europepmc = lambda query, limit: [
+            {"provider":"Europe PMC","doi":"10.1/noise","pmid":"","title":"The Penrose process in rotating black holes","abstract":"","url":"https://example.org/noise"},
+            {"provider":"Europe PMC","doi":"10.1/exercise","pmid":"123","title":"Physical activity and biological aging","abstract":"Regular exercise is associated with cellular aging markers.","url":"https://example.org/exercise"},
+        ]
+        client._search_crossref = lambda query, limit: []
+        client._get_json = lambda url: {"resultList":{"result":[{
+            "doi":"10.1/noise","pmid":"","title":"The Penrose process in rotating black holes",
+            "abstractText":"Black hole physics and rotating spacetime.",
+        }]}}
+        report = client.search("regular physical activity biological aging", limit=2,
+                               providers=("europepmc","crossref"))
+        self.assertEqual(report.records[0]["doi"], "10.1/exercise")
+
 
     def test_geo_supplementary_file_discovery_uses_ncbi_accession_layout(self):
         from oracle.geo_data import GEOSupplementaryClient
