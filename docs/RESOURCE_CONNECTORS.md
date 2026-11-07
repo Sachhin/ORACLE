@@ -11,7 +11,8 @@ This registry separates **working adapters** from **catalogued resources**. A li
 | NCBI GEO | Functional genomics | None | GEO Series metadata |
 | arXiv | Physics, astronomy, CS/AI, mathematics, engineering | None | Preprints and abstracts |
 | PubChem | Chemistry and molecular biology | None | Compound properties (not mechanistic evidence) |
-| OpenAlex | All scholarly disciplines | Optional mailto | Works, authors, venues, OA status, citation counts |\n| NASA ADS | Astronomy and astrophysics | NASA ADS API token (`NASA_ADS_API_TOKEN`) | Searchable papers, abstracts, bibcodes and DOI metadata |
+| OpenAlex | All scholarly disciplines | Optional mailto | Works, authors, venues, OA status, citation counts |
+| NASA ADS | Astronomy and astrophysics | NASA ADS API token (`NASA_ADS_API_TOKEN`) | Searchable papers, abstracts, bibcodes and DOI metadata |
 | GBIF | Biodiversity and organism occurrence records | None | Occurrence records and dataset identifiers |
 | World Bank | Economics, development and social indicators | None | Indicator catalogue metadata (not yet country/time-series observations) |
 | NOAA NCEI | Climate and environmental datasets | None for catalogue search | Dataset search metadata |
@@ -19,7 +20,9 @@ This registry separates **working adapters** from **catalogued resources**. A li
 | NCBI SRA | Sequencing studies | None | Study/run metadata; raw reads require separate download tooling |
 | Zenodo | Cross-disciplinary research outputs | None for public records | Records, DOI, licence and file metadata |
 | Harvard Dataverse | Research datasets | None for public records | Dataset search metadata; file download is a separate step |
-| PubMed | Biomedical literature | None | NCBI E-utilities search and citation metadata |\n| NCBI GenBank | Nucleotide sequence records | None | NCBI E-utilities search and sequence-record metadata |\n| RCSB PDB | Protein and nucleic-acid structures | None | Structure search and entry metadata |
+| PubMed | Biomedical literature | None | NCBI E-utilities search and citation metadata |
+| NCBI GenBank | Nucleotide sequence records | None | NCBI E-utilities search and sequence-record metadata |
+| RCSB PDB | Protein and nucleic-acid structures | None | Structure search and entry metadata |
 | PRIDE Archive | Proteomics | None for public projects | Proteomics project metadata and accession |
 | Hugging Face Datasets | ML and research datasets | None for public records; gated datasets require access | Dataset repository metadata, card description, licence and gated flag |
 | OpenML | ML benchmark datasets | None for public metadata | Dataset metadata and accession |
