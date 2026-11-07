@@ -6,7 +6,18 @@ on:
     paths:
       - ".github/workflows/affymetrix-rma-validation.yml"
       - "oracle/geo_affymetrix.py"
+      - "scripts/compare_affymetrix_rma_reference.py"
       - "tests/test_geo_affymetrix.py"
+      - "tests/test_affymetrix_rma_reference.py"
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/affymetrix-rma-validation.yml"
+      - ".github/workflows/affymetrix-rma-reference.yml"
+      - "oracle/geo_affymetrix.py"
+      - "scripts/compare_affymetrix_rma_reference.py"
+      - "tests/test_geo_affymetrix.py"
+      - "tests/test_affymetrix_rma_reference.py"
   workflow_dispatch:
 
 permissions:
@@ -107,3 +118,123 @@ jobs:
             data_geo_download.json
           if-no-files-found: error
           retention-days: 14
+
+  gse12837-reference:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+      - name: Install GEOquery and GPL96 Bioconductor dependencies
+        run: |
+          Rscript -e 'if (!requireNamespace("BiocManager", quietly=TRUE)) install.packages("BiocManager"); BiocManager::install(c("GEOquery","affy","hgu133acdf"), ask=FALSE, update=FALSE, Ncpus=2)'
+          Rscript -e 'stopifnot(requireNamespace("GEOquery", quietly=TRUE), requireNamespace("affy", quietly=TRUE), requireNamespace("hgu133acdf", quietly=TRUE))'
+      - name: Test the numerical GEO RMA comparator
+        run: python -m unittest discover -s tests -p 'test_affymetrix_rma_reference.py' -v
+      - name: Download all GSE12837 raw CEL files
+        run: |
+          set -euo pipefail
+          mkdir -p data/gse12837/raw
+          curl --fail --location --retry 4 --retry-all-errors --connect-timeout 20 --max-time 1200 \
+            https://ftp.ncbi.nlm.nih.gov/geo/series/GSE12nnn/GSE12837/suppl/GSE12837_RAW.tar \
+            -o data/gse12837/GSE12837_RAW.tar
+          tar -xf data/gse12837/GSE12837_RAW.tar -C data/gse12837/raw
+          find data/gse12837/raw -type f -iname '*.CEL.gz' -print0 | while IFS= read -r -d '' f; do gzip -dk "$f"; done
+          count="$(find data/gse12837/raw -type f -iname '*.CEL' | wc -l)"
+          test "$count" -eq 24
+          find data/gse12837/raw -type f -iname '*.CEL' -print | sort > data/gse12837/cel_paths.txt
+      - name: Download the submitter-deposited GSE12837 RMA supplementary matrix
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 4 --retry-all-errors --connect-timeout 20 --max-time 600 \
+            "https://www.ncbi.nlm.nih.gov/geo/download/?acc=GSE12837&file=GSE12837_RMA.txt&format=file" \
+            -o data/gse12837/GSE12837_RMA.download
+          test -s data/gse12837/GSE12837_RMA.download
+          if gzip -t data/gse12837/GSE12837_RMA.download 2>/dev/null; then
+            gzip -dc data/gse12837/GSE12837_RMA.download > data/gse12837/GSE12837_RMA.txt
+          else
+            cp data/gse12837/GSE12837_RMA.download data/gse12837/GSE12837_RMA.txt
+          fi
+      - name: Parse the local GEO RMA reference matrix
+        run: |
+          Rscript - <<'RS'
+          ref <- read.delim("data/gse12837/GSE12837_RMA.txt", check.names=FALSE,
+                            stringsAsFactors=FALSE, quote="", comment.char="")
+          if (ncol(ref) != 25L || nrow(ref) < 22000L)
+            stop(paste("Unexpected GSE12837 RMA dimensions:", nrow(ref), "x", ncol(ref)))
+          columns <- sub("\\\\.CEL(\\\\.gz)?$", "", names(ref)[-1], ignore.case=TRUE)
+          cat("GSE12837 submitter RMA sample columns (raw):\n", paste(names(ref)[-1], collapse=" | "), "\n")
+          cat("GSE12837 submitter RMA sample columns (normalized):\n", paste(columns, collapse=" | "), "\n")
+          title_to_gsm <- c(
+            poly1="GSM15427", poly2="GSM15428", mono1="GSM15430", mono2="GSM15431",
+            "CD34+_BM_1"="GSM321567", "CD34+_BM_2"="GSM321568",
+            "CD34+_CB_1"="GSM321569", "CD34+_CB_2"="GSM321570",
+            "CD34+_PB_1"="GSM321571", "CD34+_PB_2"="GSM321572",
+            Eosinophils_1="GSM321573", Erythroblasts_1="GSM321574",
+            Erythroblasts_2="GSM321575", Erythroblasts_3="GSM321576",
+            Megakaryoblasts_1="GSM321577", Megakaryoblasts_2="GSM321578",
+            Monoblasts_1="GSM321579", Monoblasts_2="GSM321580",
+            Monoblasts_3="GSM321581", Monocytes_1="GSM321582",
+            Myeloblasts_1="GSM321583", Myeloblasts_2="GSM321584",
+            Myeloblasts_3="GSM321585", Neutrophils_1="GSM321586"
+          )
+          gsm <- if (all(grepl("^GSM[0-9]+$", columns))) columns else unname(title_to_gsm[columns])
+          if (length(gsm) != 24L || anyNA(gsm) || anyDuplicated(gsm))
+            stop(paste0("Submitter RMA matrix columns do not map uniquely to the 24 GEO sample accessions; raw columns: ", paste(columns, collapse=" | ")))
+          names(ref) <- c("feature", gsm)
+          if (anyDuplicated(ref[[1]]) || any(!nzchar(as.character(ref[[1]]))))
+            stop("Reference feature identifiers are missing or duplicated")
+          write.table(ref, "data/gse12837/GSE12837_GEO_RMA_reference.tsv",
+                      sep="\t", quote=FALSE, row.names=FALSE, na="NA")
+          writeLines(gsm, "data/gse12837/reference_samples.txt")
+          RS
+      - name: Preserve GSE12837 reference inputs for mapping diagnosis
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oracle-gse12837-reference-mapping-diagnostics
+          path: |
+            data/gse12837/GSE12837_RMA.txt
+            data/gse12837/cel_paths.txt
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Run ORACLE RMA on all 24 CEL files
+        run: |
+          mapfile -t CEL_FILES < data/gse12837/cel_paths.txt
+          args=()
+          for cel in "${CEL_FILES[@]}"; do args+=(--geo-affymetrix-rma "$cel"); done
+          python -m oracle "${args[@]}" \
+            --affy-backend affy --affy-platform hgu133a \
+            --affy-output data/gse12837/ORACLE_GSE12837_RMA.tsv --json \
+            > data/gse12837/ORACLE_GSE12837_RMA_report.json
+      - name: Compare ORACLE output with published GEO RMA matrix
+        run: |
+          python scripts/compare_affymetrix_rma_reference.py \
+            --oracle data/gse12837/ORACLE_GSE12837_RMA.tsv \
+            --reference data/gse12837/GSE12837_GEO_RMA_reference.tsv \
+            --output data/gse12837/rma-reference-comparison.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report=json.loads(Path("data/gse12837/rma-reference-comparison.json").read_text())
+          print(json.dumps(report, indent=2))
+          if report["status"] != "PASS":
+              raise SystemExit("GSE12837 platform-matched RMA reference comparison did not pass")
+          PY
+      - name: Upload raw CEL source and reproducible RMA comparison
+        uses: actions/upload-artifact@v4
+        with:
+          name: oracle-gse12837-gpl96-rma-reference
+          path: |
+            data/gse12837/GSE12837_RAW.tar
+            data/gse12837/ORACLE_GSE12837_RMA.tsv
+            data/gse12837/ORACLE_GSE12837_RMA_report.json
+            data/gse12837/GSE12837_GEO_RMA_reference.tsv
+            data/gse12837/rma-reference-comparison.json
+          if-no-files-found: error
+          retention-days: 90
