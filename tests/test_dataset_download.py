@@ -11,6 +11,8 @@ class DatasetDownloadTests(unittest.TestCase):
     def test_download_returns_sha256_and_byte_count(self):
         payload = b"research-data"
         response = MagicMock()
+        response.__enter__.return_value = response
+        response.__exit__.return_value = False
         response.geturl.return_value = "https://zenodo.org/records/1/files/data.csv"
         response.headers = {"Content-Length": str(len(payload))}
         response.read.side_effect = [payload, b""]
@@ -33,6 +35,8 @@ class DatasetDownloadTests(unittest.TestCase):
 
     def test_rejects_oversized_content_length(self):
         response = MagicMock()
+        response.__enter__.return_value = response
+        response.__exit__.return_value = False
         response.geturl.return_value = "https://zenodo.org/data.bin"
         response.headers = {"Content-Length": "100"}
         with tempfile.TemporaryDirectory() as folder:
