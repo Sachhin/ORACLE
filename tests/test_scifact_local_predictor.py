@@ -44,6 +44,11 @@ class LocalSciFactPredictionTests(unittest.TestCase):
         self.assertNotIn("SUPPORT", messages[1]["content"])
         self.assertEqual(allowed, {"1": 1})
 
+    def test_rejects_missing_cited_document_in_corpus(self):
+        claim = {"id": 9, "claim": "Claim", "cited_doc_ids": [999]}
+        with self.assertRaisesRegex(ValueError, "absent from corpus"):
+            prompt_for_claim(claim, {})
+
     def test_rejects_duplicate_document_predictions(self):
         with self.assertRaisesRegex(ValueError, "Duplicate"):
             validate_prediction({"evidence": [
