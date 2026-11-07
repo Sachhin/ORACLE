@@ -94,7 +94,7 @@ _RESOURCES = (
     ScientificResource("crystallography_open_database", "Crystallography Open Database", ("chemistry_materials",),
         "https://www.crystallography.net/cod", "public_catalog", "none",
         "Check individual record licence and attribution", capabilities=("crystal_structures",)),
-    ScientificResource("pdb", "Worldwide Protein Data Bank", ("biology_medicine",),
+    ScientificResource("pubmed", "PubMed", ("biology_medicine", "general_science"),\n        "https://eutils.ncbi.nlm.nih.gov/entrez/eutils", "public_api", "none",\n        "Article-level access and licence terms apply", "pubmed", ("literature_search", "biomedical_metadata")),\n    ScientificResource("genbank", "NCBI GenBank", ("biology_medicine",),\n        "https://eutils.ncbi.nlm.nih.gov/entrez/eutils", "public_api", "none",\n        "Sequence records and submitter-specific terms apply", "genbank", ("sequence_search", "nucleotide_records")),\n    ScientificResource("pdb", "Worldwide Protein Data Bank", ("biology_medicine",),
         "https://data.rcsb.org", "public_api", "none",
         "Structure and linked data terms apply", "pdb", ("protein_structures", "dataset_search")),
     ScientificResource("pride", "PRIDE Proteomics", ("biology_medicine",),
@@ -171,12 +171,12 @@ def resolve_literature_providers(question: str, requested_domain: str = "auto") 
 
     profile, _ = resolve_domain(question, requested_domain)
     by_domain = {
-        "biology_medicine": ("openalex", "europepmc", "crossref", "geo", "pubchem", "clinical_trials", "sra", "zenodo", "harvard_dataverse", "pdb", "pride", "figshare"),
+        "biology_medicine": ("openalex", "europepmc", "pubmed", "crossref", "geo", "pubchem", "genbank", "clinical_trials", "sra", "zenodo", "harvard_dataverse", "pdb", "pride", "figshare"),
         "physics_astronomy": ("openalex", "arxiv", "crossref"),
         "computer_science_ai": ("openalex", "arxiv", "crossref", "huggingface_datasets", "openml"),
         "mathematics_statistics": ("openalex", "arxiv", "crossref", "openml"),
         "chemistry_materials": ("openalex", "pubchem", "crossref"),
-        "general_science": ("openalex", "europepmc", "crossref", "arxiv", "pubchem", "zenodo", "harvard_dataverse"),
+        "general_science": ("openalex", "europepmc", "pubmed", "crossref", "arxiv", "pubchem", "zenodo", "harvard_dataverse"),
         "earth_environment": ("openalex", "crossref", "gbif", "noaa_ncei", "zenodo", "nasa_earthdata", "usgs", "figshare"),
         "social_behavioral": ("openalex", "crossref", "world_bank"),
         "history_archaeology": ("openalex", "crossref", "internet_archive", "loc", "figshare"),
@@ -215,7 +215,7 @@ class ResourceManager:
             {**asdict(resource),
              "domains": list(resource.domains),
              "capabilities": list(resource.capabilities),
-             "status": "implemented" if resource.connector in {"europepmc", "crossref", "geo", "arxiv", "pubchem", "openalex", "gbif", "world_bank", "noaa_ncei", "clinical_trials", "zenodo", "harvard_dataverse", "sra", "pdb", "pride", "huggingface_datasets", "openml", "nasa_earthdata", "usgs", "figshare", "internet_archive", "loc"}
+             "status": "implemented" if resource.connector in {"europepmc", "crossref", "geo", "arxiv", "pubchem", "openalex", "gbif", "world_bank", "noaa_ncei", "clinical_trials", "zenodo", "harvard_dataverse", "sra", "pdb", "pride", "huggingface_datasets", "openml", "pubmed", "genbank", "nasa_earthdata", "usgs", "figshare", "internet_archive", "loc"}
                        else "catalog_only"}
             for resource in _RESOURCES
             if domain in {"all", "auto"} or "all" in resource.domains
