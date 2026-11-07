@@ -22,10 +22,10 @@ compounds = manager.search("aspirin", resources=("pubchem",))
 ```
 
 The registry deliberately distinguishes `implemented` from `catalog_only`.
-At this stage, executable dispatch uses Europe PMC, Crossref, NCBI GEO,
-arXiv, and PubChem adapters. Other entries document authoritative API
-endpoints, authentication expectations, and licence cautions, but do not yet
-download or analyze data. A catalog entry must never be reported as a working
+Executable dispatch currently uses Europe PMC, Crossref, NCBI GEO, arXiv,
+and PubChem adapters. OpenAlex, Materials Project, NOAA, GBIF, World Bank,
+and NASA technical reports remain catalog-only; they are not yet executable
+connectors. A catalog entry must never be reported as a working
 connector. New adapters require retrieval, parsing, pagination/rate-limit,
 provenance, error-path, and fixture-backed tests before their status changes.
 
