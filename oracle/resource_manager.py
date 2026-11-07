@@ -184,7 +184,7 @@ def resolve_literature_providers(question: str, requested_domain: str = "auto") 
     profile, _ = resolve_domain(question, requested_domain)
     by_domain = {
         "biology_medicine": ("openalex", "europepmc", "pubmed", "crossref", "geo", "pubchem", "genbank", "ensembl", "clinical_trials", "sra", "zenodo", "harvard_dataverse", "pdb", "pride", "figshare"),
-        "physics_astronomy": ("openalex", "arxiv", "crossref", "inspire_hep"),
+        "physics_astronomy": ("openalex", "arxiv", "crossref", "inspire_hep", "nasa_ads"),
         "computer_science_ai": ("openalex", "arxiv", "crossref", "huggingface_datasets", "openml"),
         "mathematics_statistics": ("openalex", "arxiv", "crossref", "openml"),
         "chemistry_materials": ("openalex", "pubchem", "crossref"),
@@ -227,7 +227,7 @@ class ResourceManager:
             {**asdict(resource),
              "domains": list(resource.domains),
              "capabilities": list(resource.capabilities),
-             "status": "implemented" if resource.connector in {"europepmc", "crossref", "geo", "arxiv", "pubchem", "openalex", "gbif", "world_bank", "noaa_ncei", "clinical_trials", "zenodo", "harvard_dataverse", "sra", "pdb", "pride", "huggingface_datasets", "openml", "pubmed", "genbank", "inspire_hep", "ensembl", "nasa_earthdata", "usgs", "figshare", "internet_archive", "loc"}
+             "status": "implemented" if resource.connector in {"europepmc", "crossref", "geo", "arxiv", "pubchem", "openalex", "gbif", "world_bank", "noaa_ncei", "clinical_trials", "zenodo", "harvard_dataverse", "sra", "pdb", "pride", "huggingface_datasets", "openml", "pubmed", "genbank", "inspire_hep", "ensembl", "nasa_ads", "nasa_earthdata", "usgs", "figshare", "internet_archive", "loc"}
                        else "catalog_only"}
             for resource in _RESOURCES
             if domain in {"all", "auto"} or "all" in resource.domains
