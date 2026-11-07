@@ -50,3 +50,23 @@ Catalog-only entries are deliberately rejected by `ResourceManager.search()`; th
 ## Validation and limitations
 
 Unit tests mock external HTTP responses and validate normalization/dispatch. They do not prove that every provider endpoint is currently reachable, that every dataset is downloadable, or that retrieved content supports a scientific claim. Live API smoke tests, rate-limit handling, licensing review, and specialist adapters remain separate validation work. ORACLE records provenance and should retain provider identifiers and dataset licences when interpreting results.
+
+
+## Downloading retrieved dataset files
+
+ORACLE can download a single HTTPS file from approved public repository hosts
+without unpacking or executing it. The downloader enforces an explicit byte
+limit, checks redirects against the host allowlist, removes partial files after
+errors, and returns a SHA-256 digest for provenance.
+
+```bash
+oracle --download-dataset-file "https://zenodo.org/records/RECORD/files/data.csv" \
+  --dataset-output data/raw/data.csv --dataset-max-mb 500
+```
+
+The user must select a specific file URL from the source record and confirm
+its access and licence conditions. Search metadata is not a guarantee that
+all linked files are openly downloadable. This is a generic single-file
+download step; it does not yet automatically crawl every dataset's file list,
+unpack archives, parse every scientific format, or ingest data into a validated
+analysis. SHA-256 and source URL should be retained with any downstream result.
