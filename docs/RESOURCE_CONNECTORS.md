@@ -36,7 +36,8 @@ OpenAlex is the cross-disciplinary scholarly discovery fallback for domains with
 
 ## Catalogued, not yet executable in ORACLE
 
-- **Astronomy:** NASA Astrophysics Data System (NASA ADS; API token required), NASA Technical Reports Server.
+- **Astronomy:** NASA Astrophysics Data System (NASA ADS; API token required), INSPIRE-HEP, NASA Technical Reports Server.
+- **Biology/medicine:** Ensembl (catalogued, but no executable adapter in this release).
 - **Materials/chemistry:** Materials Project (API key required), NOMAD, Crystallography Open Database.
 - **Engineering and software:** GitHub repositories, Papers with Code.
 - **Mathematics:** zbMATH Open.
