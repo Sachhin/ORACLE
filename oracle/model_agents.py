@@ -64,20 +64,28 @@ class GeminiJSONProvider:
                 break
             except HTTPError as exc:
                 detail = exc.read(2000).decode("utf-8", "replace")
-                quota_exhausted = any(
-                    marker in detail.casefold()
+                detail_lower = detail.casefold()
+                per_minute_limit = ("per minute" in detail_lower or "requests_per_minute" in detail_lower)
+                quota_exhausted = (any(
+                    marker in detail_lower
                     for marker in ("quota", "resource_exhausted", "daily limit", "billing")
-                )
+                ) and not per_minute_limit)
                 retryable = exc.code in {429, 500, 502, 503, 504}
-                if retryable and not quota_exhausted and attempt < self.max_retries:
+                if retryable and attempt < self.max_retries and (not quota_exhausted):
                     retry_after = exc.headers.get("Retry-After") if exc.headers else None
+                    retry_match = re.search(r"retry in ([0-9]+(?:\\.[0-9]+)?)s", detail_lower)
                     try:
-                        delay = min(5.0, max(0.0, float(retry_after))) if retry_after else min(4.0, 2.0 ** attempt)
+                        if retry_after:
+                            delay = max(0.0, float(retry_after))
+                        elif per_minute_limit and retry_match:
+                            delay = float(retry_match.group(1)) + 0.25
+                        else:
+                            delay = min(4.0, 2.0 ** attempt)
                     except ValueError:
                         delay = min(4.0, 2.0 ** attempt)
                     time.sleep(delay)
                     continue
-                suffix = " (quota appears exhausted; retries stopped)" if quota_exhausted else ""
+                suffix = " (daily quota appears exhausted; retries stopped)" if quota_exhausted else ""
                 raise GeminiAgentError(f"Gemini HTTP {exc.code}{suffix}: {detail[:1000]}") from exc
             except (URLError, TimeoutError) as exc:
                 if attempt < self.max_retries:
