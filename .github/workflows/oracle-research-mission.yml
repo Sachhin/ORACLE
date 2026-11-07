@@ -1,10 +1,10 @@
 name: ORACLE longevity research mission
 
 on:
-  push:
+  workflow_run:
+    workflows: ["ORACLE SciFact prediction benchmark"]
+    types: [completed]
     branches: [main]
-    paths:
-      - ".github/workflows/oracle-research-mission.yml"
   workflow_dispatch:
     inputs:
       question:
@@ -65,6 +65,7 @@ permissions:
 
 jobs:
   research:
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.id == 42332654496 && github.event.workflow_run.conclusion == 'success') }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
     env:
