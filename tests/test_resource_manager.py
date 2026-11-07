@@ -20,7 +20,7 @@ class ResourceManagerTests(unittest.TestCase):
         self.assertEqual(items["europepmc"]["status"], "implemented")
         self.assertEqual(items["ncbi_geo"]["status"], "implemented")
         self.assertEqual(items["arxiv"]["status"], "implemented")
-        self.assertEqual(items["pubchem"]["status"], "catalog_only")
+        self.assertEqual(items["pubchem"]["status"], "implemented")
         self.assertEqual(items["materials_project"]["authentication"], "api_key")
 
     def test_domain_filter_includes_universal_resources(self):
@@ -55,6 +55,25 @@ class ResourceManagerTests(unittest.TestCase):
         result = ResourceManager(StubClient()).search(
             "black hole", limit=4, resources=("arxiv",))
         self.assertEqual(result, ("black hole", 4, ("arxiv",)))
+
+    def test_pubchem_record_normalizes_structured_compound_properties(self):
+        record = LiteratureClient._pubchem_record({
+            "CID": 2244, "IUPACName": "acetic acid", "MolecularFormula": "C2H4O2",
+            "MolecularWeight": "60.05", "CanonicalSMILES": "CC(=O)O",
+        })
+        self.assertEqual(record["provider"], "PubChem")
+        self.assertEqual(record["compound_cid"], "2244")
+        self.assertIn("Molecular formula: C2H4O2.", record["abstract"])
+        self.assertEqual(record["molecular_weight"], "60.05")
+        self.assertIn("/compound/2244", record["url"])
+
+    def test_pubchem_resource_dispatches_to_literature_provider(self):
+        class StubClient:
+            def search(self, query, limit, providers):
+                return (query, limit, providers)
+        result = ResourceManager(StubClient()).search(
+            "aspirin", limit=3, resources=("pubchem",))
+        self.assertEqual(result, ("aspirin", 3, ("pubchem",)))
 
     def test_unknown_resource_is_rejected(self):
         with self.assertRaises(KeyError):
