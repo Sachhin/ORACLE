@@ -319,10 +319,26 @@ class LiteratureClient:
 
     @staticmethod
     def _topic_profile(query: str) -> str:
-        """Recognize broad research intents that need a domain-specific relevance gate."""
-        text = query.casefold()
-        if any(term in text for term in ("longevity", "lifespan", "life span", "healthspan",
-                                         "centenarian", "aging", "ageing", "senescence")):
+        """Recognize longevity and age-comparison wording, including plain-language questions."""
+        text = re.sub(r"[^a-z0-9]+", " ", query.casefold()).strip()
+        terms = set(text.split())
+        explicit_aging = any(term in text for term in (
+            "longevity", "lifespan", "life span", "healthspan", "centenarian",
+            "aging", "ageing", "senescence", "geroscience", "age related",
+            "age associated", "age dependent", "old age", "older adult",
+            "older adults", "elderly",
+        ))
+        young_old_comparison = (
+            {"young", "old"}.issubset(terms)
+            or {"younger", "older"}.issubset(terms)
+            or ({"young", "older"}.issubset(terms))
+            or ({"younger", "old"}.issubset(terms))
+        )
+        age_expression = (
+            "gene expression" in text
+            and bool(terms & {"age", "aged", "adult", "adults", "young", "older", "old"})
+        )
+        if explicit_aging or young_old_comparison or age_expression:
             return "human_longevity"
         return ""
 
@@ -365,8 +381,14 @@ class LiteratureClient:
             return True
         title = str(record.get("title", "")).casefold()
         abstract = str(record.get("abstract", "")).casefold()
+        # Search APIs sometimes return figure/table captions as if they were papers.
+        if re.match(r"^\\s*(figure|fig\\.?|table|supplement(?:ary|al)?)\\s*(?:\\d|[:.\\-])", title):
+            return False
         anchors = ("longevity", "lifespan", "life span", "healthspan", "centenarian",
-                   "aging", "ageing", "senescence", "geroscience", "geroprotector")
+                   "aging", "ageing", "senescence", "geroscience", "geroprotector",
+                   "age-related", "age related", "age-associated", "age associated",
+                   "age-dependent", "age dependent", "older adult", "older adults",
+                   "old age", "elderly")
         return any(term in title or term in abstract for term in anchors)
 
     @classmethod
