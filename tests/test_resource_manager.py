@@ -37,7 +37,7 @@ class ResourceManagerTests(unittest.TestCase):
 
     def test_cross_domain_resources_are_catalogued_with_truthful_status(self):
         items = {item["key"]: item for item in ResourceManager.list_resources()}
-        for key in ("openalex", "gbif", "world_bank", "pdb", "pride", "openml", "huggingface_datasets", "nasa_earthdata", "usgs", "figshare", "internet_archive", "loc"):
+        for key in ("openalex", "gbif", "world_bank", "pdb", "pride", "openml", "huggingface_datasets", "pubmed", "genbank", "nasa_earthdata", "usgs", "figshare", "internet_archive", "loc"):
             self.assertEqual(items[key]["status"], "implemented")
         for key in ("materials_project", "nomad", "nasa_ads",
                     "pangaea",
@@ -137,7 +137,7 @@ class ResourceManagerTests(unittest.TestCase):
     def test_auto_source_selection_uses_domain_adapters(self):
         self.assertEqual(
             resolve_literature_providers("Can we identify aging mechanisms?", "auto"),
-            ("openalex", "europepmc", "crossref", "geo", "pubchem", "clinical_trials", "sra", "zenodo", "harvard_dataverse", "pdb", "pride", "figshare"),
+            ("openalex", "europepmc", "pubmed", "crossref", "geo", "pubchem", "genbank", "clinical_trials", "sra", "zenodo", "harvard_dataverse", "pdb", "pride", "figshare"),
         )
         self.assertEqual(
             resolve_literature_providers("Can quantum gravity be tested?", "auto"),
@@ -362,6 +362,48 @@ class ResourceManagerTests(unittest.TestCase):
                 records = client._search_nasa_ads("stars", 2)
         self.assertEqual(records[0]["provider_id"], "2025ApJ...1A")
         self.assertEqual(request.call_args.kwargs["headers"]["Authorization"], "Bearer test-token")
+
+
+    def test_pubmed_search_uses_ncbi_eutils_and_normalizes_records(self):
+        client = LiteratureClient()
+        payloads = [
+            {"esearchresult": {"idlist": ["123456"]}},
+            {"result": {"123456": {
+                "uid": "123456", "title": "Aging biology study",
+                "authors": [{"name": "A. Researcher"}],
+                "fulljournalname": "Nature Aging", "pubdate": "2025 Jan",
+            }}},
+        ]
+        with patch.object(client, "_get_json", side_effect=payloads):
+            records = client._search_pubmed("longevity", 3)
+        self.assertEqual(records[0]["pmid"], "123456")
+        self.assertEqual(records[0]["provider"], "PubMed")
+        self.assertIn("pubmed.ncbi.nlm.nih.gov/123456", records[0]["url"])
+
+    def test_genbank_search_returns_nucleotide_accession_metadata(self):
+        client = LiteratureClient()
+        payloads = [
+            {"esearchresult": {"idlist": ["987"]}},
+            {"result": {"987": {
+                "uid": "987", "accessionversion": "NC_012345.1",
+                "title": "Homo sapiens mitochondrial genome",
+                "organism": "Homo sapiens", "slen": 16569,
+                "createdate": "2024/05/01",
+            }}},
+        ]
+        with patch.object(client, "_get_json", side_effect=payloads):
+            records = client._search_genbank("Homo sapiens mitochondrion", 2)
+        self.assertEqual(records[0]["dataset_accession"], "NC_012345.1")
+        self.assertIn("16569 bp", records[0]["abstract"])
+
+    def test_pubmed_and_genbank_dispatch_through_resource_manager(self):
+        class StubClient:
+            def search(self, query, limit, providers):
+                return (query, limit, providers)
+        manager = ResourceManager(StubClient())
+        for key in ("pubmed", "genbank"):
+            result = manager.search("human longevity", limit=4, resources=(key,))
+            self.assertEqual(result[2], (key,))
 
 if __name__ == "__main__":
     unittest.main()
