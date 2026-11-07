@@ -6,7 +6,7 @@ from pathlib import Path
 
 def read_matrix(path):
     with Path(path).open(encoding="utf-8-sig", newline="") as f:
-        reader=csv.DictReader(f, delimiter="\\t")
+        reader=csv.DictReader(f, delimiter="\t")
         if not reader.fieldnames or len(reader.fieldnames)<3:
             raise ValueError("Expected feature ID and at least two sample columns")
         feature_col=reader.fieldnames[0]; samples=reader.fieldnames[1:]
@@ -81,7 +81,7 @@ def impute(observed_path, output_path, neighbors=5, min_overlap=30):
     if changed: raise RuntimeError(f"Changed {len(changed)} observed cells")
     out=Path(output_path); out.parent.mkdir(parents=True,exist_ok=True)
     with out.open("w",encoding="utf-8",newline="") as f:
-        w=csv.writer(f,delimiter="\\t",lineterminator="\\n")
+        w=csv.writer(f,delimiter="\t",lineterminator="\n")
         w.writerow(["Sequence",*samples])
         for feature in sorted(matrix):
             w.writerow([feature,*[ "" if matrix[feature][s] is None else format(matrix[feature][s],".12g") for s in samples]])
