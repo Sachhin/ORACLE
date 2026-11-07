@@ -51,6 +51,8 @@ button:disabled{opacity:.5;cursor:wait}.muted{color:var(--muted)}.status{padding
 <div class="status">Runs with ORACLE’s built-in deterministic research workflow. No Gemini API key or paid AI API is used.</div>
 <label class="check"><input id="fulltext" type="checkbox" checked> Retrieve eligible open-access full text</label>
 <label class="check"><input id="citations" type="checkbox" checked> Expand citation network</label>
+<label class="check"><input id="geoDiscover" type="checkbox"> Discover GEO supplementary files (no downloads)</label>
+<label class="check"><input id="geoAnalyze" type="checkbox"> Download and analyze supported GEO matrices (uses bandwidth and disk space)</label>
 <button id="start" type="submit">Start research</button>
 <div id="status" class="status" role="status">Ready. Research runs may take several minutes while public scientific literature is retrieved.</div>
 </form><h2 style="margin-top:22px">Selected run</h2><div id="detail" class="muted">Select a run from the history panel to inspect its summary.</div></section>
@@ -64,7 +66,7 @@ async function refresh(){try{const d=await api('/api/runs');$('runs').replaceChi
 for(const r of d.runs){const el=document.createElement('div');el.className='item';const b=document.createElement('strong');b.textContent=r.question;const m=document.createElement('span');m.className='muted';m.textContent=r.status+' · '+r.run_id+' · '+r.updated_at;el.append(b,m);el.onclick=()=>selectRun(r.run_id);$('runs').append(el)}}catch(e){$('runs').textContent=e.message}}
 async function selectRun(id){try{const d=await api('/api/runs/'+encodeURIComponent(id));const r=d.run;$('detail').replaceChildren();const h=document.createElement('h3');h.textContent=r.question;const p=document.createElement('p');p.textContent='Status: '+r.status+' · Cycles: '+r.current_cycle+'/'+r.max_cycles+' · Sources: '+r.sources.length+' · Evidence: '+r.evidence.length+' · Claims: '+r.claims.length+' · Hypotheses: '+r.hypotheses.length;const pre=document.createElement('pre');pre.textContent=(r.findings||[]).join('\n\n')||'No findings recorded.';$('detail').append(h,p,pre)}catch(e){showStatus(e.message)}}
 $('mission').onsubmit=async e=>{e.preventDefault();$('start').disabled=true;showStatus('Submitting research mission…');
-try{const payload={question:$('question').value,mode:$('mode').value,domain:$('domain').value,cycles:Number($('cycles').value),limit:Number($('limit').value),full_text:$('fulltext').checked,citations:$('citations').checked};
+try{const payload={question:$('question').value,mode:$('mode').value,domain:$('domain').value,cycles:Number($('cycles').value),limit:Number($('limit').value),full_text:$('fulltext').checked,citations:$('citations').checked,geo_discover:$('geoDiscover').checked,geo_analyze:$('geoAnalyze').checked};
 const d=await api('/api/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});activeJob=d.job_id;showStatus('Run started: '+activeJob);poll()}catch(err){showStatus('Could not start: '+err.message);$('start').disabled=false}};
 async function poll(){if(!activeJob)return;try{const d=await api('/api/jobs/'+activeJob);showStatus('Job '+d.status+(d.run_id?' · Run '+d.run_id:'')+(d.error?'\n'+d.error:''));if(d.status==='completed'){activeJob=null;$('start').disabled=false;await refresh();if(d.run_id)await selectRun(d.run_id);return}if(d.status==='failed'){activeJob=null;$('start').disabled=false;return}setTimeout(poll,3000)}catch(e){showStatus(e.message);activeJob=null;$('start').disabled=false}}
 $('refresh').onclick=refresh;refresh();
@@ -181,6 +183,10 @@ class OracleDashboardHandler(BaseHTTPRequestHandler):
                 command.append("--full-text")
             if payload.get("citations"):
                 command.extend(["--citation-network", "--incoming-citations"])
+            if payload.get("geo_discover"):
+                command.append("--discover-geo-files")
+            if payload.get("geo_analyze"):
+                command.append("--analyze-geo-files")
             with log.open("w", encoding="utf-8") as handle:
                 process = subprocess.Popen(command, cwd=root, stdout=output.open("w", encoding="utf-8"),
                     stderr=handle, env=os.environ.copy())
