@@ -148,6 +148,24 @@ def _default_provider(model: str) -> Any:
     return providers[0] if len(providers) == 1 else ProviderRouter(providers)
 
 
+def _default_provider(model: str) -> Any:
+    """Use stable Gemini fallbacks when the primary model is temporarily unavailable.
+
+    Override ORACLE_GEMINI_FALLBACK_MODELS with a comma-separated model list.
+    ProviderRouter advances only for transient failures; auth/configuration errors
+    do not silently switch models.
+    """
+    fallback_names = os.environ.get(
+        "ORACLE_GEMINI_FALLBACK_MODELS",
+        "gemini-3.5-flash,gemini-3.5-flash-lite",
+    )
+    names = [model]
+    names.extend(item.strip() for item in fallback_names.split(",") if item.strip())
+    unique_names = list(dict.fromkeys(names))
+    providers = [GeminiJSONProvider(model=name) for name in unique_names]
+    return providers[0] if len(providers) == 1 else ProviderRouter(providers)
+
+
 def generate_predictions(
     claims_path: str | Path,
     corpus_path: str | Path,
