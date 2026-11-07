@@ -26,6 +26,11 @@ class LiteratureSearchReport:
     candidate_statements: int = 0
     warnings: list[str] = field(default_factory=list)
     records: list[dict[str, Any]] = field(default_factory=list)
+    abstract_enrichment_attempted: int = 0
+    abstract_enrichment_recovered: int = 0
+    abstract_enrichment_no_match: int = 0
+    abstract_enrichment_failed: int = 0
+    abstract_enrichment_skipped_no_identifier: int = 0
 
 class LiteratureClient:
     PROVIDERS = ("europepmc", "crossref", "geo", "arxiv", "pubchem")
@@ -256,48 +261,61 @@ class LiteratureClient:
             })
         return records
 
-    def _enrich_missing_abstracts(self, records: list[dict[str, Any]]) -> None:
-        """Recover abstracts omitted by one index using exact PMID/DOI lookups."""
+    def _enrich_missing_abstracts(self, records: list[dict[str, Any]]) -> dict[str, int]:
+        """Recover missing abstracts by exact identifiers and report every outcome."""
+        stats = {"attempted": 0, "recovered": 0, "no_match": 0, "failed": 0, "skipped_no_identifier": 0}
         remaining = self.max_abstract_enrichments
         for record in records:
-            if remaining <= 0:
-                break
-            if record.get("abstract") or not (record.get("pmid") or record.get("doi")):
+            if record.get("abstract"):
                 continue
-            identifier = ("EXT_ID:" + str(record["pmid"]) if record.get("pmid")
-                          else "DOI:" + str(record["doi"]))
+            if not (record.get("pmid") or record.get("doi")):
+                stats["skipped_no_identifier"] += 1
+                continue
+            if remaining <= 0:
+                continue
+            identifier = ("EXT_ID:" + str(record["pmid"]) if record.get("pmid") else "DOI:" + str(record["doi"]))
             url = "https://www.ebi.ac.uk/europepmc/webservices/rest/search?" + urlencode({
                 "query": identifier, "format": "json", "resultType": "core", "pageSize": 1,
             })
             remaining -= 1
+            stats["attempted"] += 1
             try:
                 data = self._get_json(url)
                 if not isinstance(data, dict):
+                    stats["failed"] += 1
                     continue
                 result_list = data.get("resultList", {})
                 if not isinstance(result_list, dict):
+                    stats["failed"] += 1
                     continue
                 hits = result_list.get("result", [])
                 if isinstance(hits, dict):
                     hits = [hits]
                 if not isinstance(hits, list):
+                    stats["failed"] += 1
                     continue
                 hit = next((item for item in hits if isinstance(item, dict)), None)
                 if hit is None:
+                    stats["no_match"] += 1
                     continue
                 match = self._epmc_record(hit)
                 same_pmid = bool(record.get("pmid") and match.get("pmid") == str(record["pmid"]))
-                same_doi = bool(record.get("doi") and match.get("doi", "").casefold()
-                                == str(record["doi"]).casefold())
+                same_doi = bool(record.get("doi") and match.get("doi", "").casefold() == str(record["doi"]).casefold())
                 if not (same_pmid or same_doi):
+                    stats["no_match"] += 1
                     continue
+                recovered_abstract = bool(match.get("abstract"))
                 for key in ("abstract", "pmcid", "license", "open_access", "pmid", "doi"):
-                    if match.get(key) not in (None, "") and (
-                        key in {"abstract", "pmcid", "license"} or not record.get(key)
-                    ):
+                    if match.get(key) not in (None, "") and (key in {"abstract", "pmcid", "license"} or not record.get(key)):
                         record[key] = match[key]
+                if recovered_abstract:
+                    stats["recovered"] += 1
+                else:
+                    stats["no_match"] += 1
             except Exception:
-                continue
+                # Keep the retrieval run alive, but never hide failed enrichment attempts.
+                stats["failed"] += 1
+        return stats
 
     @staticmethod
     def _topic_profile(query: str) -> str:
@@ -374,7 +392,20 @@ class LiteratureClient:
                 for k,v in item.items():
                     if v not in (None,"",[],False) and current.get(k) in (None,"",[],False): current[k]=v
         records = list(merged.values())
-        self._enrich_missing_abstracts(records)
+        enrichment = self._enrich_missing_abstracts(records)
+        report.abstract_enrichment_attempted = enrichment["attempted"]
+        report.abstract_enrichment_recovered = enrichment["recovered"]
+        report.abstract_enrichment_no_match = enrichment["no_match"]
+        report.abstract_enrichment_failed = enrichment["failed"]
+        report.abstract_enrichment_skipped_no_identifier = enrichment["skipped_no_identifier"]
+        if enrichment["attempted"] or enrichment["skipped_no_identifier"]:
+            report.warnings.append(
+                "Abstract recovery: "
+                f'{enrichment["recovered"]}/{enrichment["attempted"]} recovered; '
+                f'{enrichment["no_match"]} exact lookups had no abstract match; '
+                f'{enrichment["failed"]} lookup failures; '
+                f'{enrichment["skipped_no_identifier"]} missing-abstract records lacked PMID/DOI.'
+            )
         # Provider completion order is nondeterministic; rank by topical overlap.
         # Longevity missions use a conservative topical gate so generic "unknown"
         # results (viruses, yeast replication, ancestry, etc.) do not become evidence.
