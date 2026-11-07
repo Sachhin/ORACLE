@@ -11,7 +11,7 @@ This registry separates **working adapters** from **catalogued resources**. A li
 | NCBI GEO | Functional genomics | None | GEO Series metadata |
 | arXiv | Physics, astronomy, CS/AI, mathematics, engineering | None | Preprints and abstracts |
 | PubChem | Chemistry and molecular biology | None | Compound properties (not mechanistic evidence) |
-| OpenAlex | All scholarly disciplines | Optional mailto | Works, authors, venues, OA status, citation counts |
+| OpenAlex | All scholarly disciplines | Optional mailto | Works, authors, venues, OA status, citation counts |\n| NASA ADS | Astronomy and astrophysics | NASA ADS API token (`NASA_ADS_API_TOKEN`) | Searchable papers, abstracts, bibcodes and DOI metadata |
 | GBIF | Biodiversity and organism occurrence records | None | Occurrence records and dataset identifiers |
 | World Bank | Economics, development and social indicators | None | Indicator catalogue metadata (not yet country/time-series observations) |
 | NOAA NCEI | Climate and environmental datasets | None for catalogue search | Dataset search metadata |
@@ -28,7 +28,7 @@ OpenAlex is the cross-disciplinary scholarly discovery fallback for domains with
 
 ## Catalogued, not yet executable in ORACLE
 
-- **Astronomy:** NASA ADS (token required), NASA Technical Reports Server.
+- **Astronomy:** NASA Technical Reports Server.
 - **Biology/medicine:**
 - **Earth/environment:** PANGAEA, OpenStreetMap.
 - **Materials/chemistry:** Materials Project (API key required), NOMAD, Crystallography Open Database.
