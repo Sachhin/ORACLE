@@ -14,7 +14,8 @@ from urllib.request import Request, urlopen
 
 _ALLOWED_HOSTS = {
     "zenodo.org", "dataverse.harvard.edu", "files.rcsb.org",
-    "ftp.sra.ebi.ac.uk", "sra-download.ncbi.nlm.nih.gov", "api.openml.org",\n    "sra-pub-run-odp.s3.amazonaws.com",
+    "ftp.sra.ebi.ac.uk", "sra-download.ncbi.nlm.nih.gov", "api.openml.org",
+    "sra-pub-run-odp.s3.amazonaws.com",
     "huggingface.co", "cdn-lfs.huggingface.co", "openml.org",
     "www.openml.org", "www.ebi.ac.uk",
 }
