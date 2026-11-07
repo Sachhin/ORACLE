@@ -589,23 +589,22 @@ Use the actual extracted paths with `--merge-geo-counts`. Do not assume column p
 
 ## Local browser dashboard
 
-ORACLE includes a lightweight local browser dashboard with the same research engine and SQLite run history as the terminal CLI. It uses only the Python standard library; it does not add a hosted service or expose an unauthenticated server to the network.
+ORACLE includes a lightweight local browser dashboard with the same research engine and SQLite run history as the terminal CLI. It uses only the Python standard library and requires **no model API key**.
 
 Install and start it:
 
 ```bash
 python -m pip install -e .
-export GEMINI_API_KEY="YOUR_GEMINI_API_KEY"  # optional; needed for Gemini agents
 oracle-dashboard
 ```
 
-Open **http://127.0.0.1:8765** in your browser. Keep the terminal open while the dashboard runs. Choose Gemini agents for model-backed planning/research/hypothesis work, or the deterministic baseline for offline operation. The dashboard starts a research-literature run, supports deep-research/discovery modes and domain routing, and displays saved run summaries. Runs are persisted in the same SQLite database as terminal commands (set ORACLE_DB to override the default path).
+Open **http://127.0.0.1:8765** in your browser. Keep the terminal open while the dashboard runs. Browser missions use ORACLE's deterministic research workflow and public Europe PMC + Crossref literature search. No Gemini key or other model credential is needed. The deterministic workflow is a reproducible baseline, not LLM reasoning or autonomous scientific discovery. Model-backed reasoning requires a separately configured model provider and is not part of the no-key browser workflow. Runs are persisted in the same SQLite database as terminal commands (set ORACLE_DB to override the default path).
 
 Terminal remains fully supported:
 
 ```bash
 oracle --help
-oracle "Your scientific question" --research-literature --agent-provider gemini --cycles 3
+oracle "Your scientific question" --research-literature --cycles 3
 ```
 
-**Safety and limitations:** the dashboard binds to loopback only and intentionally refuses non-local bind addresses because it has no login/authentication. It is a local operator interface, not a multi-user hosted product. Long-running jobs are tracked in dashboard memory; completed research records remain in SQLite. Browser dashboard actions currently use Europe PMC + Crossref literature providers; specialized GEO and statistical workflows remain available through the terminal CLI. The dashboard does not claim that model output is experimentally validated or that proposed experiments were performed.
+**Safety and limitations:** the dashboard binds to loopback only and intentionally refuses non-local bind addresses because it has no login/authentication. It is a local operator interface, not a multi-user hosted product. Long-running jobs are tracked in dashboard memory; completed research records remain in SQLite. Specialized GEO and statistical workflows remain available through the terminal CLI. The dashboard does not claim that model output is experimentally validated or that proposed experiments were performed.
