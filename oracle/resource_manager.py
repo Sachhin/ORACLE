@@ -192,10 +192,10 @@ def resolve_literature_providers(question: str, requested_domain: str = "auto") 
 
     profile, _ = resolve_domain(question, requested_domain)
     by_domain = {
-        "biology_medicine": ("openalex", "europepmc", "crossref", "geo", "pubchem", "clinical_trials", "sra", "zenodo", "harvard_dataverse"),
+        "biology_medicine": ("openalex", "europepmc", "crossref", "geo", "pubchem", "clinical_trials", "sra", "zenodo", "harvard_dataverse", "pdb", "pride"),
         "physics_astronomy": ("openalex", "arxiv", "crossref"),
-        "computer_science_ai": ("openalex", "arxiv", "crossref"),
-        "mathematics_statistics": ("openalex", "arxiv", "crossref"),
+        "computer_science_ai": ("openalex", "arxiv", "crossref", "huggingface_datasets", "openml"),
+        "mathematics_statistics": ("openalex", "arxiv", "crossref", "openml"),
         "chemistry_materials": ("openalex", "pubchem", "crossref"),
         "general_science": ("openalex", "europepmc", "crossref", "arxiv", "pubchem", "zenodo", "harvard_dataverse"),
         "earth_environment": ("openalex", "crossref", "gbif", "noaa_ncei", "zenodo"),
@@ -236,7 +236,7 @@ class ResourceManager:
             {**asdict(resource),
              "domains": list(resource.domains),
              "capabilities": list(resource.capabilities),
-             "status": "implemented" if resource.connector in {"europepmc", "crossref", "geo", "arxiv", "pubchem", "openalex", "gbif", "world_bank", "noaa_ncei", "clinical_trials", "zenodo", "harvard_dataverse", "sra"}
+             "status": "implemented" if resource.connector in {"europepmc", "crossref", "geo", "arxiv", "pubchem", "openalex", "gbif", "world_bank", "noaa_ncei", "clinical_trials", "zenodo", "harvard_dataverse", "sra", "pdb", "pride", "huggingface_datasets", "openml"}
                        else "catalog_only"}
             for resource in _RESOURCES
             if domain in {"all", "auto"} or "all" in resource.domains
@@ -263,7 +263,7 @@ class ResourceManager:
         unsupported: list[str] = []
         for key in dict.fromkeys(resources):
             item = self.get_resource(key)
-            if item["connector"] in {"europepmc", "crossref", "geo", "arxiv", "pubchem", "openalex", "gbif", "world_bank", "noaa_ncei", "clinical_trials", "zenodo", "harvard_dataverse", "sra"}:
+            if item["connector"] in {"europepmc", "crossref", "geo", "arxiv", "pubchem", "openalex", "gbif", "world_bank", "noaa_ncei", "clinical_trials", "zenodo", "harvard_dataverse", "sra", "pdb", "pride", "huggingface_datasets", "openml"}:
                 providers.append(item["connector"])
             else:
                 unsupported.append(key)
