@@ -65,6 +65,10 @@ _RESOURCES = (
     ScientificResource("world_bank", "World Bank Open Data", ("social_behavioral", "general_science"),
         "https://api.worldbank.org/v2", "public_api", "none",
         "Check indicator and dataset-specific terms", capabilities=("economic_indicators",)),
+    ScientificResource("nasa_technical_reports", "NASA Technical Reports Server", ("engineering", "physics_astronomy"),
+        "https://ntrs.nasa.gov/api", "public_api", "none",
+        "Report-level rights and distribution statements apply",
+        capabilities=("technical_reports", "engineering_research")),
 )
 
 
