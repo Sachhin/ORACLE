@@ -466,7 +466,7 @@ class LiteratureClient:
             item = result.get(str(uid)) or {}
             exp = item.get("expXml") or item.get("expxml") or ""
             title = item.get("title") or item.get("caption") or f"SRA record {uid}"
-            accession_match = re.search(r"(SR[APRXZ]\\d+)", str(exp) + " " + str(item.get("accession") or ""))
+            accession_match = re.search(r"(SR[APRXZ]\d+)", str(exp) + " " + str(item.get("accession") or ""))
             accession = accession_match.group(1) if accession_match else str(item.get("accession") or uid)
             records.append({
                 "provider": "NCBI SRA", "provider_id": str(uid),
