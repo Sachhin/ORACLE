@@ -42,6 +42,17 @@ class LanguageReasoningAgentTests(unittest.TestCase):
         self.assertEqual(hypothesis.confidence, "very low")
         self.assertIn("not evidence", hypothesis.rationale)
 
+    def test_accepts_json_wrapped_in_markdown_fence(self):
+        model = FakeModel(
+            '```json\\n{"directions": [], "hypotheses": []}\\n```'
+        )
+        evidence = [Evidence("Claim", "paper", EvidenceKind.SOURCE, source_id="s1")]
+        result = LanguageReasoningAgent(model).run(
+            AgentContext("Q", 1, "both", evidence=evidence)
+        )
+        self.assertIn("Generated provisional", result.summary)
+        self.assertFalse(any("schema validation" in warning for warning in result.warnings))
+
     def test_rejects_invalid_json_and_degrades_gracefully(self):
         model = FakeModel("not json")
         evidence = [Evidence("Claim", "paper", EvidenceKind.SOURCE, source_id="s1")]
