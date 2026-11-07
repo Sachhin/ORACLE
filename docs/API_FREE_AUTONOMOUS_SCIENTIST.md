@@ -15,7 +15,7 @@ The LLM proposes interpretations, plans, summaries, and candidate hypotheses. It
 ## Current implementation slice
 `oracle/language_model.py` provides a small optional client for an explicitly configured self-hosted OpenAI-compatible chat-completion endpoint. It has no vendor SDK, no API-key field, no automatic endpoint, and no dependency beyond Python's standard library. It validates message shape, enforces request bounds, and reports connection failures without affecting the native core.
 
-This adapter is an integration boundary, not a complete language-reasoning agent. It is not yet wired into the orchestrator or agent roles, and it does not install, download, or host a model.
+This adapter is wired through an optional structured `LanguageReasoningAgent` into the research cycle. It receives only source-backed evidence, accepts strict JSON proposals, and records language-generated hypotheses as very-low-confidence candidates. Malformed output or model unavailability degrades to the deterministic workflow. It does not install, download, or host a model.
 
 ## Runtime options
 Self-hosted inference servers commonly expose compatible HTTP endpoints:
@@ -28,8 +28,8 @@ Choose the runtime according to the actual host hardware. vLLM is designed aroun
 ## Implementation sequence
 1. Finalize the hybrid architecture and trust boundary.
 2. Add the optional self-hosted model adapter and tests (no Gemini or paid provider).
-3. Add typed model task contracts and structured response validation.
-4. Integrate optional language reasoning into Planner, Explorer, Hypothesis, and synthesis roles while preserving deterministic fallback.
+3. Add typed model task contracts and structured response validation (initial strict-JSON language agent added).
+4. Extend optional language reasoning into Planner, Explorer, Hypothesis, and synthesis roles while preserving deterministic fallback (initial cycle-level hypothesis/direction integration added).
 5. Add adversarial tests: malformed output, hallucinated citations, unavailable model, prompt injection in retrieved papers, and attempted tool escalation.
 6. Add evaluation against deterministic baselines and human-reviewed research tasks.
 7. Only then select and benchmark a suitable open-weight model against the actual compute host.
