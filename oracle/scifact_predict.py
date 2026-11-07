@@ -10,6 +10,7 @@ import hashlib
 import json
 import math
 import os
+import time
 import re
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -175,9 +176,12 @@ def generate_predictions(
     top_k: int = 8,
     max_claims: int = 0,
     provider_factory: Callable[[str], Any] | None = None,
+    request_interval_seconds: float = 0.0,
 ) -> dict[str, Any]:
     if not 1 <= top_k <= 20:
         raise ValueError("top_k must be between 1 and 20")
+    if not 0.0 <= request_interval_seconds <= 60.0:
+        raise ValueError("request_interval_seconds must be between 0 and 60")
     claims = _read_jsonl(claims_path)
     corpus = _read_jsonl(corpus_path)
     if max_claims:
@@ -199,7 +203,9 @@ def generate_predictions(
     partial = out.with_suffix(out.suffix + ".partial")
     coverage = 0
     with partial.open("w", encoding="utf-8") as handle:
-        for row in claims:
+        for claim_index, row in enumerate(claims):
+            if claim_index and request_interval_seconds:
+                time.sleep(request_interval_seconds)
             # Deliberately pass only id and claim text: gold evidence/labels are not model inputs.
             docs = retriever.retrieve(row["claim"], top_k=top_k)
             response = provider.generate_json(_prediction_prompt(row["claim"], docs))
@@ -255,10 +261,12 @@ def main() -> None:
     parser.add_argument("--model", default="gemini-3.8-flash")
     parser.add_argument("--top-k", type=int, default=8)
     parser.add_argument("--max-claims", type=int, default=0, help="0 evaluates every supplied claim")
+    parser.add_argument("--request-interval", type=float, default=0.0, help="Minimum seconds between provider requests")
     args = parser.parse_args()
     print(json.dumps(generate_predictions(
         args.claims, args.corpus, args.output, model=args.model,
         top_k=args.top_k, max_claims=args.max_claims,
+        request_interval_seconds=args.request_interval,
     ), indent=2))
 
 
