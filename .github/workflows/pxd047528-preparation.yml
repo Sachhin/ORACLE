@@ -90,6 +90,20 @@ jobs:
             --orthogonal data/pxd047528/prepared/orthogonal_dia_log.tsv \
             --imputed data/pxd047528/prepared/row_median_imputed_dda_log.tsv \
             > data/pxd047528/prepared/reconstruction_report.json
+      - name: Generate sample-neighbour KNN imputation candidate
+        run: |
+          python scripts/impute_pxd047528_knn.py \
+            --observed data/pxd047528/prepared/observed_dda_log.tsv \
+            --output data/pxd047528/prepared/knn_imputed_dda_log.tsv \
+            --neighbors 5 --min-overlap 30 \
+            > data/pxd047528/prepared/knn_imputation_manifest.json
+      - name: Score KNN candidate on genuine DDA-missing cells
+        run: |
+          python -m oracle.missingness_validation \
+            --observed data/pxd047528/prepared/observed_dda_log.tsv \
+            --orthogonal data/pxd047528/prepared/orthogonal_dia_log.tsv \
+            --imputed data/pxd047528/prepared/knn_imputed_dda_log.tsv \
+            > data/pxd047528/prepared/knn_reconstruction_report.json
       - name: Upload frozen PXD047528 matrices, labels template, and reports
         uses: actions/upload-artifact@v4
         with:
