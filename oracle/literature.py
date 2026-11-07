@@ -396,7 +396,7 @@ class LiteratureClient:
             try:
                 for item in self._search_geo(geo_query, per_query_limit):
                     accession = str(item.get("dataset_accession") or "").upper()
-                    if not re.fullmatch(r"GSE\\d+", accession):
+                    if not re.fullmatch(r"GSE\d+", accession):
                         report.warnings.append(
                             f"Skipped GEO result without a valid GSE accession: {item.get('title', 'untitled')}"
                         )
