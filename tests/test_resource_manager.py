@@ -37,7 +37,7 @@ class ResourceManagerTests(unittest.TestCase):
 
     def test_cross_domain_resources_are_catalogued_with_truthful_status(self):
         items = {item["key"]: item for item in ResourceManager.list_resources()}
-        for key in ("openalex", "gbif", "world_bank", "pdb", "pride", "openml", "huggingface_datasets", "pubmed", "genbank", "nasa_earthdata", "usgs", "figshare", "internet_archive", "loc"):
+        for key in ("openalex", "gbif", "world_bank", "pdb", "pride", "openml", "huggingface_datasets", "pubmed", "genbank", "ensembl", "inspire_hep", "nasa_earthdata", "usgs", "figshare", "internet_archive", "loc"):
             self.assertEqual(items[key]["status"], "implemented")
         for key in ("materials_project", "nomad", "nasa_ads",
                     "pangaea",
@@ -137,7 +137,7 @@ class ResourceManagerTests(unittest.TestCase):
     def test_auto_source_selection_uses_domain_adapters(self):
         self.assertEqual(
             resolve_literature_providers("Can we identify aging mechanisms?", "auto"),
-            ("openalex", "europepmc", "pubmed", "crossref", "geo", "pubchem", "genbank", "clinical_trials", "sra", "zenodo", "harvard_dataverse", "pdb", "pride", "figshare"),
+            ("openalex", "europepmc", "pubmed", "crossref", "geo", "pubchem", "genbank", "ensembl", "clinical_trials", "sra", "zenodo", "harvard_dataverse", "pdb", "pride", "figshare"),
         )
         self.assertEqual(
             resolve_literature_providers("Can quantum gravity be tested?", "auto"),
@@ -404,6 +404,38 @@ class ResourceManagerTests(unittest.TestCase):
         for key in ("pubmed", "genbank"):
             result = manager.search("human longevity", limit=4, resources=(key,))
             self.assertEqual(result[2], (key,))
+
+
+    def test_inspire_hep_search_normalizes_physics_literature(self):
+        client = LiteratureClient()
+        payload = {"hits": {"hits": [{
+            "id": "123456", "metadata": {
+                "titles": [{"title": "A longevity model in astrophysics"}],
+                "authors": [{"full_name": "A. Scientist"}],
+                "abstracts": [{"value": "A theoretical study."}],
+                "dois": [{"value": "10.1234/example"}],
+                "arxiv_eprints": [{"value": "2601.12345"}],
+                "publication_info": [{"journal_title": "JHEP", "year": 2026}],
+            },
+        }]}}
+        with patch.object(client, "_get_json", return_value=payload):
+            records = client._search_inspire_hep("black holes", 2)
+        self.assertEqual(records[0]["provider_id"], "123456")
+        self.assertEqual(records[0]["doi"], "10.1234/example")
+        self.assertTrue(records[0]["open_access"])
+
+    def test_ensembl_search_returns_human_gene_cross_references(self):
+        client = LiteratureClient()
+        payload = [{"id": "ENSG00000141510", "type": "gene",
+                    "dbname": "Ensembl", "display_id": "TP53",
+                    "description": "tumor protein p53"}]
+        with patch.object(client, "_get_json", return_value=payload):
+            records = client._search_ensembl("TP53", 5)
+        self.assertEqual(records[0]["dataset_accession"], "ENSG00000141510")
+        self.assertEqual(records[0]["gene_symbol"], "TP53")
+        with patch.object(client, "_get_json") as request:
+            self.assertEqual(client._search_ensembl("human longevity", 5), [])
+            request.assert_not_called()
 
 if __name__ == "__main__":
     unittest.main()
