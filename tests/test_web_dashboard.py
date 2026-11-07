@@ -8,7 +8,7 @@ class DashboardTests(unittest.TestCase):
     def test_page_exposes_research_controls_and_history(self):
         for expected in (
             "Start a research mission", "Research question", "Deep research",
-            "Autonomous discovery", "Research history", "No Gemini API key or paid AI API is used", "/api/run", "/api/runs",
+            "Autonomous discovery", "Research history", "No Gemini API key or paid AI API is used", "Discover GEO supplementary files", "Download and analyze supported GEO matrices", "/api/run", "/api/runs",
         ):
             with self.subTest(expected=expected):
                 self.assertIn(expected, PAGE)
@@ -21,6 +21,8 @@ class DashboardTests(unittest.TestCase):
         self.assertNotIn("GEMINI_API_KEY", source)
         self.assertIn('literature_provider = "biology" if domain == "biology_medicine" else "both"', source)
         self.assertIn("No Gemini API key or paid AI API is used", PAGE)
+        self.assertIn('command.append("--discover-geo-files")', source)
+        self.assertIn('command.append("--analyze-geo-files")', source)
 
     def test_dashboard_is_loopback_only_by_default(self):
         # The server entry point defaults to 127.0.0.1 and rejects public binds.
