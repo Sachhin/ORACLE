@@ -52,7 +52,7 @@ class DomainRouterTests(unittest.TestCase):
             self.assertTrue(any(task.name.startswith("Biology & Medicine specialist:")
                                 for task in run.tasks))
             events = store.list_events(run.run_id)
-            self.assertTrue(any(event["kind"] == "domain_routed" for event in events))
+            self.assertTrue(any(event["event_type"] == "domain_routed" for event in events))
             self.assertTrue(any("Domain routing: Biology & Medicine" in item
                                 for item in run.findings))
 
