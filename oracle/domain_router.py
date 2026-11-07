@@ -426,8 +426,25 @@ def resolve_domain(question: str, requested: str = "auto") -> tuple[DomainProfil
     matched = [term for term in profile.search_terms if matches(term)]
     ranked = sorted(scores.values(), reverse=True)
     confidence = round(ranked[0] / max(1, sum(ranked)), 3)
-    return profile, {"method": "keyword_router", "matched_terms": matched,
-                     "confidence": confidence, "scores": scores}
+    # Keep cross-disciplinary signals instead of silently discarding them.
+    # The current orchestrator still has one primary specialist profile, while
+    # these secondary labels are persisted for diagnostics and future adapters.
+    secondary = [
+        {"key": key, "label": _PROFILES[key].label, "score": score}
+        for key, score in sorted(scores.items(), key=lambda item: (-item[1], item[0]))
+        if key != winner and score >= max(1, ranked[0] * 0.55)
+    ]
+    return profile, {
+        "method": "keyword_router",
+        "matched_terms": matched,
+        "confidence": confidence,
+        "scores": scores,
+        "secondary_domains": secondary,
+        "routing_note": (
+            "Keyword-based routing is a transparent heuristic, not semantic certainty. "
+            "Review the domain labels for ambiguous or interdisciplinary questions."
+        ),
+    }
 
 
 def profile_dict(profile: DomainProfile) -> dict:
