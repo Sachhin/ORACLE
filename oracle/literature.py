@@ -33,7 +33,7 @@ class LiteratureSearchReport:
     abstract_enrichment_skipped_no_identifier: int = 0
 
 class LiteratureClient:
-    PROVIDERS = ("europepmc", "crossref", "geo", "arxiv", "pubchem", "openalex", "gbif", "world_bank", "noaa_ncei")
+    PROVIDERS = ("europepmc", "crossref", "geo", "arxiv", "pubchem", "openalex", "gbif", "world_bank")
     def __init__(self, timeout: float = 20.0, mailto: str = "",
                  max_abstract_enrichments: int = 10):
         if timeout <= 0:
@@ -556,8 +556,7 @@ class LiteratureClient:
                 fn={"europepmc":self._search_europepmc,"crossref":self._search_crossref,
                     "geo":self._search_geo,"arxiv":self._search_arxiv,
                     "pubchem":self._search_pubchem,"openalex":self._search_openalex,
-                    "gbif":self._search_gbif,"world_bank":self._search_world_bank,
-                    "noaa_ncei":self._search_noaa_ncei}[provider]
+                    "gbif":self._search_gbif,"world_bank":self._search_world_bank}[provider]
                 jobs[pool.submit(fn,query,limit)]=provider
             for future in as_completed(jobs):
                 try: report.records.extend(future.result())
@@ -636,15 +635,18 @@ class LiteratureClient:
             abstract=item.get("abstract","").strip()
             if not abstract:
                 report.warnings.append("No abstract supplied: "+title); continue
-            target_locator = ("GEO dataset summary" if item.get("dataset") else
+            is_dataset = bool(item.get("dataset"))
+            target_locator = ("Dataset record" if is_dataset else
                               "Compound properties" if item.get("provider") == "PubChem" else "Abstract")
             evidence=next((e for e in run.evidence if e.source_id==source.source_id and e.locator==target_locator),None)
             if evidence is None:
-                evidence=Evidence(claim=abstract[:12000],source=title,kind=(EvidenceKind.DATASET if item.get("dataset") else EvidenceKind.SOURCE),
-                    method=("GEO dataset summary retrieved from NCBI E-utilities" if item.get("dataset") else
+                evidence=Evidence(claim=abstract[:12000],source=title,kind=(EvidenceKind.DATASET if is_dataset else EvidenceKind.SOURCE),
+                    method=("Dataset metadata retrieved from "+item.get("provider","data provider") if is_dataset else
                             "Structured compound properties retrieved from PubChem PUG REST" if item.get("provider") == "PubChem" else
                             "Abstract retrieved from "+item.get("provider","scholarly metadata API")),
-                    limitations=("Structured chemical metadata, not a peer-reviewed mechanistic claim." if item.get("provider") == "PubChem" else "Abstract only; full text and methods may not have been accessed."),
+                    limitations=("Dataset/indicator/occurrence metadata only; inspect the linked data and its study design before scientific interpretation." if is_dataset else
+                                 "Structured chemical metadata, not a peer-reviewed mechanistic claim." if item.get("provider") == "PubChem" else
+                                 "Abstract only; full text and methods may not have been accessed."),
                     confidence="unassessed",source_id=source.source_id,locator=target_locator,reliability=0.5,
                     dependence_group=("doi:"+doi if doi else "pmid:"+pmid if pmid else ""))
                 run.evidence.append(evidence); report.evidence_records+=1
