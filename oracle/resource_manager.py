@@ -58,17 +58,36 @@ _RESOURCES = (
     ScientificResource("noaa_ncei", "NOAA NCEI", ("earth_environment",),
         "https://www.ncei.noaa.gov/access/services", "public_api", "varies",
         "Dataset-specific terms and attribution apply", capabilities=("climate_data",)),
-    ScientificResource("gbif", "GBIF", ("earth_environment",),
+    ScientificResource("gbif", "GBIF", ("earth_environment", "biology_medicine"),
         "https://api.gbif.org/v1", "public_api", "none",
         "Occurrence records retain dataset licences; preserve dataset citations",
-        capabilities=("biodiversity_occurrences",)),
-    ScientificResource("world_bank", "World Bank Open Data", ("social_behavioral", "general_science"),
+        "gbif", ("biodiversity_occurrences", "dataset_search")),
+    ScientificResource("world_bank", "World Bank Open Data", ("social_behavioral", "economics_business", "general_science"),
         "https://api.worldbank.org/v2", "public_api", "none",
-        "Check indicator and dataset-specific terms", capabilities=("economic_indicators",)),
+        "Check indicator and dataset-specific terms", "world_bank", ("economic_indicators", "dataset_search")),
     ScientificResource("nasa_technical_reports", "NASA Technical Reports Server", ("engineering", "physics_astronomy"),
         "https://ntrs.nasa.gov/api", "public_api", "none",
         "Report-level rights and distribution statements apply",
         capabilities=("technical_reports", "engineering_research")),
+    ScientificResource("nasa_ads", "NASA Astrophysics Data System", ("physics_astronomy",),
+        "https://api.adsabs.harvard.edu/v1", "public_api", "api_token",
+        "ADS API token required; abstracts and metadata subject to provider terms",
+        capabilities=("astronomy_literature", "citation_search")),
+    ScientificResource("open_context", "Open Context", ("history_archaeology",),
+        "https://opencontext.org", "public_catalog", "none",
+        "Dataset-specific open licences apply", capabilities=("archaeology_datasets",)),
+    ScientificResource("osf", "Open Science Framework", ("social_behavioral", "general_science"),
+        "https://api.osf.io/v2", "public_api", "none",
+        "Project and file licences vary", capabilities=("research_projects", "preprints")),
+    ScientificResource("openstreetmap", "OpenStreetMap", ("geography_urban", "earth_environment"),
+        "https://overpass-api.de/api/interpreter", "public_api", "none",
+        "ODbL attribution and share-alike obligations apply", capabilities=("geospatial_data",)),
+    ScientificResource("clinical_trials", "ClinicalTrials.gov", ("biology_medicine",),
+        "https://clinicaltrials.gov/api/v2", "public_api", "none",
+        "Study records are public; linked documents have separate rights", capabilities=("clinical_trials",)),
+    ScientificResource("un_data", "UN Data", ("social_behavioral", "general_science"),
+        "https://data.un.org", "public_catalog", "none",
+        "Dataset-specific terms apply", capabilities=("international_statistics",)),
     ScientificResource("nasa_ads", "NASA Astrophysics Data System", ("physics_astronomy",),
         "https://api.adsabs.harvard.edu/v1", "public_api", "api_token",
         "ADS API token required; abstracts and metadata subject to provider terms",
@@ -101,11 +120,11 @@ def resolve_literature_providers(question: str, requested_domain: str = "auto") 
 
     profile, _ = resolve_domain(question, requested_domain)
     by_domain = {
-        "biology_medicine": ("europepmc", "crossref", "geo", "pubchem"),
-        "physics_astronomy": ("arxiv", "crossref"),
+        "biology_medicine": ("openalex", "europepmc", "crossref", "geo", "pubchem"),
+        "physics_astronomy": ("openalex", "arxiv", "crossref"),
         "computer_science_ai": ("arxiv", "crossref"),
         "mathematics_statistics": ("arxiv", "crossref"),
-        "chemistry_materials": ("pubchem", "crossref"),
+        "chemistry_materials": ("openalex", "pubchem", "crossref"),
         "general_science": ("openalex", "europepmc", "crossref", "arxiv", "pubchem"),
         "earth_environment": ("openalex", "crossref", "gbif", "noaa_ncei"),
         "social_behavioral": ("openalex", "crossref", "world_bank"),
@@ -134,6 +153,9 @@ class ResourceManager:
     @staticmethod
     def list_resources(domain: str = "all") -> list[dict[str, Any]]:
         domain = (domain or "all").strip().casefold()
+        if domain not in {"all", "auto"}:
+            from .domain_router import _ALIASES
+            domain = _ALIASES.get(domain, domain)
         if domain not in {"all", "auto"} and not any(
             domain in resource.domains for resource in _RESOURCES
         ):
