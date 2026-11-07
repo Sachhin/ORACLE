@@ -40,8 +40,8 @@ class ResourceManagerTests(unittest.TestCase):
         for key in ("openalex", "gbif", "world_bank"):
             self.assertEqual(items[key]["status"], "implemented")
         for key in ("materials_project", "nomad", "nasa_ads", "pdb",
-                    "pride", "sra", "nasa_earthdata", "usgs", "pangaea",
-                    "eric", "philpapers", "icpsr", "harvard_dataverse",
+                    "pride", "nasa_earthdata", "usgs", "pangaea",
+                    "eric", "philpapers", "icpsr",
                     "internet_archive", "europeana", "smithsonian_open_access"):
             self.assertEqual(items[key]["status"], "catalog_only")
 
@@ -137,7 +137,7 @@ class ResourceManagerTests(unittest.TestCase):
     def test_auto_source_selection_uses_domain_adapters(self):
         self.assertEqual(
             resolve_literature_providers("Can we identify aging mechanisms?", "auto"),
-            ("openalex", "europepmc", "crossref", "geo", "pubchem"),
+            ("openalex", "europepmc", "crossref", "geo", "pubchem", "clinical_trials", "sra", "zenodo", "harvard_dataverse"),
         )
         self.assertEqual(
             resolve_literature_providers("Can quantum gravity be tested?", "auto"),
@@ -159,7 +159,7 @@ class ResourceManagerTests(unittest.TestCase):
         )
         self.assertEqual(
             resolve_literature_providers("How is climate change affecting biodiversity?", "auto"),
-            ("openalex", "crossref", "gbif"),
+            ("openalex", "crossref", "gbif", "noaa_ncei", "zenodo"),
         )
 
     def test_openalex_inverted_abstract_is_reconstructed(self):
