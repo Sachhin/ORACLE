@@ -48,7 +48,7 @@ button:disabled{opacity:.5;cursor:wait}.muted{color:var(--muted)}.status{padding
 <div><label>Domain</label><select id="domain"><option value="auto">Automatic</option><option value="biology_medicine">Biology & medicine</option><option value="physics_astronomy">Physics & astronomy</option><option value="chemistry_materials">Chemistry & materials</option><option value="computer_science_ai">Computer science & AI</option><option value="earth_environment">Earth & environment</option><option value="mathematics_statistics">Mathematics & statistics</option><option value="social_behavioral">Social & behavioural science</option><option value="engineering">Engineering</option><option value="general_science">General science</option></select></div></div>
 <div class="grid"><div><label>Research cycles (1–8)</label><input id="cycles" type="number" min="1" max="8" value="3"></div>
 <div><label>Literature records (1–50)</label><input id="limit" type="number" min="1" max="50" value="20"></div></div>
-<label>Research agent</label><select id="agent"><option value="gemini">Gemini (requires GEMINI_API_KEY)</option><option value="deterministic">Deterministic offline baseline</option></select>
+<div class="status">No API key required. Uses ORACLE’s deterministic research workflow; model-based reasoning is not enabled.</div>
 <label class="check"><input id="fulltext" type="checkbox" checked> Retrieve eligible open-access full text</label>
 <label class="check"><input id="citations" type="checkbox" checked> Expand citation network</label>
 <button id="start" type="submit">Start research</button>
@@ -64,7 +64,7 @@ async function refresh(){try{const d=await api('/api/runs');$('runs').replaceChi
 for(const r of d.runs){const el=document.createElement('div');el.className='item';const b=document.createElement('strong');b.textContent=r.question;const m=document.createElement('span');m.className='muted';m.textContent=r.status+' · '+r.run_id+' · '+r.updated_at;el.append(b,m);el.onclick=()=>selectRun(r.run_id);$('runs').append(el)}}catch(e){$('runs').textContent=e.message}}
 async function selectRun(id){try{const d=await api('/api/runs/'+encodeURIComponent(id));const r=d.run;$('detail').replaceChildren();const h=document.createElement('h3');h.textContent=r.question;const p=document.createElement('p');p.textContent='Status: '+r.status+' · Cycles: '+r.current_cycle+'/'+r.max_cycles+' · Sources: '+r.sources.length+' · Evidence: '+r.evidence.length+' · Claims: '+r.claims.length+' · Hypotheses: '+r.hypotheses.length;const pre=document.createElement('pre');pre.textContent=(r.findings||[]).join('\n\n')||'No findings recorded.';$('detail').append(h,p,pre)}catch(e){showStatus(e.message)}}
 $('mission').onsubmit=async e=>{e.preventDefault();$('start').disabled=true;showStatus('Submitting research mission…');
-try{const payload={question:$('question').value,mode:$('mode').value,domain:$('domain').value,cycles:Number($('cycles').value),limit:Number($('limit').value),agent_provider:$('agent').value,full_text:$('fulltext').checked,citations:$('citations').checked};
+try{const payload={question:$('question').value,mode:$('mode').value,domain:$('domain').value,cycles:Number($('cycles').value),limit:Number($('limit').value),full_text:$('fulltext').checked,citations:$('citations').checked};
 const d=await api('/api/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});activeJob=d.job_id;showStatus('Run started: '+activeJob);poll()}catch(err){showStatus('Could not start: '+err.message);$('start').disabled=false}};
 async function poll(){if(!activeJob)return;try{const d=await api('/api/jobs/'+activeJob);showStatus('Job '+d.status+(d.run_id?' · Run '+d.run_id:'')+(d.error?'\n'+d.error:''));if(d.status==='completed'){activeJob=null;$('start').disabled=false;await refresh();if(d.run_id)await selectRun(d.run_id);return}if(d.status==='failed'){activeJob=null;$('start').disabled=false;return}setTimeout(poll,3000)}catch(e){showStatus(e.message);activeJob=null;$('start').disabled=false}}
 $('refresh').onclick=refresh;refresh();
@@ -167,11 +167,6 @@ class OracleDashboardHandler(BaseHTTPRequestHandler):
             limit = int(payload.get("limit", 20))
             if not 1 <= cycles <= 8 or not 1 <= limit <= 50:
                 raise ValueError("Cycles must be 1–8 and literature limit 1–50.")
-            agent = payload.get("agent_provider", "gemini")
-            if agent not in {"gemini", "deterministic"}:
-                raise ValueError("Invalid research agent.")
-            if agent == "gemini" and not os.environ.get("GEMINI_API_KEY"):
-                raise ValueError("GEMINI_API_KEY is not set in this terminal session.")
             root = Path(os.environ.get("ORACLE_WORKDIR", ".")).resolve()
             job_dir = root / ".oracle-web" / "jobs"
             job_dir.mkdir(parents=True, exist_ok=True)
@@ -179,10 +174,8 @@ class OracleDashboardHandler(BaseHTTPRequestHandler):
             output, log = job_dir / f"{job_id}.json", job_dir / f"{job_id}.log"
             command = [sys.executable, "-m", "oracle", question, "--mode", mode,
                 "--domain", domain, "--cycles", str(cycles), "--limit", str(limit),
-                "--agent-provider", agent, "--research-literature", "--provider", "both",
+                "--agent-provider", "deterministic", "--research-literature", "--provider", "both",
                 "--db", os.environ.get("ORACLE_DB", "data/oracle.sqlite3"), "--json"]
-            if agent == "gemini":
-                command.extend(["--gemini-model", os.environ.get("ORACLE_GEMINI_MODEL", "gemini-2.5-flash")])
             if payload.get("full_text"):
                 command.append("--full-text")
             if payload.get("citations"):
