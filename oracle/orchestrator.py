@@ -344,7 +344,7 @@ class OracleOrchestrator:
                 }, False, f"task:{task.task_id}:attempt:{task.attempts}:started")
                 query = (run.question + " " + task.name + " " + task.description)[:500]
                 report = self._search_literature(query, min(5, self.literature_limit))
-                client.ingest(run, report)
+                self._literature_client.ingest(run, report)
                 titles = {str(item.get("title", "")).strip().casefold()
                           for item in report.records if item.get("title")}
                 dois = {str(item.get("doi", "")).strip().casefold()
