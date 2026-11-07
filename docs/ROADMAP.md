@@ -26,6 +26,7 @@ Status reflects code currently present on the main branch. Checked items are imp
 - [x] Transparent knowledge-gap scoring based on source, claim-review, hypothesis, contradiction, and task coverage
 - [x] Literature-grounded novelty triage with validated source IDs (provisional; never a priority claim)
 - [x] Gemini-proposed cross-domain connections with validated source IDs and a human review gate
+- [x] Hybrid domain-specialist routing across nine scientific domains, with explicit user override and persisted routing provenance; specialist profiles guide planning but do not imply that every domain-specific external tool ran
 - [x] Research portfolio for saved runs and lexical retrieval of related prior questions
 - [x] Shared cross-run scientific knowledge graph with source-backed claim-pair retrieval, dedicated SQLite persistence, provenance revalidation, and human review gates
 - [x] Task acceptance criteria, source-backed completion, blocked/retry states, and bounded attempt counts
@@ -36,6 +37,7 @@ Status reflects code currently present on the main branch. Checked items are imp
 - [x] Bounded transient retries, timeouts, and quota-exhaustion detection for Gemini
 - [x] Ordered Gemini/Groq/OpenRouter routing with explicit transient-failure fallback policy and environment-only credentials
 - [x] Bounded Europe PMC open-access full-text retrieval with strict Creative Commons licence checks
+- [x] Scientific resource registry distinguishes implemented providers from catalog-only resources; implemented literature adapters include Europe PMC, Crossref, GEO, arXiv and PubChem
 - [x] GEO Series supplementary file discovery and size-capped download with SHA-256 checksums
 - [x] Bounded descriptive parsing of downloaded GEO TSV/CSV expression matrices with checksums, per-sample summaries, and source-linked dataset records
 - [x] Per-sample missingness/variance quality-control flags that preserve all original samples and never silently filter
@@ -49,7 +51,8 @@ Status reflects code currently present on the main branch. Checked items are imp
 - [x] Optional Affymetrix CEL RMA adapter for explicit affy/oligo package families, with input checksums, software/platform provenance, exact sample-identity validation, expected-platform guard, bounded execution, and mocked contract tests; live GEO GPL96 CEL run passed for GSM1003058/GSM1003059 (hgu133a, 22,283 features; trusted platform-matched reference comparison and probe annotation remain pending)
 - [x] Explicit row-median imputation for continuous matrices with a separate SHA-256 missingness mask and recorded imputation values; reproducible MCAR/MAR/MNAR masking, synthetic downstream Welch/BH sensitivity diagnostics, and observed-cell holdout comparison of row/column/global median reconstruction added
 - [x] Paired orthogonal-assay missingness evaluator: PXD047528 processed DDA/DIA tables verified paired at 15 shared sample aliases and frozen; reconstruction-only baseline scored on 8,859 genuine DDA-missing cells with DIA observations; clinical labels/outcome concordance remain pending because the 15 processed aliases do not map to the 13 clinical participants in the original paper
-- [x] Genuine missing-cell reconstruction evaluated on PXD047528: 8,859 DDA-missing cells had paired DIA observations and the row-median baseline was scored with frozen provenance; DIA is an orthogonal reference, not error-free absolute truth. [ ] Benchmark a non-baseline ORACLE imputer and validate independent biological outcome concordance after source-verified 15-alias-to-13-participant clinical mapping.
+- [x] Genuine missing-cell reconstruction evaluated on PXD047528: 8,859 of 13,043 DDA-missing cells had paired DIA observations (67.9% orthogonal coverage); the row-median baseline was scored with frozen provenance. DIA is an orthogonal reference, not error-free absolute truth. [ ] Benchmark a non-baseline ORACLE imputer and validate independent biological outcome concordance after source-verified 15-alias-to-13-participant clinical mapping.
+- [x] PXD000279 controlled-mixture benchmark executed on the published MaxLFQ output: 5,019 proteins, 612/30,114 LFQ cells missing; expected E. coli log2 fold change 1.585, observed-only median 1.219, row-median 1.205, MinProb 1.226. Status is SCORED_KNOWN_MIXTURE_RATIO, not a claim that any method passed universally or that one imputer is superior.
 - [x] Count-aware DESeq2 raw-count analysis with explicit categorical batch/covariate designs, rank-deficiency checks, and default median-of-ratios size-factor normalization
 - [x] Optional DESeq2 adapter for explicitly mapped raw integer-count two-group designs (external R runtime; CI subprocess mocked)
 - [x] Explicit-design Welch contrasts with BH-FDR for user-declared continuous log2 GEO matrices; raw counts rejected
