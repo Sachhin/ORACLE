@@ -17,7 +17,7 @@ _ALLOWED_HOSTS = {
     "ftp.sra.ebi.ac.uk", "sra-download.ncbi.nlm.nih.gov", "api.openml.org",
     "sra-pub-run-odp.s3.amazonaws.com",
     "huggingface.co", "cdn-lfs.huggingface.co", "openml.org",
-    "www.openml.org", "www.ebi.ac.uk",
+    "www.openml.org", "www.ebi.ac.uk", "ftp.ncbi.nlm.nih.gov", "www.ncbi.nlm.nih.gov",
 }
 _DEFAULT_MAX_BYTES = 2 * 1024 * 1024 * 1024
 
