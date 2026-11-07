@@ -14,6 +14,8 @@ This registry separates **working adapters** from **catalogued resources**. A li
 | OpenAlex | All scholarly disciplines | Optional mailto | Works, authors, venues, OA status and citation metadata |
 | NCBI GEO | Functional genomics | None | GEO Series and supplementary-file metadata |
 | NCBI GenBank | Nucleotide sequence records | None | Sequence-record metadata |
+| Ensembl | Genome annotation and gene cross-references | None | Gene and transcript annotation metadata |
+| INSPIRE-HEP | High-energy physics literature | None | Scholarly records and metadata |
 | NCBI SRA | Sequencing studies | None | Study/run metadata; raw reads require separate download tooling |
 | arXiv | Physics, astronomy, CS/AI, mathematics and engineering | None | Preprints and abstracts |
 | PubChem | Chemistry and molecular biology | None | Compound properties, not mechanistic evidence |
@@ -38,8 +40,7 @@ OpenAlex is the cross-disciplinary scholarly discovery fallback for domains with
 
 ## Catalogued, not yet executable in ORACLE
 
-- **Astronomy:** NASA Astrophysics Data System (NASA ADS; API token required), INSPIRE-HEP, NASA Technical Reports Server.
-- **Biology/medicine:** Ensembl (catalogued, but no executable adapter in this release).
+- **Astronomy:** NASA Astrophysics Data System (NASA ADS; API token required), NASA Technical Reports Server.
 - **Materials/chemistry:** Materials Project (API key required), NOMAD, Crystallography Open Database.
 - **Engineering and software:** GitHub repositories, Papers with Code.
 - **Mathematics:** zbMATH Open.
