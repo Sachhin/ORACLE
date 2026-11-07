@@ -167,9 +167,23 @@ jobs:
                             stringsAsFactors=FALSE, quote="", comment.char="")
           if (ncol(ref) != 25L || nrow(ref) < 22000L)
             stop(paste("Unexpected GSE12837 RMA dimensions:", nrow(ref), "x", ncol(ref)))
-          gsm <- sub(".*(GSM[0-9]+).*", "\\1", names(ref)[-1])
-          if (any(!grepl("^GSM[0-9]+$", gsm)) || anyDuplicated(gsm))
-            stop("Submitter RMA matrix must identify all 24 samples by unique GSM accession")
+          columns <- sub("\\.CEL(\\.gz)?$", "", names(ref)[-1], ignore.case=TRUE)
+          title_to_gsm <- c(
+            poly1="GSM15427", poly2="GSM15428", mono1="GSM15430", mono2="GSM15431",
+            "CD34+_BM_1"="GSM321567", "CD34+_BM_2"="GSM321568",
+            "CD34+_CB_1"="GSM321569", "CD34+_CB_2"="GSM321570",
+            "CD34+_PB_1"="GSM321571", "CD34+_PB_2"="GSM321572",
+            Eosinophils_1="GSM321573", Erythroblasts_1="GSM321574",
+            Erythroblasts_2="GSM321575", Erythroblasts_3="GSM321576",
+            Megakaryoblasts_1="GSM321577", Megakaryoblasts_2="GSM321578",
+            Monoblasts_1="GSM321579", Monoblasts_2="GSM321580",
+            Monoblasts_3="GSM321581", Monocytes_1="GSM321582",
+            Myeloblasts_1="GSM321583", Myeloblasts_2="GSM321584",
+            Myeloblasts_3="GSM321585", Neutrophils_1="GSM321586"
+          )
+          gsm <- if (all(grepl("^GSM[0-9]+$", columns))) columns else unname(title_to_gsm[columns])
+          if (length(gsm) != 24L || anyNA(gsm) || anyDuplicated(gsm))
+            stop("Submitter RMA matrix columns do not map uniquely to the 24 GEO sample accessions")
           names(ref) <- c("feature", gsm)
           if (anyDuplicated(ref[[1]]) || any(!nzchar(as.character(ref[[1]]))))
             stop("Reference feature identifiers are missing or duplicated")
