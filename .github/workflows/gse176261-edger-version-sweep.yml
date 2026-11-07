@@ -47,14 +47,14 @@ jobs:
           set -euo pipefail
           mkdir -p validation-artifacts
           base="https://ftp.ncbi.nlm.nih.gov/geo/series/GSE176nnn/GSE176261/suppl"
-          for file in GSE176261_QCed_counts_batch2_validationsamples.txt.gz GSE176261_Log2_normalized_expression_batch2_validationsamples.txt.gz GSE176261_Voom_weights_batch2_validationsamples.txt.gz; do
+          for file in GSE176261_QCed_counts_batch2_allsamples.txt.gz GSE176261_QCed_counts_batch2_validationsamples.txt.gz GSE176261_Log2_normalized_expression_batch2_validationsamples.txt.gz GSE176261_Voom_weights_batch2_validationsamples.txt.gz; do
             curl --fail --location --retry 4 --connect-timeout 20 --max-time 900 "$base/$file" -o "validation-artifacts/$file"
             gzip -t "validation-artifacts/$file"
           done
           sha256sum validation-artifacts/*.gz | tee validation-artifacts/SHA256SUMS.txt
       - name: Recompute GSE176261 voom
         run: |
-          Rscript scripts/validate_gse176261_voom.R validation-artifacts/GSE176261_QCed_counts_batch2_validationsamples.txt.gz validation-artifacts/GSE176261_Log2_normalized_expression_batch2_validationsamples.txt.gz validation-artifacts/GSE176261_Voom_weights_batch2_validationsamples.txt.gz validation-artifacts/gse176261-reference-report.json
+          Rscript scripts/validate_gse176261_voom.R validation-artifacts/GSE176261_QCed_counts_batch2_allsamples.txt.gz validation-artifacts/GSE176261_QCed_counts_batch2_validationsamples.txt.gz validation-artifacts/GSE176261_Log2_normalized_expression_batch2_validationsamples.txt.gz validation-artifacts/GSE176261_Voom_weights_batch2_validationsamples.txt.gz validation-artifacts/gse176261-reference-report.json
       - name: Upload version-specific audit evidence
         if: always()
         uses: actions/upload-artifact@v4
