@@ -461,7 +461,7 @@ def classify_research_intent(question: str) -> dict:
     patterns = [
         ("literature_review", (r"\bliterature review\b", r"\bsystematic review\b", r"\bstate of the art\b", r"\bwhat is known\b")),
         ("comparison", (r"\bcompare\b", r"\bcomparison\b", r"\bdifference between\b", r"\bversus\b", r"\bvs\.?\b")),
-        ("data_analysis", (r"\bdataset\b", r"\bdata analysis\b", r"\banaly[sz]e\b", r"\bcorrelation\b", r"\bregression\b", r"\bstatistics\b")),
+        ("data_analysis", (r"\bdatasets?\b", r"\bdata analysis\b", r"\banaly[sz]e\b", r"\bcorrelation\b", r"\bregression\b", r"\bstatistics\b")),
         ("causal_analysis", (r"\bcaus(e|al)\b", r"\bmechanism\b", r"\bdrives?\b", r"\beffect of\b", r"\bimpact of\b")),
         ("hypothesis_discovery", (r"\bhypothes(is|es)\b", r"\bunknown mechanism\b", r"\bdiscover\b", r"\bnovel\b", r"\bnew theory\b")),
         ("experiment_design", (r"\bexperiment\b", r"\bprotocol\b", r"\btest whether\b", r"\bhow could we test\b")),
