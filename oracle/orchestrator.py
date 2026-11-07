@@ -293,6 +293,40 @@ class OracleOrchestrator:
             full_text = OpenAccessFullTextClient().ingest(run)
             self._event(run, "open_access_full_text_ingested", full_text.__dict__)
         if self.geo_files_enabled:
+            # Search NCBI GEO directly from the mission, not only from GEO
+            # accessions incidentally present in the paper-search results.
+            from .literature import LiteratureClient
+            geo_search_client = self._literature_client or LiteratureClient(
+                mailto=self.literature_mailto
+            )
+            self._literature_client = geo_search_client
+            geo_search = geo_search_client.search_geo_datasets(
+                run.question, limit=max(20, self.literature_limit)
+            )
+            known_accessions = {
+                str(source.dataset_accession or "").upper()
+                for source in run.sources if source.dataset_accession
+            }
+            geo_search.records = [
+                item for item in geo_search.records
+                if str(item.get("dataset_accession") or "").upper() not in known_accessions
+            ]
+            geo_search.retrieved = len(geo_search.records)
+            geo_search_client.ingest(run, geo_search)
+            run.findings.append(
+                f"GEO dataset search: {geo_search.retrieved} new human GEO Series "
+                f"discovered by {len(geo_search_client.geo_dataset_queries(run.question))} "
+                "independent NCBI queries."
+            )
+            run.findings.extend("GEO search warning: " + item for item in geo_search.warnings)
+            self._event(run, "geo_datasets_searched", {
+                "retrieved": geo_search.retrieved,
+                "queries": geo_search_client.geo_dataset_queries(run.question),
+                "accessions": [
+                    item.get("dataset_accession") for item in geo_search.records
+                ],
+                "warnings": geo_search.warnings,
+            })
             from .geo_data import GEOSupplementaryClient
             geo_client = GEOSupplementaryClient()
             discovery = geo_client.discover(run)
