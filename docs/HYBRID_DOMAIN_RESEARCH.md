@@ -63,7 +63,12 @@ from subject area. This remains heuristic routing; inspect the report diagnostic
 when a question is ambiguous or uses unfamiliar terminology.
 
 The selected profile and routing diagnostics are included in the run event log
-and passed to model agents as bounded research guidance. The deterministic planner adds up to four
+and passed to model agents as bounded research guidance. Use `--provider auto`
+to select from executable source adapters based on the routed field. Current
+coverage is intentionally honest: Europe PMC/GEO for biology, arXiv for physics,
+computer science and mathematics, PubChem for chemistry, and Crossref as the
+generic scholarly fallback. Other listed databases are catalogue entries until
+a tested connector is implemented. The deterministic planner adds up to four
 domain-specific tasks. Existing evidence, source, claim, hypothesis, experiment
 and review models remain unchanged.
 
