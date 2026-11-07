@@ -168,8 +168,8 @@ def resolve_literature_providers(question: str, requested_domain: str = "auto") 
     by_domain = {
         "biology_medicine": ("openalex", "europepmc", "crossref", "geo", "pubchem"),
         "physics_astronomy": ("openalex", "arxiv", "crossref"),
-        "computer_science_ai": ("arxiv", "crossref"),
-        "mathematics_statistics": ("arxiv", "crossref"),
+        "computer_science_ai": ("openalex", "arxiv", "crossref"),
+        "mathematics_statistics": ("openalex", "arxiv", "crossref"),
         "chemistry_materials": ("openalex", "pubchem", "crossref"),
         "general_science": ("openalex", "europepmc", "crossref", "arxiv", "pubchem"),
         "earth_environment": ("openalex", "crossref", "gbif"),
@@ -210,7 +210,7 @@ class ResourceManager:
             {**asdict(resource),
              "domains": list(resource.domains),
              "capabilities": list(resource.capabilities),
-             "status": "implemented" if resource.connector in {"europepmc", "crossref", "geo", "arxiv", "pubchem", "openalex", "gbif", "world_bank", "noaa_ncei"}
+             "status": "implemented" if resource.connector in {"europepmc", "crossref", "geo", "arxiv", "pubchem", "openalex", "gbif", "world_bank"}
                        else "catalog_only"}
             for resource in _RESOURCES
             if domain in {"all", "auto"} or "all" in resource.domains
@@ -237,7 +237,7 @@ class ResourceManager:
         unsupported: list[str] = []
         for key in dict.fromkeys(resources):
             item = self.get_resource(key)
-            if item["connector"] in {"europepmc", "crossref", "geo", "arxiv", "pubchem", "openalex", "gbif", "world_bank", "noaa_ncei"}:
+            if item["connector"] in {"europepmc", "crossref", "geo", "arxiv", "pubchem", "openalex", "gbif", "world_bank"}:
                 providers.append(item["connector"])
             else:
                 unsupported.append(key)
