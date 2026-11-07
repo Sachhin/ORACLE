@@ -22,13 +22,18 @@ The report compares row-median, column-median, and global-median MAE/RMSE/bias u
 
 ## Hybrid domain-specialist research
 
-ORACLE now has an opt-in/automatic domain-routing layer while retaining one
+ORACLE now has an automatic, extensible domain-routing layer while retaining one
 shared research lifecycle. Automatic routing is the default; select a specialist
-explicitly with `--domain`. Supported profiles cover biology/medicine,
-physics/astronomy, chemistry/materials, computer science/AI, earth/environment,
-mathematics/statistics, social/behavioral science, engineering, and general
-science. Profiles guide research planning and model-agent prompts; they do not
-claim that suggested external databases or specialist analysis tools ran.
+explicitly with `--domain`. The registry covers 20 profiles across STEM,
+humanities, law/policy, economics/finance, education, geography, politics,
+arts/culture and religion, plus an interdisciplinary fallback. Routing reports
+matched terms, confidence, secondary-domain signals and a separate research-intent
+classification (for example, comparison, data analysis, causal analysis, proof,
+hypothesis discovery or experiment design). The current automatic classifier is
+a transparent keyword heuristic, not an LLM or a semantic guarantee. Profiles
+guide research planning; they do not claim that suggested external databases or
+specialist analysis tools ran. A universal router is not yet a universal set of
+source connectors or domain-specific execution engines.
 
 See [Hybrid domain-specialist research](docs/HYBRID_DOMAIN_RESEARCH.md) for the
 architecture, supported domains, command examples, and scientific-integrity limits.
