@@ -43,7 +43,7 @@ architecture, supported domains, command examples, and scientific-integrity limi
 
 ## Current build status
 
-The offline research foundation and dashboard agent workflow run without AI-provider credentials. Literature retrieval can optionally connect to public scholarly data services (such as Europe PMC and Crossref) without API keys. The default dashboard does not call Gemini or any paid AI-model API; its research agents use the built-in deterministic workflow. The orchestrator measures unique research progress, suppresses repeated scaffold records, checks core graph invariants, and stops after repeated no-progress cycles. Review agents receive the current cycle's newly generated evidence and hypotheses; novelty and cross-domain agents are restricted to source-backed records; adaptive replanning receives the latest task/evidence state. This is safer, more coherent lifecycle control, not proof of autonomous scientific reasoning.
+The offline research foundation and dashboard agent workflow run without AI-provider credentials. Literature retrieval can optionally connect to public scholarly data services (such as Europe PMC and Crossref) without API keys. The dashboard and core research agents use the built-in deterministic workflow and do not call hosted AI-model APIs. The orchestrator measures unique research progress, suppresses repeated scaffold records, checks core graph invariants, and stops after repeated no-progress cycles. Review agents receive the current cycle's newly generated evidence and hypotheses; novelty and cross-domain agents are restricted to source-backed records; adaptive replanning receives the latest task/evidence state. This is safer, more coherent lifecycle control, not proof of autonomous scientific reasoning.
 
 ## Quick start
 
@@ -57,24 +57,6 @@ python -m unittest discover -s tests -v
 ```
 
 For Termux, run these commands inside a Python virtual environment. The automated matrix verifies Python 3.10–3.14, and the package-install smoke test invokes the installed `oracle` command from outside the source directory so it cannot accidentally import the checkout instead of the installed package.
-
-### Optional Gemini research agents
-
-The normal run remains deterministic and offline. To explicitly opt in to Gemini-backed planning, research synthesis, exploration, competing hypothesis generation, skeptic review, experiment proposal, provisional evidence-integrity auditing, literature-conditioned novelty triage, and source-linked cross-domain connection proposals:
-
-    export GEMINI_API_KEY="YOUR_GEMINI_API_KEY"
-    python -m oracle "How does a fertilized egg develop?" --agent-provider gemini --gemini-model gemini-2.5-flash --cycles 3
-
-The Gemini agent suite uses the same `run(context) -> result` contract as the deterministic agents. Model-generated research statements are stored only as INFERENCE, never as source evidence. Hypotheses remain provisional and experiment designs remain PROPOSED. The Gemini auditor emits review warnings only and cannot alter evidence stance or claim status. Cross-domain proposals cite at least two existing source IDs, remain pending human review, and can be accepted/rejected/deferred through the CLI. The Gemini novelty assessor runs only when source-backed literature evidence is present, validates cited source IDs, and reports provisional prior-art triage rather than a novelty guarantee. These provider-backed review agents and cross-domain proposal gates have unit-level contract tests; live scientific quality has not yet been independently validated. The default provider is still `deterministic`; no model provider is called unless explicitly selected. `--agent-provider gemini` uses Gemini only. Opt-in `--agent-provider auto` enables ordered Gemini → Groq → OpenRouter fallback when credentials are configured. Set `GROQ_API_KEY` with `ORACLE_GROQ_MODEL`, and/or `OPENROUTER_API_KEY` with `ORACLE_OPENROUTER_MODEL`; provider keys are read only from environment variables and are never stored. Routing advances only for quota/rate-limit, network/timeout, and transient server failures; authentication/configuration errors stop rather than silently switching accounts. The active model is recorded on generated inference metadata. This is ordered failover, not automatic quality/cost optimization. Transient Gemini HTTP/network failures receive a small bounded retry; explicit quota-exhaustion responses stop immediately. Other provider errors fail and checkpoint the run rather than silently pretending that deterministic output came from Gemini.
-
-Citation graph ranking and bounded multi-hop traversal are available for DOI-resolved links between papers already present in one saved run. Crossref can also expand outgoing references and OpenAlex incoming citations can expand citing works; both add bounded metadata-only external paper nodes:
-```bash
-python -m oracle --rank-citation-graph RUN_ID
-python -m oracle --traverse-citation-graph RUN_ID --citation-start-source SOURCE_ID --citation-direction both --citation-depth 3
-python -m oracle --literature "embryo development" --citation-network --reference-depth 3 --reference-nodes 100
-python -m oracle --literature "embryo development" --incoming-citations --incoming-citation-depth 3 --incoming-citation-nodes 100
-```
-Traversal supports `outgoing` (works cited by the start paper), `incoming` (works citing it), or `both`, with depth capped at six and result count bounded by `--limit`. Each result includes its shortest source-ID path. Unresolved DOI targets are not fabricated as graph nodes; citation connectivity is not evidence quality, agreement, or scientific truth.
 
 ## Optional limma-voom analysis
 
@@ -118,7 +100,7 @@ See [docs/EXTERNAL_VALIDATION.md](docs/EXTERNAL_VALIDATION.md) for required prov
 
 ## Paired model evaluation
 
-To compare a Gemini/hosted model with ORACLE's deterministic baseline, use the paired human-scoring template at `benchmarks/paired_model_comparison_template.json` (schema v2). Populate it only after both systems answer the same frozen question using the same source packet. At least two reviewers must independently score both answers; store each reviewer's baseline and candidate scores separately under `reviewer_scores`. The evaluator averages reviewer deltas within each case and bootstraps paired cases, avoiding the false assumption that multiple reviewer scores are independent research cases.
+To compare an independently operated external model with ORACLE's deterministic baseline, use the paired human-scoring template at `benchmarks/paired_model_comparison_template.json` (schema v2). Populate it only after both systems answer the same frozen question using the same source packet. At least two reviewers must independently score both answers; store each reviewer's baseline and candidate scores separately under `reviewer_scores`. The evaluator averages reviewer deltas within each case and bootstraps paired cases, avoiding the false assumption that multiple reviewer scores are independent research cases.
 
 ```bash
 python -m oracle --paired-answer-benchmark benchmarks/my_paired_scores.json
@@ -216,8 +198,6 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) and [docs/ROADMAP.md](docs/ROADMAP.md).
 ORACLE can search Europe PMC and Crossref public REST APIs without API keys or third-party Python packages. Network access occurs only when --literature or --research-literature is supplied.
 
     python -m oracle --literature "embryonic development cell fate signaling" --limit 10
-    python -m oracle "How does a fertilized egg develop?" --research-literature --agent-provider gemini --cycles 3
-    python -m oracle "How does a fertilized egg develop?" --research-literature --extract-claims --review-evidence --agent-provider gemini --cycles 3
     python -m oracle --literature "plant nonsense-mediated mRNA decay" --provider europepmc --limit 15 --json
     python -m oracle --literature "Arabidopsis heat stress" --provider geo --limit 10
     python -m oracle --literature "embryo development" --provider all --limit 15 --citation-network --incoming-citations
@@ -225,7 +205,6 @@ ORACLE can search Europe PMC and Crossref public REST APIs without API keys or t
     python -m oracle "Arabidopsis heat stress" --research-literature --provider geo --discover-geo-files
     python -m oracle "Arabidopsis heat stress" --research-literature --provider geo --download-geo-files --dataset-max-mb 50
     python -m oracle "Arabidopsis heat stress" --research-literature --provider geo --analyze-geo-files --dataset-max-mb 50
-    python -m oracle "How does a fertilized egg develop?" --research-literature --full-text --agent-provider gemini --cycles 3
 
 For OpenAlex expansion, depth is capped at five and newly added external nodes at 250. Added nodes contain bibliographic metadata only (no abstracts-as-evidence, claims, or quality scores); they are tagged `external_citation`. The discovery is incoming-only and bounded by the per-source result cap. Citation links are navigation metadata, not scientific support.
 
@@ -237,40 +216,7 @@ Then add `--geo-covariates covariates.json` to the `--geo-deseq2` command. ORACL
 
 Use --literature for a standalone retrieval run, or --research-literature to ingest retrieved sources into the full QUESTION → PLAN → RESEARCH → DISCOVER → HYPOTHESIZE → CHALLENGE → EXPERIMENT DESIGN → DECIDE cycle. The latter makes retrieved abstracts and GEO summaries available to the selected research agents. Each work is stored with DOI/PMID/PMCID when available, authors, journal, date, provider, landing URL, licence/open-access metadata, and abstract text. The opt-in --full-text path retrieves article bodies only when Europe PMC reports open access, a PMCID exists, and the licence passes a strict reuse gate (CC BY, CC BY-SA, or CC0; non-commercial and no-derivatives variants are skipped). Retrieved text is bounded by size limits and retains its source and licence provenance. GEO Series records can have supplementary files listed with --discover-geo-files; --download-geo-files downloads them only when explicitly requested, with a default 50 MB per-file cap and SHA-256 checksums. --analyze-geo-files also discovers and downloads files, then parses supported TSV/CSV text expression matrices (including gzip-compressed GEO series_matrix files) under uncompressed-byte, row, sample, and cell limits. It verifies the recorded SHA-256 and stores per-sample descriptive summaries plus a source-linked DATASET record. It also preserves GEO sample accessions, titles, and per-sample characteristics (such as treatment/genotype) as annotations; ORACLE does not infer or silently assign experimental groups from those labels. It calculates per-sample numeric/missing counts, missing fraction, sample variance, and conservative QC flags (high missingness, constant values, or no numeric values). QC flags never remove samples automatically. It does not normalize data, perform differential-expression statistics, or infer biological effects; unsupported archives and binary formats are reported as skipped. Abstracts are source evidence with the exact "Abstract" locator. Sentence splitting produces unreviewed statement candidates only: it does not prove a claim or decide whether a paper supports/refutes it. Initial evidence links are contextual with zero weight until reviewed.
 
-Optional Gemini claim extraction is available with --extract-claims. It creates source-quoted, unreviewed candidates only; it does not determine truth, entailment, contradiction, or whether a paper supports a hypothesis. Other dataset repositories, full statistical modeling outside the documented adapters, and calibrated evidence evaluation are not yet included. First-degree outgoing reference discovery and bounded incoming-citation discovery via OpenAlex are implemented. Optional full-text retrieval is limited to Europe PMC records with PMCID and a recognized reuse-friendly Creative Commons licence. Gemini can now propose quote-grounded support/refute/contextual evidence-review candidates through --review-evidence, but every suggestion remains pending human review and never changes evidence weights automatically. The opt-in Gemini suite covers planner, researcher, explorer, hypothesis generator, skeptic, and experiment designer; auditor and novelty assessment remain deterministic and conservative. Publisher copyright may apply to abstract text.
-
-### Optional Gemini claim extraction
-
-Set GEMINI_API_KEY in your shell (do not put the key in source files or commit it), then run:
-
-    export GEMINI_API_KEY="YOUR_GEMINI_API_KEY"
-    python -m oracle --literature "embryonic development cell fate signaling" --provider both --limit 10 --extract-claims --review-evidence
-    python -m oracle --literature "Arabidopsis heat stress" --provider geo --limit 10 --extract-claims --gemini-model gemini-2.5-flash --json
-
-Gemini output is accepted only when its evidence_quote is an exact substring of the retrieved abstract, GEO summary, or licence-eligible full-text passage. Each candidate stores that quote, model name, source/evidence link, and an unreviewed status. Its evidence link remains CONTEXTUAL with zero weight. The feature is opt-in; normal offline runs never call Gemini.
-
-### Cross-paper evidence comparison
-
-Add --compare-papers together with --extract-claims to compare candidate statements across distinct papers:
-
-    python -m oracle --literature "embryonic development cell fate signaling" --provider both --limit 10 --extract-claims --compare-papers
-    python -m oracle --literature "Arabidopsis heat stress" --provider all --limit 12 --extract-claims --compare-papers --json
-
-Gemini can propose one of four cross-paper relations: corroborates, contrasts, contextual, or not_comparable. Separately, --review-evidence asks Gemini to propose supports, refutes, or contextual for a candidate claim against an independent source passage. Both workflows require exact source quotations and preserve pending human review; model suggestions never change evidence stance or weight automatically. Inspect candidates with `python -m oracle --show-reviews RUN_ID`, then explicitly decide one with `python -m oracle --review-run RUN_ID --review-candidate CANDIDATE_ID --review-status accepted --review-note "Checked the source context." --review-strength 0.6`. Use `rejected` or `needs_context` when appropriate. Every saved comparison must include exact quotations found in BOTH source abstracts, GEO summaries, or retrieved full-text passages. Comparisons retain both source and evidence IDs, model, rationale, and pending_review status. These are review candidates, not verified contradictions or proof of agreement. ORACLE does not change claim status, evidence stance, or uncertainty scores based on these model suggestions. At most 30 claim pairs are sent per run by default.
-
-### Cross-domain connection proposals
-
-When at least two source-backed literature records are available, the optional Gemini agent can propose cross-domain connections. Each proposal must cite at least two source IDs and remains pending human review:
-
-```bash
-python -m oracle "How do feedback principles connect developmental biology and control theory?" \
-  --research-literature --agent-provider gemini --cycles 3
-python -m oracle --show-connections RUN_ID
-python -m oracle --review-connection RUN_ID --connection-id CONNECTION_ID \
-  --connection-status accepted --connection-note "Reviewed both source contexts and the proposed prediction."
-```
-
-Statuses are `pending_review`, `accepted`, `rejected`, and `needs_context`. Acceptance records a human review decision on the proposal; it does not establish that the proposed connection is true or novel. Every cited source ID must already exist in the run's provenance store.
+Other dataset repositories, full statistical modeling outside the documented adapters, and calibrated evidence evaluation are not yet included. First-degree outgoing reference discovery and bounded incoming-citation discovery via OpenAlex are implemented. Optional full-text retrieval is limited to Europe PMC records with PMCID and a recognized reuse-friendly Creative Commons licence. Retrieved abstracts remain source-linked evidence; sentence-split candidates are unreviewed and are not automatically treated as support or refutation. Publisher copyright may apply to abstract text.
 
 ### Citation network
 
@@ -348,11 +294,11 @@ Run the cross-domain golden-question integrity benchmark:
 
     python -m unittest tests.test_golden_benchmark -v
 
-It checks that the deterministic baseline preserves provenance and status invariants across eight question areas. It does not score scientific answer quality or validate Gemini reasoning.
+It checks that the deterministic baseline preserves provenance and status invariants across eight question areas. It does not score scientific answer quality.
 
 ## Current limitations
 
-The Gemini adapter currently extracts quote-grounded candidate claims and proposes cross-paper relationships; it does not perform complete entailment verification or update scientific truth status. The autonomous cycle defaults to deterministic baseline agents; the optional Gemini agent suite can be selected explicitly. The decision engine measures newly persisted unique records (not scientific quality) and requests one bounded revised plan after the first stagnant cycle before stopping on repeated no-progress. A stopped run can be explicitly resumed; repeated no-progress cycles will stop it again unless a provider or new input produces new information.
+The autonomous cycle uses deterministic agents and does not include hosted-model reasoning. The decision engine measures newly persisted unique records (not scientific quality) and requests one bounded revised plan after the first stagnant cycle before stopping on repeated no-progress. A stopped run can be explicitly resumed; repeated no-progress cycles will stop it again unless new source data or input produces new information.
 
 
 ### Explicit two-group GEO contrast (continuous log2 data only)
@@ -606,7 +552,7 @@ python -m pip install -e .
 oracle-dashboard
 ```
 
-Open **http://127.0.0.1:8765** in your browser. Keep the terminal open while the dashboard runs. Browser missions use ORACLE's deterministic research workflow and public Europe PMC + Crossref literature search. No Gemini key or other model credential is needed. The deterministic workflow is a reproducible baseline, not LLM reasoning or autonomous scientific discovery. Model-backed reasoning requires a separately configured model provider and is not part of the no-key browser workflow. Runs are persisted in the same SQLite database as terminal commands (set ORACLE_DB to override the default path).
+Open **http://127.0.0.1:8765** in your browser. Keep the terminal open while the dashboard runs. Browser missions use ORACLE's deterministic research workflow and public Europe PMC + Crossref literature search. No model API key or other model credential is needed. The deterministic workflow is a reproducible baseline, not LLM reasoning or autonomous scientific discovery. Hosted-model reasoning is not included. Runs are persisted in the same SQLite database as terminal commands (set ORACLE_DB to override the default path).
 
 Terminal remains fully supported:
 
