@@ -21,10 +21,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--resource-domain", default="all",
                         help="Filter --list-resources by domain (or all)")
     parser.add_argument("--domain", default="auto",
-                        choices=["auto", "biology_medicine", "physics_astronomy",
-                                 "chemistry_materials", "computer_science_ai",
-                                 "earth_environment", "mathematics_statistics",
-                                 "social_behavioral", "engineering", "general_science"],
+                        choices=["auto","biology_medicine","physics_astronomy","chemistry_materials","computer_science_ai","earth_environment","mathematics_statistics","social_behavioral","engineering","history_archaeology","law_policy","economics_business","finance","philosophy_ethics","linguistics_literature","education","geography_urban","politics_governance","arts_culture","religion_theology","general_science"],
                         help="Research domain specialist; auto uses transparent keyword routing")
     parser.add_argument("--cycles", type=int, default=3)
     parser.add_argument("--resume", dest="resume_id", help="Resume an existing run by ID")
