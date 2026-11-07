@@ -72,6 +72,26 @@ _RESOURCES = (
 )
 
 
+def resolve_literature_providers(question: str, requested_domain: str = "auto") -> tuple[str, ...]:
+    """Choose only currently implemented scholarly adapters for the routed field.
+
+    Crossref is the generic scholarly-metadata fallback. Catalog-only sources
+    are deliberately not selected until an executable connector exists.
+    """
+    from .domain_router import resolve_domain
+
+    profile, _ = resolve_domain(question, requested_domain)
+    by_domain = {
+        "biology_medicine": ("europepmc", "crossref", "geo", "pubchem"),
+        "physics_astronomy": ("arxiv", "crossref"),
+        "computer_science_ai": ("arxiv", "crossref"),
+        "mathematics_statistics": ("arxiv", "crossref"),
+        "chemistry_materials": ("pubchem", "crossref"),
+        "general_science": ("europepmc", "crossref", "arxiv", "pubchem"),
+    }
+    return by_domain.get(profile.key, ("crossref",))
+
+
 class ResourceManager:
     """Discover resource metadata and dispatch only implemented search adapters."""
 
