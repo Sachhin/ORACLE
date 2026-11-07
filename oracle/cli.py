@@ -1354,7 +1354,7 @@ def main() -> None:
             model=args.gemini_model,
             routing="fallback" if args.agent_provider == "auto" else "single",
         )
-    providers = (__import__("oracle.resource_manager", fromlist=["resolve_literature_providers"]).resolve_literature_providers(args.question or "", args.domain) if args.provider == "auto" else {"both": ("europepmc", "crossref"), "biology": ("europepmc", "crossref", "geo"), "all": ("europepmc", "crossref", "geo", "arxiv", "pubchem"), "arxiv": ("arxiv",), "pubchem": ("pubchem",), "europepmc": ("europepmc",), "crossref": ("crossref",), "geo": ("geo",)}[args.provider])
+    providers = (resolve_literature_providers(args.question or "", args.domain) if args.provider == "auto" else {"both": ("europepmc", "crossref"), "biology": ("europepmc", "crossref", "geo"), "all": ("europepmc", "crossref", "geo", "arxiv", "pubchem"), "arxiv": ("arxiv",), "pubchem": ("pubchem",), "europepmc": ("europepmc",), "crossref": ("crossref",), "geo": ("geo",)}[args.provider])
     orchestrator = OracleOrchestrator(
         store, agent_suite=agent_suite,
         literature_enabled=args.research_literature,
