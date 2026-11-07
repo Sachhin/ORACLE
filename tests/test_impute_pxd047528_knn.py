@@ -8,7 +8,7 @@ class PXD047528KNNTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             source=Path(d)/"observed.tsv"; output=Path(d)/"imputed.tsv"
             with source.open("w",newline="") as f:
-                w=csv.writer(f,delimiter="\\t")
+                w=csv.writer(f,delimiter="\t")
                 w.writerow(["Sequence","s1","s2","s3"])
                 for i in range(40):
                     a=float(i+1)
@@ -17,7 +17,7 @@ class PXD047528KNNTests(unittest.TestCase):
             self.assertEqual(report["imputed_cells"],1)
             self.assertTrue(report["observed_cells_preserved"])
             with output.open() as f:
-                rows=list(csv.DictReader(f,delimiter="\\t"))
+                rows=list(csv.DictReader(f,delimiter="\t"))
             self.assertNotEqual(rows[0]["s3"],"")
             self.assertEqual(float(rows[1]["s1"]),2.0)
 
