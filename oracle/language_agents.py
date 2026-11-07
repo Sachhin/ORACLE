@@ -56,7 +56,7 @@ class LanguageReasoningAgent:
             {
                 "role": "system",
                 "content": (
-                    "You are ORACLE's language-reasoning assistant. Use only the supplied "
+                    "You are ORACLE's language-reasoning assistant. /no_think Use only the supplied "
                     "question and evidence records. Do not invent citations, source IDs, "
                     "measurements, results, or claims of novelty. Distinguish correlation "
                     "from causation. Produce competing, falsifiable candidate ideas, not "
