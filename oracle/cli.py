@@ -17,7 +17,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="oracle", description="Offline scientific research foundation")
     parser.add_argument("question", nargs="?", help="Scientific research question")
     parser.add_argument("--mode", choices=[m.value for m in ResearchMode], default=ResearchMode.BOTH.value)
-    parser.add_argument("--list-resources", action="store_true",
+    parser.add_argument("--download-dataset-file", default="", metavar="HTTPS_URL",\n                        help="Download one public research file from an approved repository host")\n    parser.add_argument("--dataset-output", default="", metavar="PATH",\n                        help="Destination path required by --download-dataset-file")\n    parser.add_argument("--list-resources", action="store_true",
                         help="List registered scientific resources and connector implementation status")
     parser.add_argument("--resource-domain", default="all",
                         help="Filter --list-resources by domain (or all)")
@@ -96,7 +96,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--dataset-max-mb", type=int, default=50,
                         help="Maximum size of each GEO supplementary download in MB (1-1000)")
     parser.add_argument("--limit", type=int, default=10, help="Maximum literature records (1-50)")
-    parser.add_argument("--provider", choices=["auto", "both", "all", "biology", "europepmc", "crossref", "geo", "arxiv", "pubchem"], default="both")
+    parser.add_argument("--provider", choices=["auto", "both", "all", "biology", "europepmc", "crossref", "geo", "arxiv", "pubchem", "openalex", "gbif", "world_bank", "noaa_ncei", "clinical_trials", "zenodo", "harvard_dataverse", "sra", "pdb", "pride", "huggingface_datasets", "openml", "nasa_earthdata", "usgs", "figshare", "internet_archive", "loc", "nasa_ads"], default="both")
     parser.add_argument("--mailto", default="", help="Optional contact email for Crossref polite pool")
     parser.add_argument("--extract-claims", action="store_true", help="Extract quote-grounded candidates with Gemini")
     parser.add_argument("--gemini-model", default="gemini-2.5-flash", help="Gemini model for optional claim extraction, comparison, or research agents")
