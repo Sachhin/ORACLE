@@ -7,6 +7,7 @@ on:
       - ".github/workflows/scifact-predictions.yml"
       - "oracle/scifact_predict.py"
       - "oracle/scifact_benchmark.py"
+      - "oracle/model_agents.py"
   workflow_dispatch:
     inputs:
       split:
