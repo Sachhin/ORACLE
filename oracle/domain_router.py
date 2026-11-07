@@ -157,8 +157,8 @@ _PROFILES = {
          "Specify verification, safety and prototype validation"),
     ),
     "general_science": DomainProfile(
-        "general_science", "General / Interdisciplinary Science",
-        "Cross-disciplinary or not-yet-classified scientific questions.",
+        "general_science", "General / Interdisciplinary Research",
+        "Any topic not confidently classified; begin with neutral evidence mapping and select suitable sources after clarifying scope.",
         (), ("Crossref", "OpenAlex", "Europe PMC", "arXiv"),
         ("systematic question decomposition", "comparative evidence synthesis",
          "quantitative analysis where suitable", "uncertainty and sensitivity analysis"),
