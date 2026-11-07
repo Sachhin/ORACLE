@@ -236,7 +236,7 @@ class ResourceManager:
             {**asdict(resource),
              "domains": list(resource.domains),
              "capabilities": list(resource.capabilities),
-             "status": "implemented" if resource.connector in {"europepmc", "crossref", "geo", "arxiv", "pubchem", "openalex", "gbif", "world_bank"}
+             "status": "implemented" if resource.connector in {"europepmc", "crossref", "geo", "arxiv", "pubchem", "openalex", "gbif", "world_bank", "noaa_ncei", "clinical_trials", "zenodo", "harvard_dataverse", "sra"}
                        else "catalog_only"}
             for resource in _RESOURCES
             if domain in {"all", "auto"} or "all" in resource.domains
