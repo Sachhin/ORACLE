@@ -174,7 +174,7 @@ class LiteratureClient:
 
     def _search_pubchem(self, query: str, limit: int):
         encoded = quote(query.strip(), safe="")
-        properties = "MolecularFormula,MolecularWeight,IUPACName,CanonicalSMILES,ConnectivitySMILES"
+        properties = "MolecularFormula,MolecularWeight,IUPACName,CanonicalSMILES"
         url = (f"https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/{encoded}"
                f"/property/{properties}/JSON?MaxRecords={limit}")
         data = self._get_json(url)
