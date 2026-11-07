@@ -19,7 +19,7 @@ on:
         description: Gemini model ID
         required: true
         type: string
-        default: gemini-3.8-flash
+        default: gemini-3.5-flash-lite
       max_claims:
         description: Optional pilot cap (0 = full split)
         required: true
@@ -35,8 +35,9 @@ jobs:
     timeout-minutes: 120
     env:
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      ORACLE_GEMINI_FALLBACK_MODELS: ""
       SPLIT: ${{ github.event_name == 'workflow_dispatch' && inputs.split || 'dev' }}
-      MODEL: ${{ github.event_name == 'workflow_dispatch' && inputs.model || 'gemini-3.8-flash' }}
+      MODEL: ${{ github.event_name == 'workflow_dispatch' && inputs.model || 'gemini-3.5-flash-lite' }}
       MAX_CLAIMS: ${{ github.event_name == 'workflow_dispatch' && inputs.max_claims || '0' }}
     steps:
       - uses: actions/checkout@v4
@@ -87,7 +88,7 @@ jobs:
                 --output data/scifact/oracle_predictions_${SPLIT}.jsonl
                 --model "$MODEL" --top-k 8)
           if [ "$MAX_CLAIMS" != "0" ]; then args+=(--max-claims "$MAX_CLAIMS"); fi
-          python -m oracle.scifact_predict "${args[@]}"
+          python -m oracle.scifact_predict "${args[@]}" --request-interval 4.2
       - name: Score frozen predictions
         if: steps.credential.outputs.available == 'true'
         run: |
