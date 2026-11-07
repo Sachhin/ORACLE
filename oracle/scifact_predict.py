@@ -9,12 +9,13 @@ import argparse
 import hashlib
 import json
 import math
+import os
 import re
 from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any, Callable
 
-from .model_agents import GeminiJSONProvider
+from .model_agents import GeminiAgentError, GeminiJSONProvider, ProviderRouter
 
 PROMPT_VERSION = "oracle-scifact-retrieval-1.0"
 TOKEN_RE = re.compile(r"[a-z0-9]+")
@@ -129,6 +130,24 @@ def _prediction_prompt(claim: str, documents: list[dict[str, Any]]) -> str:
     )
 
 
+def _default_provider(model: str) -> Any:
+    """Use stable Gemini fallbacks when the primary model is temporarily unavailable.
+
+    Override ORACLE_GEMINI_FALLBACK_MODELS with a comma-separated model list.
+    Fallback is limited to transient failures by ProviderRouter; auth/configuration
+    errors do not silently switch models.
+    """
+    fallback_names = os.environ.get(
+        "ORACLE_GEMINI_FALLBACK_MODELS",
+        "gemini-3.5-flash,gemini-3.5-flash-lite",
+    )
+    names = [model]
+    names.extend(item.strip() for item in fallback_names.split(",") if item.strip())
+    unique_names = list(dict.fromkeys(names))
+    providers = [GeminiJSONProvider(model=name) for name in unique_names]
+    return providers[0] if len(providers) == 1 else ProviderRouter(providers)
+
+
 def generate_predictions(
     claims_path: str | Path,
     corpus_path: str | Path,
@@ -156,7 +175,7 @@ def generate_predictions(
         raise ValueError("Every SciFact claim must contain non-empty claim text")
 
     retriever = BM25Retriever(corpus)
-    provider = (provider_factory or (lambda name: GeminiJSONProvider(model=name)))(model)
+    provider = provider_factory(model) if provider_factory else _default_provider(model)
     out = Path(output_path)
     out.parent.mkdir(parents=True, exist_ok=True)
     partial = out.with_suffix(out.suffix + ".partial")
