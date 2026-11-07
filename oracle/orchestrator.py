@@ -464,6 +464,7 @@ class OracleOrchestrator:
                 review_context = AgentContext(
                     run.question, cycle, run.mode.value,
                     run.evidence, run.hypotheses, run.findings, run.tasks,
+                    self.domain_profile,
                 )
                 skeptic = self.skeptic.run(review_context)
                 audit = self.auditor.run(review_context)
