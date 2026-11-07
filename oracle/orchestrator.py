@@ -260,7 +260,7 @@ class OracleOrchestrator:
             return
         if self.literature_enabled and not run.sources:
             report = self._search_literature(run.question, self.literature_limit)
-            client.ingest(run, report)
+            self._literature_client.ingest(run, report)
             run.findings.append(
                 f"Literature retrieval: {report.retrieved} records retrieved; "
                 f"{report.ingested_sources} sources and {report.evidence_records} evidence records ingested."
