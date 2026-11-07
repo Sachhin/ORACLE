@@ -28,9 +28,9 @@ class OpenAccessFullTextClient:
         re.compile(r"\bcc0\b", re.I),
         re.compile(r"creative commons attribution", re.I),
         # Europe PMC commonly supplies canonical licence URLs, not labels.
-        re.compile(r"creativecommons\\.org/licenses/by/(?:[0-9]+\\.[0-9]+)", re.I),
-        re.compile(r"creativecommons\\.org/licenses/by-sa/(?:[0-9]+\\.[0-9]+)", re.I),
-        re.compile(r"creativecommons\\.org/publicdomain/zero/(?:[0-9]+\\.[0-9]+)", re.I),
+        re.compile(r"creativecommons\.org/licenses/by/(?:[0-9]+\.[0-9]+)", re.I),
+        re.compile(r"creativecommons\.org/licenses/by-sa/(?:[0-9]+\.[0-9]+)", re.I),
+        re.compile(r"creativecommons\.org/publicdomain/zero/(?:[0-9]+\.[0-9]+)", re.I),
     )
 
     def __init__(self, timeout: float = 30.0, max_bytes: int = 10_000_000,
