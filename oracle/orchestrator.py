@@ -241,6 +241,16 @@ class OracleOrchestrator:
                                          "new_cycle_limit": run.max_cycles}, event_key=f"resume:{run.current_cycle}:{run.max_cycles}")
         return self._execute(run)
 
+    def _search_literature(self, query: str, limit: int):
+        """Route research retrieval through the auditable resource registry."""
+        from .resource_manager import ResourceManager
+        from .literature import LiteratureClient
+        client = self._literature_client or LiteratureClient(mailto=self.literature_mailto)
+        self._literature_client = client
+        return ResourceManager(client).search(
+            query, limit=limit, resources=self.literature_providers,
+        )
+
     def _prepare_literature(self, run: ResearchRun) -> None:
         """Optionally retrieve source-backed literature before the reasoning cycle."""
         if (not self.literature_enabled and not self.extract_literature_claims
@@ -249,13 +259,7 @@ class OracleOrchestrator:
                 and not self.incoming_citation_network_enabled):
             return
         if self.literature_enabled and not run.sources:
-            from .literature import LiteratureClient
-            client = self._literature_client or LiteratureClient(mailto=self.literature_mailto)
-            self._literature_client = client
-            report = client.search(
-                run.question, limit=self.literature_limit,
-                providers=self.literature_providers,
-            )
+            report = self._search_literature(run.question, self.literature_limit)
             client.ingest(run, report)
             run.findings.append(
                 f"Literature retrieval: {report.retrieved} records retrieved; "
@@ -322,9 +326,6 @@ class OracleOrchestrator:
         """
         if not self.literature_enabled:
             return []
-        from .literature import LiteratureClient
-        client = self._literature_client or LiteratureClient(mailto=self.literature_mailto)
-        self._literature_client = client
         candidates = sorted(
             (task for task in run.tasks
              if task.status in {"pending", "blocked"}
@@ -342,10 +343,7 @@ class OracleOrchestrator:
                     "cycle": cycle, "attempt": task.attempts,
                 }, False, f"task:{task.task_id}:attempt:{task.attempts}:started")
                 query = (run.question + " " + task.name + " " + task.description)[:500]
-                report = client.search(
-                    query, limit=min(5, self.literature_limit),
-                    providers=self.literature_providers,
-                )
+                report = self._search_literature(query, min(5, self.literature_limit))
                 client.ingest(run, report)
                 titles = {str(item.get("title", "")).strip().casefold()
                           for item in report.records if item.get("title")}
