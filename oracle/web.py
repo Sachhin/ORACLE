@@ -51,6 +51,8 @@ button:disabled{opacity:.5;cursor:wait}.muted{color:var(--muted)}.status{padding
 <div class="status">Runs with ORACLE’s built-in deterministic research workflow. No Gemini API key or paid AI API is used.</div>
 <label class="check"><input id="fulltext" type="checkbox" checked> Retrieve eligible open-access full text</label>
 <label class="check"><input id="citations" type="checkbox" checked> Expand citation network</label>
+<label class="check"><input id="geoDiscover" type="checkbox"> Discover GEO supplementary files (no downloads)</label>
+<label class="check"><input id="geoAnalyze" type="checkbox"> Download and analyze supported GEO matrices (uses bandwidth and disk space)</label>
 <button id="start" type="submit">Start research</button>
 <div id="status" class="status" role="status">Ready. Research runs may take several minutes while public scientific literature is retrieved.</div>
 </form><h2 style="margin-top:22px">Selected run</h2><div id="detail" class="muted">Select a run from the history panel to inspect its summary.</div></section>
@@ -181,6 +183,10 @@ class OracleDashboardHandler(BaseHTTPRequestHandler):
                 command.append("--full-text")
             if payload.get("citations"):
                 command.extend(["--citation-network", "--incoming-citations"])
+            if payload.get("geo_discover"):
+                command.append("--discover-geo-files")
+            if payload.get("geo_analyze"):
+                command.append("--analyze-geo-files")
             with log.open("w", encoding="utf-8") as handle:
                 process = subprocess.Popen(command, cwd=root, stdout=output.open("w", encoding="utf-8"),
                     stderr=handle, env=os.environ.copy())
