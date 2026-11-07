@@ -13,30 +13,30 @@ This registry separates **working adapters** from **catalogued resources**. A li
 | PubChem | Chemistry and molecular biology | None | Compound properties (not mechanistic evidence) |
 | OpenAlex | All scholarly disciplines | Optional mailto | Works, authors, venues, OA status, citation counts |
 | GBIF | Biodiversity and organism occurrence records | None | Occurrence records and dataset identifiers |
-| World Bank | Economics, development and social indicators | None | Indicator catalogue metadata |
+| World Bank | Economics, development and social indicators | None | Indicator catalogue metadata (not yet country/time-series observations) |\n| NOAA NCEI | Climate and environmental datasets | None for catalogue search | Dataset search metadata |\n| ClinicalTrials.gov | Clinical and observational studies | None | Study registry records and summaries |\n| NCBI SRA | Sequencing studies | None | Study/run metadata; raw reads require separate download tooling |\n| Zenodo | Cross-disciplinary research outputs | None for public records | Records, DOI, licence and file metadata |\n| Harvard Dataverse | Research datasets | None for public records | Dataset search metadata; file download is a separate step |
 
 OpenAlex is the cross-disciplinary scholarly discovery fallback for domains without a dedicated adapter. Crossref remains the DOI metadata fallback. Dataset records and chemical properties are stored as source records but must not be interpreted as peer-reviewed causal claims.
 
 ## Catalogued, not yet executable in ORACLE
 
 - **Astronomy:** NASA ADS (token required), NASA Technical Reports Server.
-- **Biology/medicine:** PDB, PRIDE, NCBI SRA, ClinicalTrials.gov.
-- **Earth/environment:** NOAA NCEI, NASA Earthdata (collection/login requirements vary), USGS ScienceBase, PANGAEA, OpenStreetMap.
+- **Biology/medicine:** PDB, PRIDE.
+- **Earth/environment:** NASA Earthdata (collection/login requirements vary), USGS ScienceBase, PANGAEA, OpenStreetMap.
 - **Materials/chemistry:** Materials Project (API key required), NOMAD, Crystallography Open Database.
 - **Engineering:** NASA Technical Reports Server, GitHub repositories, Figshare.
 - **Computer science/AI:** Hugging Face Datasets, OpenML, Papers with Code, GitHub repositories.
 - **Mathematics:** zbMATH Open and OpenML.
 - **History/archaeology and arts:** Open Context, Internet Archive, Europeana (API key), Smithsonian Open Access (API key), Library of Congress.
 - **Philosophy:** PhilPapers.
-- **Social/behavioural science:** OSF, ICPSR, Harvard Dataverse, UN Data, World Bank.
+- **Social/behavioural science:** OSF, ICPSR, UN Data.
 - **Education:** ERIC.
-- **General/interdisciplinary:** Zenodo, Figshare, OpenAlex and Crossref.
+- **General/interdisciplinary:** Figshare, OpenAlex and Crossref.
 
 Catalog-only entries are deliberately rejected by `ResourceManager.search()`; they are not silently treated as live connectors. Some sources require credentials, registration, or dataset-specific access and licences.
 
 ## Routing
 
-`resolve_literature_providers(question, "auto")` chooses working adapters based on the domain router. OpenAlex + Crossref are included for all domains; specialist adapters are added where available (Europe PMC/GEO/PubChem, arXiv, GBIF, World Bank). This remains deterministic keyword routing, not semantic certainty.
+`resolve_literature_providers(question, "auto")` chooses working adapters based on the domain router. OpenAlex + Crossref are included for all domains; specialist adapters are added where available (Europe PMC/GEO/PubChem, arXiv, GBIF, World Bank, NOAA NCEI, ClinicalTrials.gov, SRA, Zenodo and Harvard Dataverse). This remains deterministic keyword routing, not semantic certainty.
 
 ## Validation and limitations
 
