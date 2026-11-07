@@ -37,7 +37,7 @@ jobs:
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       SPLIT: ${{ github.event_name == 'workflow_dispatch' && inputs.split || 'dev' }}
       MODEL: ${{ github.event_name == 'workflow_dispatch' && inputs.model || 'gemini-3.8-flash' }}
-      MAX_CLAIMS: ${{ github.event_name == 'workflow_dispatch' && inputs.max_claims || '20' }}
+      MAX_CLAIMS: ${{ github.event_name == 'workflow_dispatch' && inputs.max_claims || '0' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
