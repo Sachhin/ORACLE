@@ -382,7 +382,7 @@ class LiteratureClient:
         title = str(record.get("title", "")).casefold()
         abstract = str(record.get("abstract", "")).casefold()
         # Search APIs sometimes return figure/table captions as if they were papers.
-        if re.match(r"^\\s*(figure|fig\\.?|table|supplement(?:ary|al)?)\\s*(?:\\d|[:.\\-])", title):
+        if re.match(r"^\s*(figure|fig\.?|table|supplement(?:ary|al)?)\s*(?:\d|[:.\-])", title):
             return False
         anchors = ("longevity", "lifespan", "life span", "healthspan", "centenarian",
                    "aging", "ageing", "senescence", "geroscience", "geroprotector",
