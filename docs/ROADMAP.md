@@ -59,7 +59,7 @@ Status reflects code and verified evidence currently present on this branch. Che
 - [x] Bounded multi-hop citation traversal with incoming/outgoing direction, shortest paths, and depth/node limits
 - [x] Bounded multi-hop incoming citation discovery via OpenAlex and outgoing reference discovery via Crossref, adding DOI-backed metadata-only external nodes
 - [x] Explicit experiment lifecycle recording for proposed, simulated, performed, and evaluated states with execution provenance
-- [x] Domain-specific proposed protocol templates for plant, molecular, cell, and computational biology
+- [x] Domain-specific proposed protocol templates for plant, molecular, cell, and computational biology\n- [x] Hybrid keyword-based domain router with specialist profiles, explicit CLI override, routing diagnostics, and source-safe research guidance (heuristic routing; no tool execution implied)
 - [x] Deterministic GEO normalization adapters with input/output checksums and same-runtime byte-identical rerun check
 - [x] Cross-Python-version golden-byte normalization check exercised by the Python 3.10–3.14 CI matrix (does not replace an independent implementation comparison)
 - [x] Independent edgeR TMM factor comparison against `edgeR::calcNormFactors` on the same raw-count matrix (live numerical tolerance assertion in CI)
