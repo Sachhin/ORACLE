@@ -1,6 +1,6 @@
 # Implementation Roadmap
 
-Status reflects code currently present on the main branch. Checked items are implemented and covered by tests; they do not imply scientific validity or live-provider verification. Gemini auditor and novelty behavior has unit-level contract tests, but live model quality remains unvalidated.
+Status reflects code currently present on the main branch. Checked items are implemented and covered by tests; they do not imply scientific validity or live-provider verification. Hosted-model integration is intentionally excluded from the product.
 
 ## Milestone 1 — Offline foundation
 - [x] Domain models and integrity-oriented statuses
@@ -17,7 +17,6 @@ Status reflects code currently present on the main branch. Checked items are imp
 - [x] Provenance, claim revisions, dependence-aware evidence accounting, and human source-quality review
 - [x] Literature retrieval from Europe PMC, Crossref, and NCBI GEO metadata
 - [x] Optional source ingestion into the full autonomous research cycle
-- [x] Quote-validated Gemini claim extraction and cross-paper comparison candidates
 - [x] Quote-grounded support/refute/contextual evidence-review suggestions with a human acceptance gate
 - [x] Measured progress, duplicate suppression, critical integrity checks, bounded replanning, and safe no-progress stopping
 - [x] Persisted no-progress state and explicit resume of safely stopped runs
@@ -25,7 +24,6 @@ Status reflects code currently present on the main branch. Checked items are imp
 ## Milestone 3 — Discovery quality
 - [x] Transparent knowledge-gap scoring based on source, claim-review, hypothesis, contradiction, and task coverage
 - [x] Literature-grounded novelty triage with validated source IDs (provisional; never a priority claim)
-- [x] Gemini-proposed cross-domain connections with validated source IDs and a human review gate
 - [x] Hybrid domain-specialist routing across nine scientific domains, with explicit user override and persisted routing provenance; specialist profiles guide planning but do not imply that every domain-specific external tool ran
 - [x] Research portfolio for saved runs and lexical retrieval of related prior questions
 - [x] Shared cross-run scientific knowledge graph with source-backed claim-pair retrieval, dedicated SQLite persistence, provenance revalidation, and human review gates
