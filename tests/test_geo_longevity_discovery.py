@@ -66,3 +66,12 @@ class GEOLongevityDiscoveryTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+
+def test_plain_language_age_comparison_uses_human_specific_geo_queries():
+    client = _FixtureGEOClient()
+    query = "How does gene expression change between young and old humans?"
+    queries = client.geo_dataset_queries(query)
+    assert len(queries) == 3
+    assert all('"Homo sapiens"[Organism]' in item for item in queries)
