@@ -33,7 +33,7 @@ class LiteratureSearchReport:
     abstract_enrichment_skipped_no_identifier: int = 0
 
 class LiteratureClient:
-    PROVIDERS = ("europepmc", "crossref", "geo", "arxiv", "pubchem", "openalex", "gbif", "world_bank")
+    PROVIDERS = ("europepmc", "crossref", "geo", "arxiv", "pubchem", "openalex", "gbif", "world_bank", "noaa_ncei", "clinical_trials", "zenodo", "harvard_dataverse", "sra")
     def __init__(self, timeout: float = 20.0, mailto: str = "",
                  max_abstract_enrichments: int = 10):
         if timeout <= 0:
@@ -371,6 +371,116 @@ class LiteratureClient:
             })
         return records
 
+
+    def _search_clinical_trials(self, query: str, limit: int):
+        data = self._get_json("https://clinicaltrials.gov/api/v2/studies?" + urlencode({
+            "query.term": query, "pageSize": limit, "format": "json",
+            "fields": "NCTId,BriefTitle,OfficialTitle,BriefSummary,StudyType,OverallStatus,StartDate,CompletionDate,LeadSponsorName"
+        }))
+        records = []
+        for item in data.get("studies", []):
+            protocol = item.get("protocolSection") or {}
+            ident = protocol.get("identificationModule") or {}
+            design = protocol.get("designModule") or {}
+            status = protocol.get("statusModule") or {}
+            desc = protocol.get("descriptionModule") or {}
+            sponsor = protocol.get("sponsorCollaboratorsModule") or {}
+            nct = (ident.get("nctId") or "").strip()
+            title = ident.get("briefTitle") or ident.get("officialTitle") or nct
+            summary = desc.get("briefSummary") or ""
+            records.append({
+                "provider": "ClinicalTrials.gov", "provider_id": nct,
+                "doi": "", "pmid": "", "pmcid": "", "title": self._clean(title),
+                "authors": (sponsor.get("leadSponsor") or {}).get("name", ""),
+                "journal": "ClinicalTrials.gov", "year": str((status.get("studyFirstPostDateStruct") or {}).get("date") or "")[:4],
+                "url": "https://clinicaltrials.gov/study/" + nct if nct else "https://clinicaltrials.gov/",
+                "abstract": self._clean(summary), "publication_type": design.get("studyType") or "clinical study",
+                "open_access": True, "license": "Study registry record; linked documents have separate rights",
+                "citation_count": None, "dataset": True, "dataset_accession": nct,
+                "study_status": (status.get("overallStatus") or ""),
+            })
+        return records
+
+    def _search_zenodo(self, query: str, limit: int):
+        data = self._get_json("https://zenodo.org/api/records?" + urlencode({
+            "q": query, "size": limit, "sort": "mostrecent"
+        }))
+        records = []
+        for item in data.get("hits", {}).get("hits", []):
+            metadata = item.get("metadata") or {}
+            doi = str(metadata.get("doi") or item.get("doi") or "").lower()
+            identifier = str(item.get("id") or "")
+            creators = metadata.get("creators") or []
+            records.append({
+                "provider": "Zenodo", "provider_id": identifier, "doi": doi,
+                "pmid": "", "pmcid": "",
+                "title": self._clean(metadata.get("title") or f"Zenodo record {identifier}"),
+                "authors": "; ".join(str(x.get("name") or "") for x in creators[:30]),
+                "journal": "Zenodo repository", "year": str((metadata.get("publication_date") or "")[:4]),
+                "url": item.get("links", {}).get("self_html") or item.get("links", {}).get("html") or "",
+                "abstract": self._clean(metadata.get("description") or ""),
+                "publication_type": metadata.get("resource_type", {}).get("type") or "research output",
+                "open_access": True, "license": (metadata.get("license") or {}).get("id", ""),
+                "citation_count": None, "dataset": True, "dataset_accession": identifier,
+                "files": item.get("files") or [],
+            })
+        return records
+
+    def _search_dataverse(self, query: str, limit: int):
+        data = self._get_json("https://dataverse.harvard.edu/api/search?" + urlencode({
+            "q": query, "type": "dataset", "per_page": limit, "start": 0
+        }))
+        response = data.get("data") or {}
+        records = []
+        for item in response.get("items", []):
+            pid = str(item.get("global_id") or item.get("entity_id") or "")
+            name = item.get("name") or item.get("title") or pid
+            description = item.get("description") or ""
+            records.append({
+                "provider": "Harvard Dataverse", "provider_id": pid,
+                "doi": pid.replace("doi:", "") if pid.startswith("doi:") else "",
+                "pmid": "", "pmcid": "", "title": self._clean(name),
+                "authors": "", "journal": item.get("type", "Dataverse dataset"),
+                "year": str(item.get("published_at") or "")[:4],
+                "url": item.get("url") or ("https://dataverse.harvard.edu/dataset.xhtml?persistentId=" + quote(pid, safe="") if pid else ""),
+                "abstract": self._clean(description), "publication_type": "research dataset",
+                "open_access": True, "license": "Check dataset-level licence and access conditions",
+                "citation_count": None, "dataset": True, "dataset_accession": pid,
+            })
+        return records
+
+    def _search_sra(self, query: str, limit: int):
+        base = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/"
+        search = self._get_json(base + "esearch.fcgi?" + urlencode({
+            "db": "sra", "term": query, "retmax": limit, "retmode": "json"
+        }))
+        ids = (search.get("esearchresult") or {}).get("idlist") or []
+        if not ids:
+            return []
+        summary = self._get_json(base + "esummary.fcgi?" + urlencode({
+            "db": "sra", "id": ",".join(ids), "retmode": "json"
+        }))
+        result = summary.get("result") or {}
+        records = []
+        for uid in ids:
+            item = result.get(str(uid)) or {}
+            exp = item.get("expXml") or item.get("expxml") or ""
+            title = item.get("title") or item.get("caption") or f"SRA record {uid}"
+            accession_match = re.search(r"(SR[APRXZ]\\d+)", str(exp) + " " + str(item.get("accession") or ""))
+            accession = accession_match.group(1) if accession_match else str(item.get("accession") or uid)
+            records.append({
+                "provider": "NCBI SRA", "provider_id": str(uid),
+                "doi": "", "pmid": "", "pmcid": "", "title": self._clean(str(title)),
+                "authors": "", "journal": "NCBI Sequence Read Archive",
+                "year": str(item.get("published") or "")[:4],
+                "url": "https://www.ncbi.nlm.nih.gov/sra/" + accession,
+                "abstract": self._clean(str(item.get("summary") or item.get("description") or title)),
+                "publication_type": "sequencing dataset", "open_access": True,
+                "license": "Study-level access and reuse terms apply", "citation_count": None,
+                "dataset": True, "dataset_accession": accession,
+            })
+        return records
+
     def _enrich_missing_abstracts(self, records: list[dict[str, Any]]) -> dict[str, int]:
         """Recover missing abstracts by exact identifiers and report every outcome."""
         stats = {"attempted": 0, "recovered": 0, "no_match": 0, "failed": 0, "skipped_no_identifier": 0}
@@ -556,7 +666,7 @@ class LiteratureClient:
                 fn={"europepmc":self._search_europepmc,"crossref":self._search_crossref,
                     "geo":self._search_geo,"arxiv":self._search_arxiv,
                     "pubchem":self._search_pubchem,"openalex":self._search_openalex,
-                    "gbif":self._search_gbif,"world_bank":self._search_world_bank}[provider]
+                    "gbif":self._search_gbif,"world_bank":self._search_world_bank,"noaa_ncei":self._search_noaa_ncei,\n                    "clinical_trials":self._search_clinical_trials,"zenodo":self._search_zenodo,\n                    "harvard_dataverse":self._search_dataverse,"sra":self._search_sra}[provider]
                 jobs[pool.submit(fn,query,limit)]=provider
             for future in as_completed(jobs):
                 try: report.records.extend(future.result())
