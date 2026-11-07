@@ -768,7 +768,9 @@ class LiteratureClient:
                     "pubchem":self._search_pubchem,"openalex":self._search_openalex,
                     "gbif":self._search_gbif,"world_bank":self._search_world_bank,"noaa_ncei":self._search_noaa_ncei,
                     "clinical_trials":self._search_clinical_trials,"zenodo":self._search_zenodo,
-                    "harvard_dataverse":self._search_dataverse,"sra":self._search_sra,\n                    "pdb":self._search_pdb,"pride":self._search_pride,\n                    "huggingface_datasets":self._search_huggingface_datasets,"openml":self._search_openml}[provider]
+                    "harvard_dataverse":self._search_dataverse,"sra":self._search_sra,
+                    "pdb":self._search_pdb,"pride":self._search_pride,
+                    "huggingface_datasets":self._search_huggingface_datasets,"openml":self._search_openml}[provider]
                 jobs[pool.submit(fn,query,limit)]=provider
             for future in as_completed(jobs):
                 try: report.records.extend(future.result())
