@@ -18,6 +18,8 @@ class DashboardTests(unittest.TestCase):
         import oracle.web as web
         source = inspect.getsource(web.OracleDashboardHandler.do_POST)
         self.assertNotIn("GEMINI_API_KEY", source)
+        self.assertNotIn("--agent-provider", source)
+        self.assertNotIn("--gemini-model", source)
         self.assertIn('literature_provider = "auto"', source)
         self.assertIn('"--provider", literature_provider', source)
         self.assertIn("No model API key or paid AI API is used", PAGE)
