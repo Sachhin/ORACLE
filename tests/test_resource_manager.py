@@ -145,7 +145,7 @@ class ResourceManagerTests(unittest.TestCase):
             ("openalex", "crossref"),
         )
         self.assertEqual(
-            resolve_literature_providers("What predicts national income inequality?", "auto"),
+            resolve_literature_providers("How does GDP growth influence unemployment rates?", "auto"),
             ("openalex", "crossref", "world_bank"),
         )
         self.assertEqual(
