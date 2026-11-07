@@ -125,12 +125,15 @@ jobs:
           if path.exists():
               try:
                   data = json.loads(path.read_text())
+                  run = data.get("run", data) if isinstance(data, dict) else {}
+                  if not isinstance(run, dict):
+                      run = {}
                   lines.extend([
-                      f"- Question: {data.get('question', 'see full report')}",
-                      f"- Run ID: {data.get('run_id', 'see full report')}",
-                      f"- Status: {data.get('status', 'see full report')}",
-                      f"- Mode: {data.get('mode', 'see full report')}",
-                      f"- Cycles: {data.get('current_cycle', data.get('cycles', 'see full report'))}",
+                      f"- Question: {run.get('question', 'see full report')}",
+                      f"- Run ID: {run.get('run_id', 'see full report')}",
+                      f"- Status: {run.get('status', 'see full report')}",
+                      f"- Mode: {run.get('mode', 'see full report')}",
+                      f"- Cycles: {run.get('current_cycle', run.get('cycles', 'see full report'))}",
                   ])
               except Exception as exc:
                   lines.append(f"- JSON summary unavailable: {exc}")
