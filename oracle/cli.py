@@ -1371,7 +1371,14 @@ def main() -> None:
             model=args.gemini_model,
             routing="fallback" if args.agent_provider == "auto" else "single",
         )
-    providers = (resolve_literature_providers(args.question or "", args.domain) if args.provider == "auto" else {"both": ("europepmc", "crossref"), "biology": ("europepmc", "crossref", "geo"), "all": ("europepmc", "crossref", "geo", "arxiv", "pubchem"), "arxiv": ("arxiv",), "pubchem": ("pubchem",), "europepmc": ("europepmc",), "crossref": ("crossref",), "geo": ("geo",)}[args.provider])
+    if args.provider in {"auto", "all"}:
+        providers = resolve_literature_providers(args.question or "", args.domain)
+    elif args.provider == "biology":
+        providers = resolve_literature_providers(args.question or "", "biology_medicine")
+    elif args.provider == "both":
+        providers = ("europepmc", "crossref")
+    else:
+        providers = (args.provider,)
     orchestrator = OracleOrchestrator(
         store, agent_suite=agent_suite,
         literature_enabled=args.research_literature,
@@ -1407,8 +1414,7 @@ def main() -> None:
     experiment_counts = {status.value: sum(1 for item in run.experiments if item.status == status)
                          for status in ExperimentStatus}
     print("Experiments: " + " | ".join(f"{name}: {count}" for name, count in experiment_counts.items()))
-    print("
-Findings and limitations:")
+    print("\nFindings and limitations:")
     for finding in run.findings:
         print(f"- {finding}")
 
