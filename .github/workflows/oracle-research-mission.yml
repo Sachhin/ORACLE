@@ -65,10 +65,10 @@ on:
         type: number
         default: 50
       provider:
-        description: Literature providers
+        description: Literature providers (NASA ADS requires NASA_ADS_API_TOKEN secret)
         required: true
         type: choice
-        options: [auto, all, both, biology, europepmc, pubmed, crossref, geo, genbank, ensembl, arxiv, inspire_hep, pubchem, openalex, gbif, world_bank, noaa_ncei, clinical_trials, zenodo, harvard_dataverse, sra, pdb, pride, huggingface_datasets, openml, nasa_earthdata, usgs, figshare, internet_archive, loc]
+        options: [auto, all, both, biology, europepmc, pubmed, crossref, geo, genbank, ensembl, arxiv, inspire_hep, pubchem, openalex, gbif, world_bank, noaa_ncei, clinical_trials, zenodo, harvard_dataverse, sra, pdb, pride, huggingface_datasets, openml, nasa_earthdata, usgs, figshare, internet_archive, loc, nasa_ads]
         default: all
 
 permissions:
@@ -81,6 +81,7 @@ jobs:
     timeout-minutes: 120
     env:
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      NASA_ADS_API_TOKEN: ${{ secrets.NASA_ADS_API_TOKEN }}
       GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
       QUESTION: ${{ github.event_name == 'workflow_dispatch' && inputs.question || 'Can we identify previously unknown biological mechanisms involved in human longevity?' }}
