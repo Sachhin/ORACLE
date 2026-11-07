@@ -8,7 +8,7 @@ class DashboardTests(unittest.TestCase):
     def test_page_exposes_research_controls_and_history(self):
         for expected in (
             "Start a research mission", "Research question", "Deep research",
-            "Autonomous discovery", "Research history", "No API key required", "/api/run", "/api/runs",
+            "Autonomous discovery", "Research history", "No API key is required", "/api/run", "/api/runs",
         ):
             with self.subTest(expected=expected):
                 self.assertIn(expected, PAGE)
