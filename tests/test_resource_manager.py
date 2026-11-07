@@ -37,7 +37,7 @@ class ResourceManagerTests(unittest.TestCase):
 
     def test_cross_domain_resources_are_catalogued_with_truthful_status(self):
         items = {item["key"]: item for item in ResourceManager.list_resources()}
-        for key in ("openalex", "gbif", "world_bank", "pdb", "pride", "openml", "huggingface_datasets", "pubmed", "genbank", "ensembl", "inspire_hep", "nasa_earthdata", "usgs", "figshare", "internet_archive", "loc"):
+        for key in ("openalex", "gbif", "world_bank", "pdb", "pride", "openml", "huggingface_datasets", "pubmed", "genbank", "ensembl", "inspire_hep", "ensembl", "inspire_hep", "nasa_earthdata", "usgs", "figshare", "internet_archive", "loc"):
             self.assertEqual(items[key]["status"], "implemented")
         for key in ("materials_project", "nomad", "nasa_ads",
                     "pangaea",
@@ -137,11 +137,11 @@ class ResourceManagerTests(unittest.TestCase):
     def test_auto_source_selection_uses_domain_adapters(self):
         self.assertEqual(
             resolve_literature_providers("Can we identify aging mechanisms?", "auto"),
-            ("openalex", "europepmc", "pubmed", "crossref", "geo", "pubchem", "genbank", "clinical_trials", "sra", "zenodo", "harvard_dataverse", "pdb", "pride", "figshare"),
+            ("openalex", "europepmc", "pubmed", "crossref", "geo", "pubchem", "genbank", "ensembl", "clinical_trials", "sra", "zenodo", "harvard_dataverse", "pdb", "pride", "figshare"),
         )
         self.assertEqual(
             resolve_literature_providers("Can quantum gravity be tested?", "auto"),
-            ("openalex", "arxiv", "crossref"),
+            ("openalex", "arxiv", "crossref", "inspire_hep"),
         )
         self.assertEqual(
             resolve_literature_providers("How does a polymer catalyst work?", "auto"),
