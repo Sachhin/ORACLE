@@ -2,7 +2,7 @@
 
 The catalog is metadata, not a claim that every listed API has an implemented
 client. Search dispatch is enabled only for providers backed by a tested
-ORACLE adapter (currently Europe PMC, Crossref, and NCBI GEO).
+ORACLE adapter (currently Europe PMC, Crossref, NCBI GEO, and arXiv).
 """
 from __future__ import annotations
 
@@ -47,7 +47,7 @@ _RESOURCES = (
     ScientificResource("arxiv", "arXiv", ("physics_astronomy", "computer_science_ai",
         "mathematics_statistics", "general_science"),
         "https://export.arxiv.org/api/query", "public_api", "none",
-        "Article licences vary by submission", capabilities=("preprint_search",)),
+        "Article licences vary by submission", "arxiv", ("preprint_search", "literature_search")),
     ScientificResource("pubchem", "PubChem", ("chemistry_materials", "biology_medicine"),
         "https://pubchem.ncbi.nlm.nih.gov/rest/pug", "public_api", "none",
         "PubChem data are generally public; linked records may carry separate terms",
@@ -89,7 +89,7 @@ class ResourceManager:
             {**asdict(resource),
              "domains": list(resource.domains),
              "capabilities": list(resource.capabilities),
-             "status": "implemented" if resource.connector in {"europepmc", "crossref", "geo"}
+             "status": "implemented" if resource.connector in {"europepmc", "crossref", "geo", "arxiv"}
                        else "catalog_only"}
             for resource in _RESOURCES
             if domain in {"all", "auto"} or "all" in resource.domains
@@ -112,7 +112,7 @@ class ResourceManager:
         unsupported: list[str] = []
         for key in dict.fromkeys(resources):
             item = self.get_resource(key)
-            if item["connector"] in {"europepmc", "crossref", "geo"}:
+            if item["connector"] in {"europepmc", "crossref", "geo", "arxiv"}:
                 providers.append(item["connector"])
             else:
                 unsupported.append(key)
