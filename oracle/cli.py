@@ -16,6 +16,16 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="oracle", description="Offline scientific research foundation")
     parser.add_argument("question", nargs="?", help="Scientific research question")
     parser.add_argument("--mode", choices=[m.value for m in ResearchMode], default=ResearchMode.BOTH.value)
+    parser.add_argument("--list-resources", action="store_true",
+                        help="List registered scientific resources and connector implementation status")
+    parser.add_argument("--resource-domain", default="all",
+                        help="Filter --list-resources by domain (or all)")
+    parser.add_argument("--domain", default="auto",
+                        choices=["auto", "biology_medicine", "physics_astronomy",
+                                 "chemistry_materials", "computer_science_ai",
+                                 "earth_environment", "mathematics_statistics",
+                                 "social_behavioral", "engineering", "general_science"],
+                        help="Research domain specialist; auto uses transparent keyword routing")
     parser.add_argument("--cycles", type=int, default=3)
     parser.add_argument("--resume", dest="resume_id", help="Resume an existing run by ID")
     parser.add_argument("--db", default="data/oracle.sqlite3")
@@ -88,7 +98,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--dataset-max-mb", type=int, default=50,
                         help="Maximum size of each GEO supplementary download in MB (1-1000)")
     parser.add_argument("--limit", type=int, default=10, help="Maximum literature records (1-50)")
-    parser.add_argument("--provider", choices=["both", "all", "europepmc", "crossref", "geo"], default="both")
+    parser.add_argument("--provider", choices=["both", "all", "europepmc", "crossref", "geo", "arxiv", "pubchem"], default="both")
     parser.add_argument("--mailto", default="", help="Optional contact email for Crossref polite pool")
     parser.add_argument("--extract-claims", action="store_true", help="Extract quote-grounded candidates with Gemini")
     parser.add_argument("--gemini-model", default="gemini-2.5-flash", help="Gemini model for optional claim extraction, comparison, or research agents")
@@ -258,6 +268,20 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main() -> None:
     args = build_parser().parse_args()
+    if args.list_resources:
+        from .resource_manager import ResourceManager
+        try:
+            resources = ResourceManager.list_resources(args.resource_domain)
+        except ValueError as exc:
+            raise SystemExit(str(exc)) from exc
+        if args.json:
+            print(json.dumps(resources, indent=2, ensure_ascii=False))
+        else:
+            for item in resources:
+                print(f"- {item['key']} | {item['status']} | {item['name']}")
+                print(f"  API: {item['api_url']} | Auth: {item['authentication']}")
+                print(f"  Capabilities: {', '.join(item['capabilities']) or 'metadata only'}")
+        return
     if args.paired_answer_benchmark:
         from .model_comparison import run_paired_answer_benchmark
         try:
@@ -1252,7 +1276,7 @@ def main() -> None:
         raise SystemExit("--compare-papers and --review-evidence require --extract-claims.")
     if args.literature is not None:
         run = ResearchRun(question=args.literature)
-        providers = {"both": ("europepmc", "crossref"), "all": ("europepmc", "crossref", "geo"), "europepmc": ("europepmc",), "crossref": ("crossref",), "geo": ("geo",)}[args.provider]
+        providers = {"both": ("europepmc", "crossref"), "all": ("europepmc", "crossref", "geo", "arxiv", "pubchem"), "arxiv": ("arxiv",), "pubchem": ("pubchem",), "europepmc": ("europepmc",), "crossref": ("crossref",), "geo": ("geo",)}[args.provider]
         client = LiteratureClient(mailto=args.mailto)
         report = client.search(args.literature, limit=args.limit, providers=providers)
         client.ingest(run, report)
@@ -1332,7 +1356,7 @@ def main() -> None:
             model=args.gemini_model,
             routing="fallback" if args.agent_provider == "auto" else "single",
         )
-    providers = {"both": ("europepmc", "crossref"), "all": ("europepmc", "crossref", "geo"), "europepmc": ("europepmc",), "crossref": ("crossref",), "geo": ("geo",)}[args.provider]
+    providers = {"both": ("europepmc", "crossref"), "all": ("europepmc", "crossref", "geo", "arxiv", "pubchem"), "arxiv": ("arxiv",), "pubchem": ("pubchem",), "europepmc": ("europepmc",), "crossref": ("crossref",), "geo": ("geo",)}[args.provider]
     orchestrator = OracleOrchestrator(
         store, agent_suite=agent_suite,
         literature_enabled=args.research_literature,
@@ -1350,6 +1374,7 @@ def main() -> None:
         citation_network_enabled=args.citation_network,
         incoming_citation_network_enabled=args.incoming_citations,
         gemini_model=args.gemini_model,
+        research_domain=args.domain,
     )
     if args.resume_id:
         run = orchestrator.resume(args.resume_id, additional_cycles=args.cycles)
