@@ -44,7 +44,7 @@ class LanguageReasoningAgentTests(unittest.TestCase):
 
     def test_accepts_json_wrapped_in_markdown_fence(self):
         model = FakeModel(
-            '```json\\n{"directions": [], "hypotheses": []}\\n```'
+            '```json\n{"directions": [], "hypotheses": []}\n```'
         )
         evidence = [Evidence("Claim", "paper", EvidenceKind.SOURCE, source_id="s1")]
         result = LanguageReasoningAgent(model).run(
