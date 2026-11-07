@@ -4,7 +4,7 @@ ORACLE has a single auditable resource registry across biology/medicine,
 physics/astronomy, computer science/AI, chemistry/materials, earth/environment,
 mathematics/statistics, social/behavioral science, and general science.
 
-Use it from Python:
+The arXiv adapter is executable through the same literature pipeline, including Atom parsing, normalized metadata, and abstract ingestion. It does not claim peer review or validate preprint conclusions.\n\nUse it from Python:
 
 ```python
 from oracle.resource_manager import ResourceManager
@@ -12,7 +12,7 @@ from oracle.resource_manager import ResourceManager
 manager = ResourceManager()
 for resource in manager.list_resources("biology_medicine"):
     print(resource["key"], resource["status"], resource["api_url"])
-report = manager.search("human longevity mechanisms", resources=("europepmc", "crossref", "ncbi_geo"))
+report = manager.search("human longevity mechanisms", resources=("europepmc", "crossref", "ncbi_geo"))\npreprints = manager.search("black hole information", resources=("arxiv",))
 ```
 
 The registry deliberately distinguishes `implemented` from `catalog_only`.
