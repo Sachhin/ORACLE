@@ -33,7 +33,7 @@ class LiteratureSearchReport:
     abstract_enrichment_skipped_no_identifier: int = 0
 
 class LiteratureClient:
-    PROVIDERS = ("europepmc", "crossref", "geo", "arxiv", "pubchem", "openalex", "gbif", "world_bank", "noaa_ncei", "clinical_trials", "zenodo", "harvard_dataverse", "sra", "pdb", "pride", "huggingface_datasets", "openml")
+    PROVIDERS = ("europepmc", "crossref", "geo", "arxiv", "pubchem", "openalex", "gbif", "world_bank", "noaa_ncei", "clinical_trials", "zenodo", "harvard_dataverse", "sra", "pdb", "pride", "huggingface_datasets", "openml", "nasa_earthdata", "usgs", "figshare", "internet_archive", "loc")
     def __init__(self, timeout: float = 20.0, mailto: str = "",
                  max_abstract_enrichments: int = 10):
         if timeout <= 0:
@@ -472,6 +472,115 @@ class LiteratureClient:
             })
         return records
 
+
+    def _search_nasa_earthdata(self, query: str, limit: int):
+        data = self._get_json("https://cmr.earthdata.nasa.gov/search/collections.json?" + urlencode({
+            "keyword": query, "page_size": limit
+        }))
+        rows = (data.get("feed") or {}).get("entry") or []
+        records = []
+        for item in rows[:limit]:
+            concept = str(item.get("id") or "")
+            title = item.get("title") or concept or "NASA Earthdata collection"
+            links = item.get("links") or []
+            url = next((x.get("href") for x in links if x.get("rel", "").endswith("/metadata")), "")
+            records.append({
+                "provider": "NASA Earthdata", "provider_id": concept, "doi": "", "pmid": "", "pmcid": "",
+                "title": self._clean(str(title)), "authors": str(item.get("机构") or "NASA"),
+                "journal": "NASA Earthdata CMR", "year": str(item.get("updated") or "")[:4],
+                "url": url or ("https://search.earthdata.nasa.gov/search?q=" + quote(query)),
+                "abstract": self._clean(str(item.get("summary") or "")),
+                "publication_type": "Earth observation data collection", "open_access": True,
+                "license": "Collection and granule access requirements vary; Earthdata Login may be required",
+                "citation_count": None, "dataset": True, "dataset_accession": concept,
+            })
+        return records
+
+    def _search_usgs(self, query: str, limit: int):
+        data = self._get_json("https://www.sciencebase.gov/catalog/items?" + urlencode({
+            "q": query, "format": "json", "max": limit
+        }))
+        rows = data.get("items") or []
+        records = []
+        for item in rows[:limit]:
+            identifier = str(item.get("id") or "")
+            title = item.get("title") or identifier or "USGS ScienceBase item"
+            records.append({
+                "provider": "USGS ScienceBase", "provider_id": identifier, "doi": "", "pmid": "", "pmcid": "",
+                "title": self._clean(str(title)), "authors": str(item.get("provenance") or {}).strip(),
+                "journal": "USGS ScienceBase", "year": str(item.get("dateCreated") or "")[:4],
+                "url": item.get("link") or ("https://www.sciencebase.gov/catalog/item/" + identifier),
+                "abstract": self._clean(str(item.get("summary") or "")),
+                "publication_type": "earth science data record", "open_access": True,
+                "license": "Item-specific access and reuse terms apply", "citation_count": None,
+                "dataset": True, "dataset_accession": identifier,
+            })
+        return records
+
+    def _search_figshare(self, query: str, limit: int):
+        data = self._get_json("https://api.figshare.com/v2/articles?" + urlencode({
+            "search": query, "limit": limit
+        }))
+        rows = data if isinstance(data, list) else data.get("items", [])
+        records = []
+        for item in rows[:limit]:
+            identifier = str(item.get("id") or "")
+            records.append({
+                "provider": "Figshare", "provider_id": identifier, "doi": str(item.get("doi") or ""),
+                "pmid": "", "pmcid": "", "title": self._clean(str(item.get("title") or identifier)),
+                "authors": "; ".join(str(x.get("full_name") or "") for x in item.get("authors", [])[:20]),
+                "journal": "Figshare", "year": str(item.get("published_date") or item.get("created_date") or "")[:4],
+                "url": item.get("url_public_html") or item.get("url") or "",
+                "abstract": self._clean(str(item.get("description") or "")),
+                "publication_type": str(item.get("defined_type_name") or "research output"),
+                "open_access": True, "license": str(item.get("license") or "Check item-level licence"),
+                "citation_count": None, "dataset": True, "dataset_accession": identifier,
+                "download_url": item.get("download_url") or "",
+            })
+        return records
+
+    def _search_internet_archive(self, query: str, limit: int):
+        data = self._get_json("https://archive.org/advancedsearch.php?" + urlencode({
+            "q": query, "fl[]": ["identifier", "title", "description", "creator", "date"],
+            "rows": limit, "output": "json"
+        }, doseq=True))
+        rows = (data.get("response") or {}).get("docs") or []
+        records = []
+        for item in rows[:limit]:
+            identifier = str(item.get("identifier") or "")
+            records.append({
+                "provider": "Internet Archive", "provider_id": identifier, "doi": "", "pmid": "", "pmcid": "",
+                "title": self._clean(str(item.get("title") or identifier)),
+                "authors": str(item.get("creator") or ""), "journal": "Internet Archive",
+                "year": str(item.get("date") or "")[:4],
+                "url": "https://archive.org/details/" + identifier if identifier else "https://archive.org/",
+                "abstract": self._clean(str(item.get("description") or "")),
+                "publication_type": "digitized primary source or archived item",
+                "open_access": True, "license": "Item-specific copyright, lending and reuse restrictions apply",
+                "citation_count": None, "dataset": False, "dataset_accession": identifier,
+            })
+        return records
+
+    def _search_loc(self, query: str, limit: int):
+        data = self._get_json("https://www.loc.gov/search/?" + urlencode({
+            "q": query, "fo": "json", "c": limit
+        }))
+        rows = data.get("results") or []
+        records = []
+        for item in rows[:limit]:
+            identifier = str(item.get("id") or item.get("url") or "")
+            title = item.get("title") or identifier or "Library of Congress item"
+            records.append({
+                "provider": "Library of Congress", "provider_id": identifier, "doi": "", "pmid": "", "pmcid": "",
+                "title": self._clean(str(title)), "authors": str(item.get("contributor") or ""),
+                "journal": "Library of Congress", "year": str(item.get("date") or "")[:4],
+                "url": item.get("url") or identifier, "abstract": self._clean(str(item.get("description") or "")),
+                "publication_type": "digital collection or primary source", "open_access": True,
+                "license": "Item-level rights statements apply", "citation_count": None,
+                "dataset": False, "dataset_accession": identifier,
+            })
+        return records
+
     def _search_clinical_trials(self, query: str, limit: int):
         data = self._get_json("https://clinicaltrials.gov/api/v2/studies?" + urlencode({
             "query.term": query, "pageSize": limit, "format": "json",
@@ -770,7 +879,7 @@ class LiteratureClient:
                     "clinical_trials":self._search_clinical_trials,"zenodo":self._search_zenodo,
                     "harvard_dataverse":self._search_dataverse,"sra":self._search_sra,
                     "pdb":self._search_pdb,"pride":self._search_pride,
-                    "huggingface_datasets":self._search_huggingface_datasets,"openml":self._search_openml}[provider]
+                    "huggingface_datasets":self._search_huggingface_datasets,"openml":self._search_openml,\n                    "nasa_earthdata":self._search_nasa_earthdata,"usgs":self._search_usgs,\n                    "figshare":self._search_figshare,"internet_archive":self._search_internet_archive,"loc":self._search_loc}[provider]
                 jobs[pool.submit(fn,query,limit)]=provider
             for future in as_completed(jobs):
                 try: report.records.extend(future.result())
