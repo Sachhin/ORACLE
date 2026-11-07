@@ -300,18 +300,51 @@ class LiteratureClient:
                 continue
 
     @staticmethod
-    def _relevance_score(query: str, record: dict[str, Any]) -> int:
-        """Prefer records whose title/abstract actually discuss the requested topic."""
+    def _topic_profile(query: str) -> str:
+        """Recognize broad research intents that need a domain-specific relevance gate."""
+        text = query.casefold()
+        if any(term in text for term in ("longevity", "lifespan", "life span", "healthspan",
+                                         "centenarian", "aging", "ageing", "senescence")):
+            return "human_longevity"
+        return ""
+
+    @classmethod
+    def _relevance_score(cls, query: str, record: dict[str, Any]) -> int:
+        """Score topical evidence, giving title matches more weight than abstract matches."""
         stop = {"the", "and", "for", "with", "from", "that", "this", "into",
                 "can", "does", "how", "what", "are", "was", "were", "in", "of",
-                "to", "a", "an", "is", "on", "by", "their", "human"}
+                "to", "a", "an", "is", "on", "by", "their", "human", "previously",
+                "unknown", "identify", "identified", "involved"}
         terms = {token for token in re.findall(r"[a-z0-9]+", query.casefold())
                  if len(token) >= 3 and token not in stop}
-        if not terms:
-            return 0
         title = set(re.findall(r"[a-z0-9]+", str(record.get("title", "")).casefold()))
         abstract = set(re.findall(r"[a-z0-9]+", str(record.get("abstract", "")).casefold()))
-        return 4 * len(terms & title) + len(terms & abstract)
+        score = 5 * len(terms & title) + len(terms & abstract)
+        if cls._topic_profile(query) == "human_longevity":
+            anchors = {"longevity", "lifespan", "healthspan", "centenarian", "centenarians",
+                       "aging", "ageing", "senescence", "geroscience", "geroprotector",
+                       "geroprotective"}
+            mechanisms = {"mechanism", "mechanisms", "genetic", "genetics", "genomic",
+                          "molecular", "cellular", "pathway", "pathways", "mitochondrial",
+                          "telomere", "telomeres", "proteostasis", "epigenetic", "epigenetics",
+                          "autophagy", "inflammation", "metabolism", "immune", "immunity",
+                          "repair", "stem", " senescent"}
+            score += 12 * len(anchors & title) + 4 * len(anchors & abstract)
+            score += 2 * len(mechanisms & title) + len(mechanisms & abstract)
+        return score
+
+    @classmethod
+    def _passes_topic_gate(cls, query: str, record: dict[str, Any]) -> bool:
+        """Reject obvious off-topic hits for longevity missions; retain sparse metadata hits only
+        when their title itself clearly identifies longevity/aging.
+        """
+        if cls._topic_profile(query) != "human_longevity":
+            return True
+        title = str(record.get("title", "")).casefold()
+        abstract = str(record.get("abstract", "")).casefold()
+        anchors = ("longevity", "lifespan", "life span", "healthspan", "centenarian",
+                   "aging", "ageing", "senescence", "geroscience", "geroprotector")
+        return any(term in title or term in abstract for term in anchors)
 
     def search(self, query: str, limit: int=10, providers=("europepmc","crossref")) -> LiteratureSearchReport:
         query=query.strip()
@@ -343,6 +376,16 @@ class LiteratureClient:
         records = list(merged.values())
         self._enrich_missing_abstracts(records)
         # Provider completion order is nondeterministic; rank by topical overlap.
+        # Longevity missions use a conservative topical gate so generic "unknown"
+        # results (viruses, yeast replication, ancestry, etc.) do not become evidence.
+        if self._topic_profile(query) == "human_longevity":
+            before = len(records)
+            records = [item for item in records if self._passes_topic_gate(query, item)]
+            rejected = before - len(records)
+            if rejected:
+                report.warnings.append(
+                    f"Relevance filter excluded {rejected} records without an explicit longevity/aging signal in title or abstract."
+                )
         records.sort(key=lambda item: self._relevance_score(query, item), reverse=True)
         report.records = records[:limit]
         report.retrieved = len(report.records)
