@@ -66,16 +66,19 @@ def prompt_for_claim(claim: dict[str, Any], corpus: dict[str, dict[str, Any]]) -
     cited = claim.get("cited_doc_ids", [])
     if not isinstance(cited, list):
         raise ValueError(f"Claim {claim.get('id')} has invalid cited_doc_ids")
+    cited_ids = [str(item) for item in cited]
+    if len(set(cited_ids)) != len(cited_ids):
+        raise ValueError(f"Claim {claim.get('id')} has duplicate cited_doc_ids")
+    missing = [doc_id for doc_id in cited_ids if doc_id not in corpus]
+    if missing:
+        raise ValueError(f"Claim {claim.get('id')} cites documents absent from corpus: {missing[:10]}")
     docs = []
     allowed: dict[str, int] = {}
-    for raw_id in cited:
-        doc_id = str(raw_id)
-        document = corpus.get(doc_id)
-        if document is None:
-            continue
+    for doc_id in cited_ids:
+        document = corpus[doc_id]
         abstract = document.get("abstract")
-        if not isinstance(abstract, list) or any(not isinstance(s, str) for s in abstract):
-            raise ValueError(f"Corpus document {doc_id} has invalid abstract")
+        if not isinstance(abstract, list) or not abstract or any(not isinstance(s, str) for s in abstract):
+            raise ValueError(f"Corpus document {doc_id} has invalid or empty abstract")
         allowed[doc_id] = len(abstract)
         docs.append({
             "doc_id": doc_id,
