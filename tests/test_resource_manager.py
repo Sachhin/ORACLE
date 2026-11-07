@@ -139,10 +139,16 @@ class ResourceManagerTests(unittest.TestCase):
             resolve_literature_providers("Can we identify aging mechanisms?", "auto"),
             ("openalex", "europepmc", "pubmed", "crossref", "geo", "pubchem", "genbank", "ensembl", "clinical_trials", "sra", "zenodo", "harvard_dataverse", "pdb", "pride", "figshare"),
         )
-        self.assertEqual(
-            resolve_literature_providers("Can quantum gravity be tested?", "auto"),
-            ("openalex", "arxiv", "crossref", "inspire_hep", "nasa_ads"),
-        )
+        with patch.dict("os.environ", {"NASA_ADS_API_TOKEN": "test-token"}):
+            self.assertEqual(
+                resolve_literature_providers("Can quantum gravity be tested?", "auto"),
+                ("openalex", "arxiv", "crossref", "inspire_hep", "nasa_ads"),
+            )
+        with patch.dict("os.environ", {"NASA_ADS_API_TOKEN": ""}):
+            self.assertEqual(
+                resolve_literature_providers("Can quantum gravity be tested?", "auto"),
+                ("openalex", "arxiv", "crossref", "inspire_hep"),
+            )
         self.assertEqual(
             resolve_literature_providers("How does a polymer catalyst work?", "auto"),
             ("openalex", "pubchem", "crossref"),
