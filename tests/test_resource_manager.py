@@ -39,7 +39,7 @@ class ResourceManagerTests(unittest.TestCase):
         items = {item["key"]: item for item in ResourceManager.list_resources()}
         for key in ("openalex", "gbif", "world_bank", "pdb", "pride", "openml", "huggingface_datasets"):
             self.assertEqual(items[key]["status"], "implemented")
-        for key in ("materials_project", "nomad", "nasa_ads", "pdb",
+        for key in ("materials_project", "nomad", "nasa_ads",
                     "nasa_earthdata", "usgs", "pangaea",
                     "eric", "philpapers", "icpsr",
                     "internet_archive", "europeana", "smithsonian_open_access"):
