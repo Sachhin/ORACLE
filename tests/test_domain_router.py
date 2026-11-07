@@ -49,7 +49,8 @@ class DomainRouterTests(unittest.TestCase):
                 ResearchMode.DEEP_RESEARCH, max_cycles=1,
             )
             self.assertEqual(run.status, RunStatus.COMPLETED)
-            self.assertTrue(any(task.name.startswith("Biology & Medicine specialist:")
+            self.assertEqual(len(run.tasks), 4)
+            self.assertTrue(any("Domain-specialist lens: Identify organism" in task.description
                                 for task in run.tasks))
             events = store.list_events(run.run_id)
             self.assertTrue(any(event["event_type"] == "domain_routed" for event in events))
