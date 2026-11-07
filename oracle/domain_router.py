@@ -415,7 +415,11 @@ def resolve_domain(question: str, requested: str = "auto") -> tuple[DomainProfil
 
     scores = {}
     for key, profile in _PROFILES.items():
-        score = sum(1 for term in profile.search_terms if matches(term))
+        # Multi-word phrases carry more weight than generic component words.
+        # This prevents "machine learning" from being classified as Education
+        # solely because it contains the word "learning".
+        score = sum(2 if " " in term else 1
+                    for term in profile.search_terms if matches(term))
         if score:
             scores[key] = score
     if not scores:
