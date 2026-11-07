@@ -70,6 +70,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     env:
+      NASA_ADS_API_TOKEN: ${{ secrets.NASA_ADS_API_TOKEN }}
       QUESTION: ${{ github.event_name == 'workflow_dispatch' && inputs.question || 'Can we identify previously unknown biological mechanisms involved in human longevity?' }}
       MODE: ${{ github.event_name == 'workflow_dispatch' && inputs.mode || 'both' }}
       DOMAIN: ${{ github.event_name == 'workflow_dispatch' && inputs.domain || 'biology_medicine' }}
