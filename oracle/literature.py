@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from html import unescape
 import json, re
+import xml.etree.ElementTree as ET
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
@@ -27,7 +28,7 @@ class LiteratureSearchReport:
     records: list[dict[str, Any]] = field(default_factory=list)
 
 class LiteratureClient:
-    PROVIDERS = ("europepmc", "crossref", "geo")
+    PROVIDERS = ("europepmc", "crossref", "geo", "arxiv")
     def __init__(self, timeout: float = 20.0, mailto: str = ""):
         if timeout <= 0:
             raise ValueError("timeout must be positive")
@@ -96,6 +97,55 @@ class LiteratureClient:
         data=self._get_json("https://api.crossref.org/works?"+urlencode(params))
         return [self._crossref_record(x) for x in data.get("message",{}).get("items",[])]
 
+    @classmethod
+    def _arxiv_record(cls, item: dict[str, Any]) -> dict[str, Any]:
+        """Normalize one Atom arXiv entry into ORACLE's literature schema."""
+        arxiv_id = str(item.get("id") or "").strip()
+        authors = "; ".join(str(name).strip() for name in item.get("authors", []) if str(name).strip())
+        categories = item.get("categories", [])
+        return {
+            "provider": "arXiv", "provider_id": arxiv_id,
+            "doi": str(item.get("doi") or "").strip().lower(),
+            "pmid": "", "pmcid": "",
+            "title": cls._clean(str(item.get("title") or "Untitled preprint")),
+            "authors": authors, "journal": str(item.get("journal_ref") or "arXiv preprint"),
+            "year": str(item.get("published") or "")[:10],
+            "url": arxiv_id, "abstract": cls._clean(str(item.get("summary") or "")),
+            "publication_type": "preprint", "open_access": True,
+            "license": str(item.get("license") or "See arXiv record for version-specific licence"),
+            "citation_count": None, "categories": categories,
+        }
+
+    def _search_arxiv(self, query: str, limit: int):
+        params = {"search_query": "all:" + query, "start": 0,
+                  "max_results": limit, "sortBy": "relevance", "sortOrder": "descending"}
+        url = "https://export.arxiv.org/api/query?" + urlencode(params)
+        req = Request(url, headers={"Accept": "application/atom+xml",
+            "User-Agent": "ORACLE-Scientific-Literature/2.0"})
+        try:
+            with urlopen(req, timeout=self.timeout) as response:
+                payload = response.read(8_000_000)
+            root = ET.fromstring(payload)
+        except (HTTPError, URLError, TimeoutError, ET.ParseError, OSError) as exc:
+            raise LiteratureSearchError(f"arXiv request failed: {exc}") from exc
+        ns = {"atom": "http://www.w3.org/2005/Atom", "arxiv": "http://arxiv.org/schemas/atom"}
+        records = []
+        for entry in root.findall("atom:entry", ns):
+            def value(tag: str) -> str:
+                node = entry.find("atom:" + tag, ns)
+                return (node.text or "").strip() if node is not None else ""
+            authors = [(node.findtext("atom:name", default="", namespaces=ns) or "").strip()
+                       for node in entry.findall("atom:author", ns)]
+            categories = [node.attrib.get("term", "") for node in entry.findall("atom:category", ns)]
+            doi = entry.findtext("arxiv:doi", default="", namespaces=ns) or ""
+            journal = entry.findtext("arxiv:journal_ref", default="", namespaces=ns) or ""
+            records.append(self._arxiv_record({
+                "id": value("id"), "title": value("title"), "summary": value("summary"),
+                "published": value("published"), "authors": authors, "categories": categories,
+                "doi": doi, "journal_ref": journal,
+            }))
+        return records
+
     def _search_geo(self, query: str, limit: int):
         base = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/"
         search = self._get_json(base+"esearch.fcgi?"+urlencode({
@@ -133,12 +183,12 @@ class LiteratureClient:
         if not 1 <= limit <= 50: raise ValueError("limit must be between 1 and 50.")
         selected=tuple(dict.fromkeys(providers))
         if not selected or any(p not in self.PROVIDERS for p in selected):
-            raise ValueError("providers must be europepmc, crossref, and/or geo.")
+            raise ValueError("providers must be europepmc, crossref, geo, and/or arxiv.")
         report=LiteratureSearchReport(query, list(selected))
         jobs={}
         with ThreadPoolExecutor(max_workers=len(selected)) as pool:
             for provider in selected:
-                fn={"europepmc":self._search_europepmc,"crossref":self._search_crossref,"geo":self._search_geo}[provider]
+                fn={"europepmc":self._search_europepmc,"crossref":self._search_crossref,"geo":self._search_geo,"arxiv":self._search_arxiv}[provider]
                 jobs[pool.submit(fn,query,limit)]=provider
             for future in as_completed(jobs):
                 try: report.records.extend(future.result())
