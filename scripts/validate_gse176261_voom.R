@@ -14,6 +14,11 @@ suppressPackageStartupMessages({
   library(jsonlite)
 })
 
+# GEOquery parses a long GEO series-matrix characteristics line with vroom.
+# Increase the default connection buffer so the same validation works across
+# Bioconductor/container versions instead of failing before voom is recomputed.
+Sys.setenv(VROOM_CONNECTION_SIZE = "10485760")
+
 counts_path <- args[[1]]
 reference_e_path <- args[[2]]
 reference_w_path <- args[[3]]
