@@ -98,8 +98,12 @@ class ResourceManager:
 
     @staticmethod
     def get_resource(key: str) -> dict[str, Any]:
+        # CLI/provider adapters use "geo"; the catalog's canonical key is
+        # "ncbi_geo". Accept both names while keeping catalog metadata stable.
+        aliases = {"geo": "ncbi_geo"}
+        canonical_key = aliases.get(key, key)
         for item in ResourceManager.list_resources():
-            if item["key"] == key:
+            if item["key"] == canonical_key:
                 return item
         raise KeyError(f"Unknown scientific resource: {key}")
 
