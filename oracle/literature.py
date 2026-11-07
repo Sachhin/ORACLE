@@ -666,7 +666,9 @@ class LiteratureClient:
                 fn={"europepmc":self._search_europepmc,"crossref":self._search_crossref,
                     "geo":self._search_geo,"arxiv":self._search_arxiv,
                     "pubchem":self._search_pubchem,"openalex":self._search_openalex,
-                    "gbif":self._search_gbif,"world_bank":self._search_world_bank,"noaa_ncei":self._search_noaa_ncei,\n                    "clinical_trials":self._search_clinical_trials,"zenodo":self._search_zenodo,\n                    "harvard_dataverse":self._search_dataverse,"sra":self._search_sra}[provider]
+                    "gbif":self._search_gbif,"world_bank":self._search_world_bank,"noaa_ncei":self._search_noaa_ncei,
+                    "clinical_trials":self._search_clinical_trials,"zenodo":self._search_zenodo,
+                    "harvard_dataverse":self._search_dataverse,"sra":self._search_sra}[provider]
                 jobs[pool.submit(fn,query,limit)]=provider
             for future in as_completed(jobs):
                 try: report.records.extend(future.result())
