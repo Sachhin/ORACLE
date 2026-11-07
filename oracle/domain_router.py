@@ -420,7 +420,9 @@ def resolve_domain(question: str, requested: str = "auto") -> tuple[DomainProfil
             scores[key] = score
     if not scores:
         return _PROFILES["general_science"], {
-            "method": "keyword_fallback", "matched_terms": [], "confidence": 0.0}
+            "method": "keyword_fallback", "matched_terms": [], "confidence": 0.0,
+            "secondary_domains": [], "research_intent": classify_research_intent(question),
+            "routing_note": "No domain-specific terms matched; using interdisciplinary research guidance."}
     winner = max(scores, key=lambda key: (scores[key], key))
     profile = _PROFILES[winner]
     matched = [term for term in profile.search_terms if matches(term)]
@@ -440,10 +442,36 @@ def resolve_domain(question: str, requested: str = "auto") -> tuple[DomainProfil
         "confidence": confidence,
         "scores": scores,
         "secondary_domains": secondary,
+        "research_intent": classify_research_intent(question),
         "routing_note": (
             "Keyword-based routing is a transparent heuristic, not semantic certainty. "
             "Review the domain labels for ambiguous or interdisciplinary questions."
         ),
+    }
+
+
+
+def classify_research_intent(question: str) -> dict:
+    """Classify the requested work separately from its subject domain."""
+    text = question.casefold()
+    patterns = [
+        ("literature_review", (r"\bliterature review\b", r"\bsystematic review\b", r"\bstate of the art\b", r"\bwhat is known\b")),
+        ("comparison", (r"\bcompare\b", r"\bcomparison\b", r"\bdifference between\b", r"\bversus\b", r"\bvs\.?\b")),
+        ("data_analysis", (r"\bdataset\b", r"\bdata analysis\b", r"\banaly[sz]e\b", r"\bcorrelation\b", r"\bregression\b", r"\bstatistics\b")),
+        ("causal_analysis", (r"\bcaus(e|al)\b", r"\bmechanism\b", r"\bdrives?\b", r"\beffect of\b", r"\bimpact of\b")),
+        ("hypothesis_discovery", (r"\bhypothes(is|es)\b", r"\bunknown mechanism\b", r"\bdiscover\b", r"\bnovel\b", r"\bnew theory\b")),
+        ("experiment_design", (r"\bexperiment\b", r"\bprotocol\b", r"\btest whether\b", r"\bhow could we test\b")),
+        ("proof_or_derivation", (r"\bprove\b", r"\bproof\b", r"\bderive\b", r"\btheorem\b", r"\bshow that\b")),
+        ("forecasting", (r"\bforecast\b", r"\bpredict\b", r"\bfuture trend\b", r"\bprojection\b")),
+    ]
+    matched = [name for name, expressions in patterns
+               if any(re.search(expression, text) for expression in expressions)]
+    if not matched:
+        matched = ["evidence_synthesis"]
+    return {
+        "primary": matched[0],
+        "all_detected": matched,
+        "method": "transparent_keyword_intent_classifier",
     }
 
 
