@@ -17,7 +17,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="oracle", description="Offline scientific research foundation")
     parser.add_argument("question", nargs="?", help="Scientific research question")
     parser.add_argument("--mode", choices=[m.value for m in ResearchMode], default=ResearchMode.BOTH.value)
-    parser.add_argument("--download-dataset-file", default="", metavar="HTTPS_URL",\n                        help="Download one public research file from an approved repository host")\n    parser.add_argument("--dataset-output", default="", metavar="PATH",\n                        help="Destination path required by --download-dataset-file")\n    parser.add_argument("--list-resources", action="store_true",
+    parser.add_argument("--download-dataset-file", default="", metavar="HTTPS_URL",
+                        help="Download one public research file from an approved repository host")
+    parser.add_argument("--dataset-output", default="", metavar="PATH",
+                        help="Destination path required by --download-dataset-file")
+    parser.add_argument("--list-resources", action="store_true",
                         help="List registered scientific resources and connector implementation status")
     parser.add_argument("--resource-domain", default="all",
                         help="Filter --list-resources by domain (or all)")
@@ -266,6 +270,19 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main() -> None:
     args = build_parser().parse_args()
+    if args.download_dataset_file:
+        if not args.dataset_output:
+            raise SystemExit("--download-dataset-file requires --dataset-output.")
+        from .dataset_download import download_dataset_file
+        try:
+            report = download_dataset_file(
+                args.download_dataset_file, args.dataset_output,
+                max_bytes=args.dataset_max_mb * 1_000_000,
+            )
+        except (OSError, ValueError, RuntimeError) as exc:
+            raise SystemExit(f"Research dataset download failed: {exc}") from exc
+        print(json.dumps(report, indent=2, ensure_ascii=False))
+        return
     if args.list_resources:
         from .resource_manager import ResourceManager
         try:
