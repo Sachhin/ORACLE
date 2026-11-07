@@ -68,7 +68,7 @@ class GeminiJSONProvider:
                 per_minute_limit = ("per minute" in detail_lower or "requests_per_minute" in detail_lower)
                 quota_exhausted = (any(
                     marker in detail_lower
-                    for marker in ("quota", "resource_exhausted", "daily limit", "billing")
+                    for marker in ("quota", "resource_exhausted", "daily limit", "per day", "billing")
                 ) and not per_minute_limit)
                 retryable = exc.code in {429, 500, 502, 503, 504}
                 if retryable and attempt < self.max_retries and (not quota_exhausted):
