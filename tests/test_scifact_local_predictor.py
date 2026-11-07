@@ -37,9 +37,11 @@ class LocalSciFactPredictionTests(unittest.TestCase):
         messages, allowed = prompt_for_claim(claim, {
             "1": {"doc_id": 1, "title": "Paper", "abstract": ["Evidence sentence."]}
         })
-        rendered = "\n".join(item["content"] for item in messages)
-        self.assertNotIn('"evidence"', rendered)
-        self.assertNotIn("SUPPORT", rendered)
+        import json
+        user_payload = json.loads(messages[1]["content"])
+        self.assertEqual(set(user_payload), {"claim_id", "claim", "candidate_abstracts"})
+        self.assertNotIn("evidence", user_payload)
+        self.assertNotIn("SUPPORT", messages[1]["content"])
         self.assertEqual(allowed, {"1": 1})
 
     def test_rejects_duplicate_document_predictions(self):
