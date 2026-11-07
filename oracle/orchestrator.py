@@ -18,14 +18,10 @@ from .task_manager import TaskManager
 class OracleOrchestrator:
     def __init__(self, store: ResearchStore | None = None,
                  max_no_progress_cycles: int = 2,
-                 agent_suite=None,
                  literature_enabled: bool = False,
                  literature_providers: tuple[str, ...] = ("europepmc", "crossref"),
                  literature_limit: int = 10,
                  literature_mailto: str = "",
-                 extract_literature_claims: bool = False,
-                 compare_literature_papers: bool = False,
-                 review_literature_evidence: bool = False,
                  full_text_enabled: bool = False,
                  geo_files_enabled: bool = False,
                  geo_download_enabled: bool = False,
@@ -35,24 +31,18 @@ class OracleOrchestrator:
                  incoming_citation_network_enabled: bool = False,
                  max_tasks: int = 50,
                  max_task_attempts: int = 3,
-                 gemini_model: str = "gemini-2.5-flash",
                  literature_client=None,
                  research_domain: str = "auto") -> None:
         if not 1 <= max_no_progress_cycles <= 10:
             raise ValueError("max_no_progress_cycles must be between 1 and 10.")
         if not 1 <= literature_limit <= 50:
             raise ValueError("literature_limit must be between 1 and 50.")
-        if compare_literature_papers and not extract_literature_claims:
-            raise ValueError("Cross-paper comparison requires Gemini claim extraction.")
         self.store = store or ResearchStore()
         self.max_no_progress_cycles = max_no_progress_cycles
         self.literature_enabled = literature_enabled
         self.literature_providers = literature_providers
         self.literature_limit = literature_limit
         self.literature_mailto = literature_mailto
-        self.extract_literature_claims = extract_literature_claims
-        self.compare_literature_papers = compare_literature_papers
-        self.review_literature_evidence = review_literature_evidence
         self.full_text_enabled = full_text_enabled
         self.geo_analysis_enabled = geo_analysis_enabled
         self.geo_files_enabled = geo_files_enabled or geo_download_enabled or geo_analysis_enabled
@@ -61,28 +51,20 @@ class OracleOrchestrator:
         self.citation_network_enabled = citation_network_enabled
         self.incoming_citation_network_enabled = incoming_citation_network_enabled
         self.task_manager = TaskManager(max_attempts=max_task_attempts, max_tasks=max_tasks)
-        self.gemini_model = gemini_model
         self.research_domain = research_domain
         self.domain_profile: dict = {}
         self.domain_diagnostics: dict = {}
         # Injectable for deterministic tests; production creates the public-API client lazily.
         self._literature_client = literature_client
-        # Every agent implements run(context) -> AgentResult. Deterministic
-        # agents remain the default; an optional suite can replace selected agents.
-        self.planner = agent_suite.planner if agent_suite else PlannerAgent()
-        self.researcher = agent_suite.researcher if agent_suite else ResearcherAgent()
-        self.explorer = agent_suite.explorer if agent_suite else ExplorerAgent()
-        self.hypothesizer = agent_suite.hypothesizer if agent_suite else HypothesisAgent()
-        self.skeptic = agent_suite.skeptic if agent_suite else SkepticAgent()
-        self.auditor = agent_suite.auditor if agent_suite and hasattr(agent_suite, "auditor") else AuditorAgent()
-        self.experiment_designer = (
-            agent_suite.experiment_designer if agent_suite else ExperimentDesignerAgent()
-        )
-        self.novelty = agent_suite.novelty if agent_suite and hasattr(agent_suite, "novelty") else NoveltyAssessorAgent()
-        self.connection_explorer = (
-            agent_suite.connection_explorer if agent_suite and hasattr(agent_suite, "connection_explorer")
-            else None
-        )
+        # The core research loop uses deterministic, auditable agents only.
+        self.planner = PlannerAgent()
+        self.researcher = ResearcherAgent()
+        self.explorer = ExplorerAgent()
+        self.hypothesizer = HypothesisAgent()
+        self.skeptic = SkepticAgent()
+        self.auditor = AuditorAgent()
+        self.experiment_designer = ExperimentDesignerAgent()
+        self.novelty = NoveltyAssessorAgent()
         self.knowledge = KnowledgeBase()
 
     def _event(self, run: ResearchRun, kind: str, payload: dict,
@@ -268,8 +250,7 @@ class OracleOrchestrator:
 
     def _prepare_literature(self, run: ResearchRun) -> None:
         """Optionally retrieve source-backed literature before the reasoning cycle."""
-        if (not self.literature_enabled and not self.extract_literature_claims
-                and not self.full_text_enabled and not self.geo_files_enabled
+        if (not self.literature_enabled and not self.full_text_enabled and not self.geo_files_enabled
                 and not self.geo_analysis_enabled and not self.citation_network_enabled
                 and not self.incoming_citation_network_enabled):
             return
@@ -351,19 +332,6 @@ class OracleOrchestrator:
             from .incoming_citations import OpenAlexIncomingCitationClient
             incoming_report = OpenAlexIncomingCitationClient(mailto=self.literature_mailto).discover(run)
             self._event(run, "incoming_citation_network_discovered", incoming_report.__dict__)
-        if self.extract_literature_claims:
-            from .llm import GeminiClaimExtractor
-            extractor = GeminiClaimExtractor(model=self.gemini_model)
-            extraction = extractor.extract(run)
-            self._event(run, "literature_claims_extracted", extraction.__dict__)
-        if self.compare_literature_papers:
-            from .comparison import CrossPaperComparator
-            comparison = CrossPaperComparator(model=self.gemini_model).compare(run)
-            self._event(run, "literature_papers_compared", comparison.__dict__)
-        if self.review_literature_evidence:
-            from .evidence_review import GeminiEvidenceReviewer
-            review = GeminiEvidenceReviewer(model=self.gemini_model).review(run)
-            self._event(run, "literature_evidence_reviewed", review.__dict__)
 
     def _execute_research_tasks(self, run: ResearchRun, cycle: int,
                                 max_per_cycle: int = 2) -> list[str]:
@@ -548,30 +516,7 @@ class OracleOrchestrator:
                 design = self.experiment_designer.run(review_context)
                 self._add_unique_experiments(run, design.items)
                 novelty = self.novelty.run(review_context)
-                connection_result = None
-                if self.connection_explorer is not None:
-                    connection_context = AgentContext(
-                        run.question, cycle, run.mode.value,
-                        run.evidence, run.hypotheses, run.findings, run.tasks,
-                    )
-                    connection_result = self.connection_explorer.run(connection_context)
-                    known_connections = {
-                        (self._normalise(item.statement), tuple(sorted(item.source_ids)))
-                        for item in run.cross_domain_connections
-                    }
-                    for item in connection_result.items:
-                        key = (self._normalise(item.statement), tuple(sorted(item.source_ids)))
-                        if key not in known_connections:
-                            run.cross_domain_connections.append(item)
-                            known_connections.add(key)
-                    if connection_result.items:
-                        self._event(run, "cross_domain_connections_proposed", {
-                            "count": len(connection_result.items),
-                            "connection_ids": [item.connection_id for item in connection_result.items],
-                        }, False, f"cycle:{cycle}:cross-domain-connections")
                 warnings = skeptic.warnings + audit.warnings + novelty.warnings
-                if connection_result:
-                    warnings.extend(connection_result.warnings)
                 self._add_unique_strings(
                     run.findings,
                     ["Skeptic review: " + warning for warning in skeptic.warnings]

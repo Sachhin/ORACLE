@@ -51,9 +51,8 @@ Automatic routing is the default and preserves existing command lines:
 
 ```bash
 python -m oracle "Can we identify previously unknown biological mechanisms involved in human longevity?" \
-  --domain auto --mode both --cycles 3 --agent-provider gemini \
-  --research-literature --provider all --extract-claims --compare-papers \
-  --review-evidence --full-text --discover-geo-files --json
+  --domain auto --mode both --cycles 3 \
+  --research-literature --provider all --full-text --discover-geo-files --json
 ```
 
 To override routing, use any profile key listed above, or `--domain auto`.
@@ -63,7 +62,7 @@ from subject area. This remains heuristic routing; inspect the report diagnostic
 when a question is ambiguous or uses unfamiliar terminology.
 
 The selected profile and routing diagnostics are included in the run event log
-and passed to model agents as bounded research guidance. Use `--provider auto`
+and used to select bounded deterministic research tasks. Use `--provider auto`
 to select from executable source adapters based on the routed field. Current
 coverage is intentionally honest: Europe PMC/GEO for biology, arXiv for physics,
 computer science and mathematics, PubChem for chemistry, and Crossref as the

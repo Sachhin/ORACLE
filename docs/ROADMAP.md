@@ -1,6 +1,6 @@
 # Implementation Roadmap
 
-Status reflects code currently present on the main branch. Checked items are implemented and covered by tests; they do not imply scientific validity or live-provider verification. Gemini auditor and novelty behavior has unit-level contract tests, but live model quality remains unvalidated.
+Status reflects code currently present on the main branch. Checked items are implemented and covered by tests; they do not imply scientific validity or live-provider verification. Hosted-model integration is intentionally excluded from the product.
 
 ## Milestone 1 — Offline foundation
 - [x] Domain models and integrity-oriented statuses
@@ -17,7 +17,6 @@ Status reflects code currently present on the main branch. Checked items are imp
 - [x] Provenance, claim revisions, dependence-aware evidence accounting, and human source-quality review
 - [x] Literature retrieval from Europe PMC, Crossref, and NCBI GEO metadata
 - [x] Optional source ingestion into the full autonomous research cycle
-- [x] Quote-validated Gemini claim extraction and cross-paper comparison candidates
 - [x] Quote-grounded support/refute/contextual evidence-review suggestions with a human acceptance gate
 - [x] Measured progress, duplicate suppression, critical integrity checks, bounded replanning, and safe no-progress stopping
 - [x] Persisted no-progress state and explicit resume of safely stopped runs
@@ -25,17 +24,13 @@ Status reflects code currently present on the main branch. Checked items are imp
 ## Milestone 3 — Discovery quality
 - [x] Transparent knowledge-gap scoring based on source, claim-review, hypothesis, contradiction, and task coverage
 - [x] Literature-grounded novelty triage with validated source IDs (provisional; never a priority claim)
-- [x] Gemini-proposed cross-domain connections with validated source IDs and a human review gate
 - [x] Hybrid domain-specialist routing across nine scientific domains, with explicit user override and persisted routing provenance; specialist profiles guide planning but do not imply that every domain-specific external tool ran
 - [x] Research portfolio for saved runs and lexical retrieval of related prior questions
 - [x] Shared cross-run scientific knowledge graph with source-backed claim-pair retrieval, dedicated SQLite persistence, provenance revalidation, and human review gates
 - [x] Task acceptance criteria, source-backed completion, blocked/retry states, and bounded attempt counts
 
 ## Milestone 4 — Real research capabilities
-- [x] Common run(context) -> result contract with optional Gemini suite for planner, researcher, explorer, hypothesis, skeptic, experiment, auditor, and novelty agents
-- [x] Provider-backed provisional auditor and literature-grounded novelty triage
-- [x] Bounded transient retries, timeouts, and quota-exhaustion detection for Gemini
-- [x] Ordered Gemini/Groq/OpenRouter routing with explicit transient-failure fallback policy and environment-only credentials
+- [x] Common run(context) -> result contract implemented by the built-in deterministic agents
 - [x] Bounded Europe PMC open-access full-text retrieval with strict Creative Commons licence checks
 - [x] Scientific resource registry distinguishes executable adapters from catalog-only resources; implemented adapters cover Europe PMC, PubMed, Crossref, OpenAlex, NCBI GEO, GenBank, Ensembl, SRA, arXiv, INSPIRE-HEP, PubChem, RCSB PDB, PRIDE, ClinicalTrials.gov, GBIF, World Bank, NOAA NCEI, NASA Earthdata, USGS, Zenodo, Harvard Dataverse, Figshare, Hugging Face Datasets, OpenML, Internet Archive and Library of Congress, plus NASA ADS when its API token is configured. Many connectors return metadata/records rather than full raw datasets; provider-specific limits are documented in docs/RESOURCE_CONNECTORS.md.
 - [x] GEO Series supplementary file discovery and size-capped download with SHA-256 checksums
@@ -76,7 +71,7 @@ Status reflects code currently present on the main branch. Checked items are imp
 - [x] Machine-validated benchmark ingestion requirements for frozen source packets, two independent reviewers, adjudication, and paired baseline/candidate scores
 - [ ] Curated expert-scored scientific answer benchmark set with multiple reviewers and adjudicated labels (rubric, starter questions, and adjudication protocol exist; real labels remain pending)
 - [x] Evidence benchmark requires two named human annotations per case, records reviewer agreement, and validates adjudication on disagreement
-- [x] SciFact 20-claim live Gemini pilot generated, scored and uploaded (20/300 dev claims; coverage 6.67%; pilot-only stance accuracy 0.85, abstract evidence F1 0.833, sentence evidence F1 0.579; frozen predictions and subset-scoped rescore artifact run 42332689562); [ ] full 300-claim dev prediction/scoring run 42332654496 in progress using Gemini Flash Lite with 4.2-second pacing and provider-guided per-minute 429 retries. The free-tier daily quotas for Gemini 3.8/3.5 Flash were exhausted, so these models are excluded from this run.
+- [x] Historical 20-claim SciFact model-assisted pilot archived (20/300 dev claims; coverage 6.67%; pilot-only stance accuracy 0.85, abstract evidence F1 0.833, sentence evidence F1 0.579; frozen predictions and subset-scoped rescore artifact run 42332689562). The hosted-model prediction integration and its live workflow have since been removed; the remaining SciFact evaluator scores externally supplied frozen predictions only.
 - [ ] Empirical evidence attribution, entailment, contradiction, and hallucination benchmark results (frozen ORACLE predictions and expert adjudication remain pending)
 - [x] Reproducibility and regression suite across Python 3.10–3.14 CI matrix
 - [x] High-impact claim review requires independent source groups, reviewer identity, and rationale

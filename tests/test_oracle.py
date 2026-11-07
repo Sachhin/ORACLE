@@ -258,90 +258,6 @@ class OracleTests(unittest.TestCase):
         with self.assertRaises(ValueError): client.search(" ")
         with self.assertRaises(ValueError): client.search("valid", limit=0)
 
-    def test_gemini_extraction_requires_verbatim_quote_and_persists_provenance(self):
-        from unittest.mock import patch
-        from oracle.llm import GeminiClaimExtractor
-        from oracle.models import SourceRecord
-        run = ResearchRun("How does cell fate change?")
-        source = SourceRecord(title="Example developmental study", source_id="src-example")
-        run.sources.append(source)
-        quote_text = "Cell signaling controls developmental outcomes in several contexts."
-        evidence = Evidence(quote_text + " The authors measured gene expression across multiple independent samples.",
-                            source.title, source_id=source.source_id, locator="Abstract")
-        run.evidence.append(evidence)
-        extractor = GeminiClaimExtractor(api_key="test-key")
-        response = {"claims": [
-            {"statement":"Cell signaling controls developmental outcomes in multiple contexts.",
-             "evidence_quote":quote_text},
-            {"statement":"A made-up mechanism explains all cell fate decisions in embryos.",
-             "evidence_quote":"This quotation does not occur in the paper."},
-        ]}
-        with patch.object(extractor, "_generate_json", return_value=response):
-            report = extractor.extract(run)
-        self.assertEqual(report.evidence_examined, 1)
-        self.assertEqual(report.candidates_created, 1)
-        self.assertEqual(report.candidates_rejected, 1)
-        claim = run.claims[0]
-        self.assertEqual(claim.status, "unreviewed_candidate")
-        self.assertEqual(claim.source_quote, quote_text)
-        self.assertEqual(claim.extraction_model, "gemini-2.5-flash")
-        self.assertEqual(run.evidence_claim_links[0].stance, EvidenceStance.CONTEXTUAL)
-        self.assertEqual(run.evidence_claim_links[0].strength, 0.0)
-        self.store.save_run(run)
-        loaded = self.store.load_run(run.run_id)
-        self.assertEqual(loaded.claims[0].source_quote, quote_text)
-        self.assertEqual(loaded.claims[0].extraction_model, "gemini-2.5-flash")
-
-    def test_gemini_extractor_requires_api_key(self):
-        from unittest.mock import patch
-        from oracle.llm import GeminiClaimExtractor
-        with patch.dict("os.environ", {}, clear=True):
-            with self.assertRaises(ValueError):
-                GeminiClaimExtractor(api_key="")
-
-    def test_cross_paper_comparisons_require_two_exact_quotes_and_persist(self):
-        from unittest.mock import patch
-        from oracle.comparison import CrossPaperComparator
-        from oracle.models import SourceRecord
-        run = ResearchRun("Do two papers agree about signaling and cell fate?")
-        source_a = SourceRecord(title="Paper A", source_id="paper-a", doi="10.1000/a")
-        source_b = SourceRecord(title="Paper B", source_id="paper-b", doi="10.1000/b")
-        run.sources.extend([source_a, source_b])
-        text_a = "In this study, pathway activation increased the fraction of cells adopting the neuronal fate."
-        text_b = "Our results show that pathway activation increased neuronal cell fate under the tested conditions."
-        ev_a = Evidence(text_a, source_a.title, source_id=source_a.source_id, locator="Abstract")
-        ev_b = Evidence(text_b, source_b.title, source_id=source_b.source_id, locator="Abstract")
-        run.evidence.extend([ev_a, ev_b])
-        kb = KnowledgeBase()
-        claim_a = kb.add_claim(run, "Pathway activation increases neuronal cell fate.")
-        claim_b = kb.add_claim(run, "Pathway activation increases neuronal fate in tested conditions.")
-        claim_a.status = claim_b.status = "unreviewed_candidate"
-        kb.link_evidence(run, claim_a.claim_id, ev_a.evidence_id, EvidenceStance.CONTEXTUAL, 0.0)
-        kb.link_evidence(run, claim_b.claim_id, ev_b.evidence_id, EvidenceStance.CONTEXTUAL, 0.0)
-        comparator = CrossPaperComparator(api_key="test-key")
-        response = {"claims": [
-            {"pair_index": 0, "relation": "corroborates",
-             "rationale": "Both abstracts report an increase under pathway activation.",
-             "quote_a": text_a, "quote_b": text_b},
-            {"pair_index": 0, "relation": "contrasts",
-             "rationale": "Invalid duplicate pair.",
-             "quote_a": "not in source", "quote_b": text_b},
-        ]}
-        with patch.object(comparator.extractor, "_generate_json", return_value=response):
-            report = comparator.compare(run)
-        self.assertEqual(report.pairs_submitted, 1)
-        self.assertEqual(report.comparisons_created, 1)
-        self.assertEqual(report.comparisons_rejected, 1)
-        comparison = run.evidence_comparisons[0]
-        self.assertEqual(comparison.relation, "corroborates")
-        self.assertEqual(comparison.status, "pending_review")
-        self.assertEqual(comparison.source_a_id, source_a.source_id)
-        self.assertEqual(comparison.quote_b, text_b)
-        self.store.save_run(run)
-        loaded = self.store.load_run(run.run_id)
-        self.assertEqual(len(loaded.evidence_comparisons), 1)
-        self.assertEqual(loaded.evidence_comparisons[0].status, "pending_review")
-
     def test_repeated_no_progress_stops_without_duplicate_records(self):
         run = OracleOrchestrator(self.store, max_no_progress_cycles=2).run(
             "A deterministic question", max_cycles=5
@@ -367,61 +283,6 @@ class OracleTests(unittest.TestCase):
         self.assertEqual(len(resumed.evidence), 1)
         self.assertEqual(resumed.run_id, run.run_id)
 
-
-
-    def test_gemini_agents_keep_model_outputs_provisional(self):
-        from oracle.agents import AgentContext
-        from oracle.model_agents import (
-            GeminiExperimentDesignerAgent, GeminiHypothesisAgent,
-            GeminiResearcherAgent,
-        )
-        from oracle.models import EvidenceKind, ExperimentStatus
-
-        class FakeProvider:
-            model = "fake-gemini"
-
-            def generate_json(self, prompt):
-                if "AGENT: researcher" in prompt:
-                    return {"inferences": [{
-                        "statement": "Several interacting mechanisms may contribute to cell fate.",
-                        "rationale": "A provisional synthesis that needs source verification.",
-                    }]}
-                if "AGENT: hypothesis_generator" in prompt:
-                    return {"hypotheses": [
-                        {"statement": "Model A explains the outcome through pathway A.",
-                         "rationale": "Provisional mechanism A.",
-                         "predictions": ["Blocking pathway A changes the measured outcome."]},
-                        {"statement": "Model B explains the outcome through mechanical cues.",
-                         "rationale": "Competing provisional mechanism B.",
-                         "predictions": ["Changing mechanical cues changes the measured outcome."]},
-                    ]}
-                if "AGENT: experiment_designer" in prompt:
-                    return {"question": "Which mechanism predicts the measured outcome?",
-                            "protocol": ["Define conditions", "Measure the outcome", "Compare controls"],
-                            "predictions": ["Model A predicts one outcome", "Model B predicts another"],
-                            "limitations": "Requires domain expert review."}
-                raise AssertionError("Unexpected agent prompt")
-
-        context = AgentContext("How do cells choose a fate?", 1, "both")
-        researcher = GeminiResearcherAgent(FakeProvider()).run(context)
-        self.assertTrue(researcher.items)
-        self.assertTrue(all(item.kind == EvidenceKind.INFERENCE for item in researcher.items))
-        self.assertTrue(all("not an external" in item.source for item in researcher.items))
-
-        hypotheses = GeminiHypothesisAgent(FakeProvider()).run(context)
-        self.assertEqual(len(hypotheses.items), 2)
-        context.hypotheses = hypotheses.items
-        design = GeminiExperimentDesignerAgent(FakeProvider()).run(context)
-        self.assertEqual(len(design.items), 1)
-        self.assertEqual(design.items[0].status, ExperimentStatus.PROPOSED)
-        self.assertIn("not performed or simulated", design.items[0].limitations)
-
-    def test_gemini_agent_suite_requires_environment_key(self):
-        from unittest.mock import patch
-        from oracle.model_agents import GeminiAgentSuite
-        with patch.dict("os.environ", {}, clear=True):
-            with self.assertRaises(ValueError):
-                GeminiAgentSuite()
 
 
     def test_full_research_cycle_can_ingest_literature_before_agents(self):
@@ -465,54 +326,6 @@ class OracleTests(unittest.TestCase):
         self.assertEqual(run.evidence[0].locator, "Abstract")
         self.assertIn("literature_ingested", [e["event_type"] for e in self.store.list_events(run.run_id)])
 
-
-    def test_gemini_evidence_review_is_quote_grounded_and_requires_human_acceptance(self):
-        from unittest.mock import patch
-        from oracle.evidence_review import GeminiEvidenceReviewer
-        from oracle.models import SourceRecord
-
-        run = ResearchRun("Does pathway activation change cell fate?")
-        source_a = SourceRecord(title="Paper A", source_id="paper-a")
-        source_b = SourceRecord(title="Paper B", source_id="paper-b")
-        run.sources.extend([source_a, source_b])
-        own_text = "Pathway activation increased the neuronal cell fraction in this assay."
-        other_text = "The measured neuronal fraction decreased after pathway activation in this tissue."
-        own_evidence = Evidence(own_text, source_a.title, source_id=source_a.source_id, locator="Abstract")
-        other_evidence = Evidence(other_text, source_b.title, source_id=source_b.source_id, locator="Abstract")
-        run.evidence.extend([own_evidence, other_evidence])
-        kb = KnowledgeBase()
-        claim = kb.add_claim(run, "Pathway activation increases neuronal cell fraction.")
-        claim.status = "unreviewed_candidate"
-        kb.link_evidence(run, claim.claim_id, own_evidence.evidence_id, EvidenceStance.CONTEXTUAL, 0.0)
-
-        reviewer = GeminiEvidenceReviewer(api_key="test-key")
-        reviewer.provider.generate_json = lambda prompt: {"reviews": [
-            {"pair_index": 0, "stance": "refutes",
-             "rationale": "The other paper reports the opposite direction in its stated tissue.",
-             "source_quote": other_text},
-            {"pair_index": 0, "stance": "supports",
-             "rationale": "Invalid duplicate pair and quote.",
-             "source_quote": "not present"},
-        ]}
-        report = reviewer.review(run)
-        self.assertEqual(report.pairs_submitted, 1)
-        self.assertEqual(report.candidates_created, 1)
-        self.assertEqual(report.candidates_rejected, 1)
-        candidate = run.evidence_review_candidates[0]
-        self.assertEqual(candidate.status, "pending_review")
-        self.assertEqual(candidate.proposed_stance, EvidenceStance.REFUTES)
-        self.assertEqual(len(run.evidence_claim_links), 1)  # model suggestion did not change evidence links
-
-        kb.review_evidence_candidate(
-            run, candidate.candidate_id, "accepted", "Human checked the source context.", strength=0.6
-        )
-        self.assertEqual(candidate.status, "accepted")
-        self.assertEqual(len(run.evidence_claim_links), 2)
-        self.assertEqual(run.evidence_claim_links[-1].stance, EvidenceStance.REFUTES)
-        self.store.save_run(run)
-        loaded = self.store.load_run(run.run_id)
-        self.assertEqual(loaded.evidence_review_candidates[0].status, "accepted")
-        self.assertEqual(loaded.evidence_review_candidates[0].proposed_stance, EvidenceStance.REFUTES)
 
     def test_evidence_review_rejects_inference_as_source_evidence(self):
         run = ResearchRun("Review integrity")
@@ -940,41 +753,6 @@ class OracleTests(unittest.TestCase):
             KnowledgeBase().review_hypothesis(
                 run, hypothesis.hypothesis_id, "supported", "Insufficient evidence.",
             )
-
-
-    def test_gemini_provider_retries_transient_errors_but_stops_on_quota(self):
-        import json
-        from io import BytesIO
-        from unittest.mock import patch
-        from urllib.error import HTTPError
-        from oracle.model_agents import GeminiAgentError, GeminiJSONProvider
-
-        class FakeResponse:
-            headers = {}
-            def __enter__(self): return self
-            def __exit__(self, *args): return False
-            def read(self, size=-1):
-                body = {"candidates": [{"content": {"parts": [{"text": json.dumps({"ok": True})}]}}]}
-                return json.dumps(body).encode()
-
-        transient = HTTPError("https://example.invalid", 503, "Unavailable", {}, BytesIO(b"temporary"))
-        with patch("oracle.model_agents.urlopen", side_effect=[transient, FakeResponse()]) as mocked:
-            with patch("oracle.model_agents.time.sleep"):
-                provider = GeminiJSONProvider(api_key="test-secret", max_retries=1)
-                self.assertEqual(provider.generate_json("test prompt"), {"ok": True})
-                self.assertEqual(mocked.call_count, 2)
-                request = mocked.call_args_list[0].args[0]
-                self.assertNotIn("test-secret", request.full_url)
-                self.assertEqual(request.get_header("X-goog-api-key"), "test-secret")
-
-        quota = HTTPError("https://example.invalid", 429, "Too Many Requests", {}, BytesIO(b"quota exceeded"))
-        with patch("oracle.model_agents.urlopen", side_effect=quota) as mocked:
-            with patch("oracle.model_agents.time.sleep") as sleeper:
-                provider = GeminiJSONProvider(api_key="test-secret", max_retries=2)
-                with self.assertRaises(GeminiAgentError):
-                    provider.generate_json("test prompt")
-                self.assertEqual(mocked.call_count, 1)
-                sleeper.assert_not_called()
 
 
     def test_human_source_quality_review_updates_linked_evidence_reliability(self):

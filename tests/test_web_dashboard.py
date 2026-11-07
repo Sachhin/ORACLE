@@ -8,20 +8,21 @@ class DashboardTests(unittest.TestCase):
     def test_page_exposes_research_controls_and_history(self):
         for expected in (
             "Start a research mission", "Research question", "Deep research",
-            "Autonomous discovery", "Research history", "No Gemini API key or paid AI API is used", "Discover GEO supplementary files", "Download and analyze supported GEO matrices", "/api/run", "/api/runs",
+            "Autonomous discovery", "Research history", "No model API key or paid AI API is used", "Discover GEO supplementary files", "Download and analyze supported GEO matrices", "/api/run", "/api/runs",
         ):
             with self.subTest(expected=expected):
                 self.assertIn(expected, PAGE)
 
-    def test_browser_always_uses_keyless_deterministic_agents(self):
+    def test_browser_uses_deterministic_agents_without_model_provider_flags(self):
         import inspect
         import oracle.web as web
         source = inspect.getsource(web.OracleDashboardHandler.do_POST)
-        self.assertIn('"--agent-provider", "deterministic"', source)
         self.assertNotIn("GEMINI_API_KEY", source)
+        self.assertNotIn("--agent-provider", source)
+        self.assertNotIn("--gemini-model", source)
         self.assertIn('literature_provider = "auto"', source)
         self.assertIn('"--provider", literature_provider', source)
-        self.assertIn("No Gemini API key or paid AI API is used", PAGE)
+        self.assertIn("No model API key or paid AI API is used", PAGE)
         self.assertIn('command.append("--discover-geo-files")', source)
         self.assertIn('command.append("--analyze-geo-files")', source)
 

@@ -1,7 +1,7 @@
 # ORACLE 2.0 Architecture Specification
 
 ## Product direction
-Integrated Deep Research + Autonomous Discovery. Balanced priority: scientific accuracy, useful exploration, reasoning quality, and bounded autonomy. The offline deterministic baseline is always available; optional literature, Gemini, and R/Bioconductor analysis integrations are opt-in.
+Integrated Deep Research + Autonomous Discovery. Balanced priority: scientific accuracy, useful exploration, reasoning quality, and bounded autonomy. The deterministic research engine is model-API-free; public literature and dataset retrieval plus optional R/Bioconductor analysis are opt-in.
 
 ## Layered architecture
 1. **Core** — configuration, run lifecycle, orchestration, checkpoints, event log.
@@ -14,7 +14,7 @@ Integrated Deep Research + Autonomous Discovery. Balanced priority: scientific a
 8. **Decision** — continue, re-plan, investigate gap, reject, or conclude.
 
 ## Agent contracts
-Agents are replaceable components implementing a common `run(context) -> result` contract. Baseline agents are deterministic and deliberately conservative. The optional Gemini suite implements the same contract for planning, research synthesis, exploration, hypothesis generation, skeptic review, experiment proposal, provisional integrity auditing, literature-conditioned novelty triage, and source-linked cross-domain connection proposals. It is opt-in through `--agent-provider gemini`; deterministic agents remain the default. Model-generated research statements are always typed as inference, never source evidence. Auditor findings are warnings only and never mutate evidence links or claim status. Novelty triage requires source-backed literature evidence, validates every cited source ID against the supplied context, and remains provisional rather than a priority claim.
+Agents implement a common `run(context) -> result` contract. The built-in agents are deterministic, conservative, and require no model credentials. Research statements are grounded in retrieved source records or explicitly labelled as provisional inferences. Auditor findings are warnings only and never mutate evidence links or claim status. Novelty assessment remains provisional rather than a priority claim.
 
 ## Research cycle
 QUESTION → PLAN → RESEARCH → DISCOVER → HYPOTHESIZE → CHALLENGE → EXPERIMENT DESIGN → EVALUATE → UPDATE KNOWLEDGE → DECIDE.
@@ -41,7 +41,7 @@ Saved runs can be browsed as a portfolio. A transparent heuristic reports missin
 Cycle budgets, task budgets, checkpoint persistence, deterministic IDs, error events, and explicit stop reasons prevent unbounded loops. Repeated no-progress cycles should trigger re-planning or a safe stop.
 
 ## Provider boundary
-Deterministic agents remain the default and require no credentials. An optional Gemini suite replaces selected agents behind the same contract; shared Gemini requests use bounded transient retries and stop immediately when quota exhaustion is explicit. Provider failures are checkpointed rather than silently falling back to a different model. Credentials are read from environment variables and must never be committed to source control.
+The core research loop has no hosted-model provider, API client, API-key setting, or model-provider fallback. Research retrieval uses public scientific data services independently of model APIs; provider-specific public data access may have its own optional credentials.
 
 ## External research connectors
 Europe PMC and Crossref metadata/abstract retrieval, licence-gated Europe PMC full text, NCBI GEO metadata, size-capped GEO supplementary downloads, and bounded first-degree Crossref reference discovery are opt-in. Downloaded GEO files are stored with checksums and may be parsed into descriptive dataset records. Affymetrix CEL RMA preprocessing records input/output checksums and software versions but leaves platform annotation and reference validation to the operator. Differential-expression outputs are persisted as analyses and provisional candidate findings, never automatically promoted to scientific claims.
