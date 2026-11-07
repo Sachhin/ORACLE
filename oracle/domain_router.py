@@ -199,7 +199,7 @@ def resolve_domain(question: str, requested: str = "auto") -> tuple[DomainProfil
         profile = _PROFILES[requested]
         return profile, {"method": "user_selected", "matched_terms": [], "confidence": 1.0}
 
-    text = re.sub(r"[^\\w\\s]", " ", question.casefold().replace("-", " "))
+    text = re.sub(r"[^\w\s]", " ", question.casefold().replace("-", " "))
     text = " ".join(text.split())
     words = set(text.split())
     def matches(term: str) -> bool:
