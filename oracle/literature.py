@@ -636,12 +636,14 @@ class LiteratureClient:
             if not abstract:
                 report.warnings.append("No abstract supplied: "+title); continue
             is_dataset = bool(item.get("dataset"))
-            target_locator = ("Dataset record" if is_dataset else
+            target_locator = ("GEO dataset summary" if item.get("provider") == "NCBI GEO" else
+                              "Dataset record" if is_dataset else
                               "Compound properties" if item.get("provider") == "PubChem" else "Abstract")
             evidence=next((e for e in run.evidence if e.source_id==source.source_id and e.locator==target_locator),None)
             if evidence is None:
                 evidence=Evidence(claim=abstract[:12000],source=title,kind=(EvidenceKind.DATASET if is_dataset else EvidenceKind.SOURCE),
-                    method=("Dataset metadata retrieved from "+item.get("provider","data provider") if is_dataset else
+                    method=("GEO dataset summary retrieved from NCBI E-utilities" if item.get("provider") == "NCBI GEO" else
+                            "Dataset metadata retrieved from "+item.get("provider","data provider") if is_dataset else
                             "Structured compound properties retrieved from PubChem PUG REST" if item.get("provider") == "PubChem" else
                             "Abstract retrieved from "+item.get("provider","scholarly metadata API")),
                     limitations=("Dataset/indicator/occurrence metadata only; inspect the linked data and its study design before scientific interpretation." if is_dataset else
