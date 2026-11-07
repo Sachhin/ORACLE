@@ -486,7 +486,7 @@ class LiteratureClient:
             url = next((x.get("href") for x in links if x.get("rel", "").endswith("/metadata")), "")
             records.append({
                 "provider": "NASA Earthdata", "provider_id": concept, "doi": "", "pmid": "", "pmcid": "",
-                "title": self._clean(str(title)), "authors": str(item.get("机构") or "NASA"),
+                "title": self._clean(str(title)), "authors": "NASA",
                 "journal": "NASA Earthdata CMR", "year": str(item.get("updated") or "")[:4],
                 "url": url or ("https://search.earthdata.nasa.gov/search?q=" + quote(query)),
                 "abstract": self._clean(str(item.get("summary") or "")),
@@ -879,7 +879,9 @@ class LiteratureClient:
                     "clinical_trials":self._search_clinical_trials,"zenodo":self._search_zenodo,
                     "harvard_dataverse":self._search_dataverse,"sra":self._search_sra,
                     "pdb":self._search_pdb,"pride":self._search_pride,
-                    "huggingface_datasets":self._search_huggingface_datasets,"openml":self._search_openml,\n                    "nasa_earthdata":self._search_nasa_earthdata,"usgs":self._search_usgs,\n                    "figshare":self._search_figshare,"internet_archive":self._search_internet_archive,"loc":self._search_loc}[provider]
+                    "huggingface_datasets":self._search_huggingface_datasets,"openml":self._search_openml,
+                    "nasa_earthdata":self._search_nasa_earthdata,"usgs":self._search_usgs,
+                    "figshare":self._search_figshare,"internet_archive":self._search_internet_archive,"loc":self._search_loc}[provider]
                 jobs[pool.submit(fn,query,limit)]=provider
             for future in as_completed(jobs):
                 try: report.records.extend(future.result())
