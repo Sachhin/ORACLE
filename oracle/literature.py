@@ -8,7 +8,7 @@ import json, re
 import xml.etree.ElementTree as ET
 from typing import Any
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode
+from urllib.parse import urlencode, quote
 from urllib.request import Request, urlopen
 from .knowledge import KnowledgeBase
 from .models import Evidence, EvidenceKind, EvidenceStance, ResearchRun, SourceRecord
@@ -28,7 +28,7 @@ class LiteratureSearchReport:
     records: list[dict[str, Any]] = field(default_factory=list)
 
 class LiteratureClient:
-    PROVIDERS = ("europepmc", "crossref", "geo", "arxiv")
+    PROVIDERS = ("europepmc", "crossref", "geo", "arxiv", "pubchem")
     def __init__(self, timeout: float = 20.0, mailto: str = ""):
         if timeout <= 0:
             raise ValueError("timeout must be positive")
@@ -146,6 +146,41 @@ class LiteratureClient:
             }))
         return records
 
+    @classmethod
+    def _pubchem_record(cls, item: dict[str, Any]) -> dict[str, Any]:
+        """Normalize PubChem compound properties; these are not literature claims."""
+        cid = str(item.get("CID") or "")
+        name = cls._clean(str(item.get("IUPACName") or item.get("Title") or f"PubChem CID {cid}"))
+        formula = str(item.get("MolecularFormula") or "")
+        weight = str(item.get("MolecularWeight") or "")
+        smiles = str(item.get("ConnectivitySMILES") or item.get("CanonicalSMILES") or "")
+        details = [
+            f"PubChem compound record CID {cid}.",
+            f"IUPAC name: {name}." if name else "",
+            f"Molecular formula: {formula}." if formula else "",
+            f"Molecular weight: {weight} g/mol." if weight else "",
+            f"Canonical/connectivity SMILES: {smiles}." if smiles else "",
+        ]
+        return {
+            "provider": "PubChem", "provider_id": cid, "doi": "", "pmid": "", "pmcid": "",
+            "title": name or f"PubChem CID {cid}", "authors": "", "journal": "PubChem",
+            "year": "", "url": f"https://pubchem.ncbi.nlm.nih.gov/compound/{cid}" if cid else "",
+            "abstract": " ".join(part for part in details if part),
+            "publication_type": "chemical compound record", "open_access": True,
+            "license": "See PubChem data-use and linked-source terms",
+            "citation_count": None, "dataset": False, "compound_cid": cid,
+            "molecular_formula": formula, "molecular_weight": weight, "smiles": smiles,
+        }
+
+    def _search_pubchem(self, query: str, limit: int):
+        encoded = quote(query.strip(), safe="")
+        properties = "MolecularFormula,MolecularWeight,IUPACName,CanonicalSMILES,ConnectivitySMILES"
+        url = (f"https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/{encoded}"
+               f"/property/{properties}/JSON?MaxRecords={limit}")
+        data = self._get_json(url)
+        rows = data.get("PropertyTable", {}).get("Properties", [])
+        return [self._pubchem_record(item) for item in rows]
+
     def _search_geo(self, query: str, limit: int):
         base = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/"
         search = self._get_json(base+"esearch.fcgi?"+urlencode({
@@ -183,12 +218,12 @@ class LiteratureClient:
         if not 1 <= limit <= 50: raise ValueError("limit must be between 1 and 50.")
         selected=tuple(dict.fromkeys(providers))
         if not selected or any(p not in self.PROVIDERS for p in selected):
-            raise ValueError("providers must be europepmc, crossref, geo, and/or arxiv.")
+            raise ValueError("providers must be europepmc, crossref, geo, arxiv, and/or pubchem.")
         report=LiteratureSearchReport(query, list(selected))
         jobs={}
         with ThreadPoolExecutor(max_workers=len(selected)) as pool:
             for provider in selected:
-                fn={"europepmc":self._search_europepmc,"crossref":self._search_crossref,"geo":self._search_geo,"arxiv":self._search_arxiv}[provider]
+                fn={"europepmc":self._search_europepmc,"crossref":self._search_crossref,"geo":self._search_geo,"arxiv":self._search_arxiv,"pubchem":self._search_pubchem}[provider]
                 jobs[pool.submit(fn,query,limit)]=provider
             for future in as_completed(jobs):
                 try: report.records.extend(future.result())
@@ -239,12 +274,15 @@ class LiteratureClient:
             abstract=item.get("abstract","").strip()
             if not abstract:
                 report.warnings.append("No abstract supplied: "+title); continue
-            target_locator = "GEO dataset summary" if item.get("dataset") else "Abstract"
+            target_locator = ("GEO dataset summary" if item.get("dataset") else
+                              "Compound properties" if item.get("provider") == "PubChem" else "Abstract")
             evidence=next((e for e in run.evidence if e.source_id==source.source_id and e.locator==target_locator),None)
             if evidence is None:
                 evidence=Evidence(claim=abstract[:12000],source=title,kind=(EvidenceKind.DATASET if item.get("dataset") else EvidenceKind.SOURCE),
-                    method=("GEO dataset summary retrieved from NCBI E-utilities" if item.get("dataset") else "Abstract retrieved from "+item.get("provider","scholarly metadata API")),
-                    limitations="Abstract only; full text and methods may not have been accessed.",
+                    method=("GEO dataset summary retrieved from NCBI E-utilities" if item.get("dataset") else
+                            "Structured compound properties retrieved from PubChem PUG REST" if item.get("provider") == "PubChem" else
+                            "Abstract retrieved from "+item.get("provider","scholarly metadata API")),
+                    limitations=("Structured chemical metadata, not a peer-reviewed mechanistic claim." if item.get("provider") == "PubChem" else "Abstract only; full text and methods may not have been accessed."),
                     confidence="unassessed",source_id=source.source_id,locator=target_locator,reliability=0.5,
                     dependence_group=("doi:"+doi if doi else "pmid:"+pmid if pmid else ""))
                 run.evidence.append(evidence); report.evidence_records+=1
