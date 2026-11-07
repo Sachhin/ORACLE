@@ -16,6 +16,7 @@ class AgentContext:
     hypotheses: list[Hypothesis] = field(default_factory=list)
     findings: list[str] = field(default_factory=list)
     tasks: list[ResearchTask] = field(default_factory=list)
+    domain_profile: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -36,7 +37,16 @@ class PlannerAgent:
             ResearchTask("Identify gaps", "List unknowns, missing evidence, and testable questions.", 2),
             ResearchTask("Challenge assumptions", "Look for alternative explanations and possible falsifiers.", 1),
         ]
-        return AgentResult(self.name, "Created a balanced starter research plan.", tasks)
+        profile = context.domain_profile
+        # Enrich the existing bounded plan in place. Do not add tasks here:
+        # literature retrieval relies on the original task budget/semantics.
+        for task, template in zip(tasks, profile.get("task_templates", [])):
+            methods = ", ".join(profile.get("analysis_methods", [])[:5])
+            task.description += (
+                f" Domain-specialist lens: {template}. Suitable methods: {methods}. "
+                "Do not claim a method was run unless its tool actually executed."
+            )
+        return AgentResult(self.name, "Created a balanced domain-aware research plan.", tasks)
 
 
 class ResearcherAgent:
