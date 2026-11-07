@@ -2,8 +2,10 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
-from oracle.scifact_predict import BM25Retriever, generate_predictions
+from oracle.model_agents import GeminiAgentError, ProviderRouter
+from oracle.scifact_predict import BM25Retriever, _default_provider, generate_predictions
 
 
 class FakeProvider:
@@ -19,6 +21,37 @@ class FakeProvider:
 
 
 class SciFactPredictionTests(unittest.TestCase):
+    def test_default_provider_configures_stable_gemini_fallbacks(self):
+        created = []
+
+        class StubGemini:
+            def __init__(self, model):
+                self.model = model
+                created.append(model)
+
+        with patch.dict("os.environ", {"ORACLE_GEMINI_FALLBACK_MODELS": "gemini-3.5-flash,gemini-3.5-flash-lite"}), \
+             patch("oracle.scifact_predict.GeminiJSONProvider", StubGemini):
+            provider = _default_provider("gemini-3.8-flash")
+        self.assertIsInstance(provider, ProviderRouter)
+        self.assertEqual(created, ["gemini-3.8-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"])
+
+    def test_provider_router_falls_back_after_transient_503(self):
+        class Unavailable:
+            model = "primary"
+
+            def generate_json(self, prompt):
+                raise GeminiAgentError("Gemini HTTP 503: temporarily unavailable")
+
+        class Healthy:
+            model = "fallback"
+
+            def generate_json(self, prompt):
+                return {"ok": True}
+
+        router = ProviderRouter([Unavailable(), Healthy()])
+        self.assertEqual(router.generate_json("test"), {"ok": True})
+        self.assertEqual(router.model, "fallback")
+
     def test_bm25_retrieval_is_deterministic_and_returns_abstract_sentences(self):
         corpus = [
             {"doc_id": 2, "title": "Cell cycle", "abstract": ["Cell cycle control uses cyclins."]},
