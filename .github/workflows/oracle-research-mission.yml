@@ -1,10 +1,6 @@
 name: ORACLE longevity research mission
 
 on:
-  workflow_run:
-    workflows: ["ORACLE SciFact prediction benchmark"]
-    types: [completed]
-    branches: [main]
   workflow_dispatch:
     inputs:
       question:
@@ -49,11 +45,6 @@ on:
         required: true
         type: number
         default: 3
-      model:
-        description: Gemini model
-        required: true
-        type: string
-        default: gemini-3.5-flash-lite
       limit:
         description: Maximum literature records per search
         required: true
@@ -76,19 +67,13 @@ permissions:
 
 jobs:
   research:
-    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
     env:
-      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-      NASA_ADS_API_TOKEN: ${{ secrets.NASA_ADS_API_TOKEN }}
-      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
       QUESTION: ${{ github.event_name == 'workflow_dispatch' && inputs.question || 'Can we identify previously unknown biological mechanisms involved in human longevity?' }}
       MODE: ${{ github.event_name == 'workflow_dispatch' && inputs.mode || 'both' }}
       DOMAIN: ${{ github.event_name == 'workflow_dispatch' && inputs.domain || 'biology_medicine' }}
       CYCLES: ${{ github.event_name == 'workflow_dispatch' && inputs.cycles || '3' }}
-      MODEL: ${{ github.event_name == 'workflow_dispatch' && inputs.model || 'gemini-3.5-flash-lite' }}
       LIMIT: ${{ github.event_name == 'workflow_dispatch' && inputs.limit || '30' }}
       DATASET_MAX_MB: ${{ github.event_name == 'workflow_dispatch' && inputs.dataset_max_mb || '50' }}
       PROVIDER: ${{ github.event_name == 'workflow_dispatch' && inputs.provider || 'all' }}
@@ -97,13 +82,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Verify Gemini credential
-        shell: bash
-        run: |
-          if [ -z "$GEMINI_API_KEY" ]; then
-            echo "::error::GEMINI_API_KEY is missing from repository Actions secrets."
-            exit 1
-          fi
       - name: Run full ORACLE literature and discovery mission
         shell: bash
         run: |
@@ -113,8 +91,6 @@ jobs:
             --mode "$MODE" \
             --domain "$DOMAIN" \
             --cycles "$CYCLES" \
-            --agent-provider auto \
-            --gemini-model "$MODEL" \
             --research-literature \
             --full-text \
             --citation-network \
