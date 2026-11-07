@@ -1,0 +1,87 @@
+name: ORACLE SciFact frozen prediction rescore
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/scifact-rescore.yml"
+      - "oracle/scifact_benchmark.py"
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: GitHub Actions run ID containing frozen SciFact predictions
+        required: true
+        type: string
+        default: "42330720883"
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  rescore:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SOURCE_RUN_ID: ${{ github.event_name == 'workflow_dispatch' && inputs.source_run_id || '42330720883' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Download official labelled SciFact data
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p data/scifact
+          curl --fail --location --retry 4 --retry-all-errors \
+            https://scifact.s3-us-west-2.amazonaws.com/release/latest/data.tar.gz \
+            -o data/scifact/data.tar.gz
+          tar -xzf data/scifact/data.tar.gz -C data/scifact
+          claims="$(find data/scifact -name "claims_dev.jsonl" -print -quit)"
+          corpus="$(find data/scifact -name "corpus.jsonl" -print -quit)"
+          test -n "$claims" && test -n "$corpus"
+          echo "CLAIMS_PATH=$claims" >> "$GITHUB_ENV"
+          echo "CORPUS_PATH=$corpus" >> "$GITHUB_ENV"
+      - name: Download frozen predictions from the source run
+        uses: actions/download-artifact@v4
+        with:
+          name: oracle-scifact-dev-${{ env.SOURCE_RUN_ID }}
+          run-id: ${{ env.SOURCE_RUN_ID }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: data/scifact/frozen
+      - name: Rescore frozen predictions with the current evaluator
+        run: |
+          set -euo pipefail
+          test -s data/scifact/frozen/oracle_predictions_dev.jsonl
+          python -m oracle.scifact_benchmark \
+            --claims "$CLAIMS_PATH" --corpus "$CORPUS_PATH" \
+            --predictions data/scifact/frozen/oracle_predictions_dev.jsonl \
+            --split dev > data/scifact/oracle_scifact_rescored_report.json
+      - name: Summarize covered-claim metrics
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          report = json.loads(Path("data/scifact/oracle_scifact_rescored_report.json").read_text())
+          lines = [
+              "## SciFact frozen-prediction rescore",
+              f"- Source run: {os.environ['SOURCE_RUN_ID']}",
+              f"- Full dev claims: {report['claim_count']}",
+              f"- Claims actually scored: {report['scored_claim_count']}",
+              f"- Prediction coverage: {report['prediction_coverage']:.1%}",
+              f"- Stance accuracy on scored claims: {report['stance_accuracy']:.3f}" if report["stance_accuracy"] is not None else "- Stance accuracy: unavailable",
+              f"- Abstract evidence F1: {report['abstract_level_evidence']['f1']}",
+              f"- Sentence evidence F1: {report['sentence_level_evidence']['f1']}",
+              "- Metrics exclude unpredicted claims; coverage is reported separately."
+          ]
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as handle:
+              handle.write("\n".join(lines) + "\n")
+          PY
+      - name: Upload corrected score report
+        uses: actions/upload-artifact@v4
+        with:
+          name: oracle-scifact-rescore-${{ env.SOURCE_RUN_ID }}-${{ github.run_id }}
+          path: data/scifact/oracle_scifact_rescored_report.json
+          if-no-files-found: error
+          retention-days: 90
