@@ -49,7 +49,8 @@ Status reflects code and verified evidence currently present on this branch. Che
 - [x] Optional Affymetrix CEL RMA adapter for explicit affy/oligo package families, with input checksums, software/platform provenance, exact sample-identity validation, expected-platform guard, bounded execution, and mocked contract tests; live GEO GPL96 CEL run PASS for GSM1003058/GSM1003059 (hgu133a, 22,283 features; RMA preprocessing verified; trusted platform-matched reference comparison and probe annotation remain pending)
 - [x] Explicit row-median imputation for continuous matrices with a separate SHA-256 missingness mask and recorded imputation values; reproducible MCAR/MAR/MNAR masking, synthetic downstream Welch/BH sensitivity diagnostics, and observed-cell holdout comparison of row/column/global median reconstruction added
 - [x] Paired orthogonal-assay missingness evaluator: PXD047528 processed DDA/DIA tables verified paired at 15 shared sample aliases and frozen; reconstruction-only baseline scored on 8,859 genuine DDA-missing cells with DIA observations; clinical labels/outcome concordance remain pending because the 15 processed aliases do not map to the 13 clinical participants in the original paper
-- [x] PXD000279 HeLa/E. coli controlled-mixture benchmark scored against known species-level ratios under real deposited missingness (5,019 proteins, 612/30,114 missing cells; row-median and MinProb compared; this is downstream ratio recovery, not exact cell-level ground truth)\n- [ ] PXD047528 biological-outcome concordance against independent clinical labels (reconstruction-only score exists; sample-to-patient crosswalk for 15 processed aliases versus 13 clinical participants remains unresolved)
+- [x] PXD000279 HeLa/E. coli controlled-mixture benchmark scored against known species-level ratios under real deposited missingness (5,019 proteins, 612/30,114 missing cells; row-median and MinProb compared; this is downstream ratio recovery, not exact cell-level ground truth)
+- [ ] PXD047528 biological-outcome concordance against independent clinical labels (reconstruction-only score exists; sample-to-patient crosswalk for 15 processed aliases versus 13 clinical participants remains unresolved)
 - [x] Count-aware DESeq2 raw-count analysis with explicit categorical batch/covariate designs, rank-deficiency checks, and default median-of-ratios size-factor normalization
 - [x] Optional DESeq2 adapter for explicitly mapped raw integer-count two-group designs (external R runtime; CI subprocess mocked)
 - [x] Explicit-design Welch contrasts with BH-FDR for user-declared continuous log2 GEO matrices; raw counts rejected
@@ -59,12 +60,13 @@ Status reflects code and verified evidence currently present on this branch. Che
 - [x] Bounded multi-hop citation traversal with incoming/outgoing direction, shortest paths, and depth/node limits
 - [x] Bounded multi-hop incoming citation discovery via OpenAlex and outgoing reference discovery via Crossref, adding DOI-backed metadata-only external nodes
 - [x] Explicit experiment lifecycle recording for proposed, simulated, performed, and evaluated states with execution provenance
-- [x] Domain-specific proposed protocol templates for plant, molecular, cell, and computational biology\n- [x] Hybrid keyword-based domain router with specialist profiles, explicit CLI override, routing diagnostics, and source-safe research guidance (heuristic routing; no tool execution implied)
+- [x] Domain-specific proposed protocol templates for plant, molecular, cell, and computational biology
+- [x] Hybrid keyword-based domain router with specialist profiles, explicit CLI override, routing diagnostics, and source-safe research guidance (heuristic routing; no tool execution implied)
 - [x] Deterministic GEO normalization adapters with input/output checksums and same-runtime byte-identical rerun check
 - [x] Cross-Python-version golden-byte normalization check exercised by the Python 3.10–3.14 CI matrix (does not replace an independent implementation comparison)
 - [x] Independent edgeR TMM factor comparison against `edgeR::calcNormFactors` on the same raw-count matrix (live numerical tolerance assertion in CI)
 - [x] External-reference comparison CLI with provenance enforcement, file hashes, feature overlap checks, expression-matrix metrics, and DE call concordance
-- [x] External trusted limma-voom comparisons against published GSE176260 and corrected GSE176261 expression/weight matrices, plus independent GSE64099 published DE results; [x] real Affymetrix GPL96 CEL-to-RMA preprocessing; [ ] trusted platform-matched RMA output comparison/probe annotation
+- [x] External trusted limma-voom comparisons against published GSE176260 and corrected GSE176261 expression/weight matrices, plus independent GSE64099 published DE results; [x] real Affymetrix GPL96 CEL-to-RMA preprocessing; [ ] 24-sample GSE12837 GPL96 RMA comparison workflow implemented against the submitter-deposited RMA supplementary matrix; numerical artifact and threshold result
 
 ## Milestone 5 — Evaluation and scientific validation
 - [x] Cross-domain golden-question integrity benchmark for the deterministic baseline
