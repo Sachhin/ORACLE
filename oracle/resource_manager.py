@@ -106,10 +106,10 @@ _RESOURCES = (
         "BioProject and study-specific access restrictions apply", "sra", ("sequence_datasets",)),
     ScientificResource("nasa_earthdata", "NASA Earthdata", ("earth_environment",),
         "https://cmr.earthdata.nasa.gov/search", "public_api", "earthdata_login_varies",
-        "Some data are open; account/login requirements vary by collection", capabilities=("earth_observation",)),
+        "Some data are open; account/login requirements vary by collection", "nasa_earthdata", ("earth_observation", "dataset_search")),
     ScientificResource("usgs", "USGS ScienceBase", ("earth_environment", "geography_urban"),
         "https://www.sciencebase.gov/catalog", "public_api", "none",
-        "Dataset-specific terms and attribution apply", capabilities=("earth_science_data",)),
+        "Dataset-specific terms and attribution apply", "usgs", ("earth_science_data", "dataset_search")),
     ScientificResource("pangaea", "PANGAEA Data Publisher", ("earth_environment",),
         "https://www.pangaea.de", "public_catalog", "none",
         "Dataset licences and citations vary", capabilities=("earth_environment_data",)),
@@ -127,7 +127,7 @@ _RESOURCES = (
         "Dataset licences vary; cite individual datasets", "harvard_dataverse", ("research_data",)),
     ScientificResource("internet_archive", "Internet Archive", ("history_archaeology", "arts_culture", "linguistics_literature"),
         "https://archive.org/advancedsearch.php", "public_api", "none",
-        "Access and reuse depend on item rights and lending restrictions", capabilities=("digitized_primary_sources",)),
+        "Access and reuse depend on item rights and lending restrictions", "internet_archive", ("digitized_primary_sources", "search")),
     ScientificResource("europeana", "Europeana", ("history_archaeology", "arts_culture"),
         "https://api.europeana.eu/record/v2", "public_api", "api_key",
         "API key and item-specific rights statements apply", capabilities=("cultural_heritage",)),
@@ -151,10 +151,10 @@ _RESOURCES = (
         "Record-level licences apply; preserve DOI and citation", "zenodo", ("research_data", "software_archives")),
     ScientificResource("figshare", "Figshare", ("general_science", "biology_medicine", "engineering"),
         "https://api.figshare.com/v2", "public_api", "none",
-        "Record-level licences apply", capabilities=("research_data",)),
+        "Record-level licences apply", "figshare", ("research_data", "dataset_search")),
     ScientificResource("loc", "Library of Congress", ("history_archaeology", "arts_culture"),
         "https://www.loc.gov", "public_api", "none",
-        "Item-specific rights and access statements apply", capabilities=("primary_sources", "digital_collections")),
+        "Item-specific rights and access statements apply", "loc", ("primary_sources", "digital_collections", "search")),
     ScientificResource("papers_with_code", "Papers with Code", ("computer_science_ai",),
         "https://paperswithcode.com", "public_catalog", "none",
         "Linked papers, code and datasets retain their own licences", capabilities=("ml_papers_and_benchmarks",)),
@@ -172,15 +172,15 @@ def resolve_literature_providers(question: str, requested_domain: str = "auto") 
 
     profile, _ = resolve_domain(question, requested_domain)
     by_domain = {
-        "biology_medicine": ("openalex", "europepmc", "crossref", "geo", "pubchem", "clinical_trials", "sra", "zenodo", "harvard_dataverse", "pdb", "pride"),
+        "biology_medicine": ("openalex", "europepmc", "crossref", "geo", "pubchem", "clinical_trials", "sra", "zenodo", "harvard_dataverse", "pdb", "pride", "figshare"),
         "physics_astronomy": ("openalex", "arxiv", "crossref"),
         "computer_science_ai": ("openalex", "arxiv", "crossref", "huggingface_datasets", "openml"),
         "mathematics_statistics": ("openalex", "arxiv", "crossref", "openml"),
         "chemistry_materials": ("openalex", "pubchem", "crossref"),
         "general_science": ("openalex", "europepmc", "crossref", "arxiv", "pubchem", "zenodo", "harvard_dataverse"),
-        "earth_environment": ("openalex", "crossref", "gbif", "noaa_ncei", "zenodo"),
+        "earth_environment": ("openalex", "crossref", "gbif", "noaa_ncei", "zenodo", "nasa_earthdata", "usgs", "figshare"),
         "social_behavioral": ("openalex", "crossref", "world_bank"),
-        "history_archaeology": ("openalex", "crossref"),
+        "history_archaeology": ("openalex", "crossref", "internet_archive", "loc", "figshare"),
         "philosophy_ethics": ("openalex", "crossref"),
         "economics_business": ("openalex", "crossref", "world_bank"),
         "geography_urban": ("openalex", "crossref"),
@@ -216,7 +216,7 @@ class ResourceManager:
             {**asdict(resource),
              "domains": list(resource.domains),
              "capabilities": list(resource.capabilities),
-             "status": "implemented" if resource.connector in {"europepmc", "crossref", "geo", "arxiv", "pubchem", "openalex", "gbif", "world_bank", "noaa_ncei", "clinical_trials", "zenodo", "harvard_dataverse", "sra", "pdb", "pride", "huggingface_datasets", "openml"}
+             "status": "implemented" if resource.connector in {"europepmc", "crossref", "geo", "arxiv", "pubchem", "openalex", "gbif", "world_bank", "noaa_ncei", "clinical_trials", "zenodo", "harvard_dataverse", "sra", "pdb", "pride", "huggingface_datasets", "openml", "nasa_earthdata", "usgs", "figshare", "internet_archive", "loc"}
                        else "catalog_only"}
             for resource in _RESOURCES
             if domain in {"all", "auto"} or "all" in resource.domains
