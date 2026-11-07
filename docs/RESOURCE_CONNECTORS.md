@@ -18,7 +18,11 @@ This registry separates **working adapters** from **catalogued resources**. A li
 | ClinicalTrials.gov | Clinical and observational studies | None | Study registry records and summaries |
 | NCBI SRA | Sequencing studies | None | Study/run metadata; raw reads require separate download tooling |
 | Zenodo | Cross-disciplinary research outputs | None for public records | Records, DOI, licence and file metadata |
-| Harvard Dataverse | Research datasets | None for public records | Dataset search metadata; file download is a separate step |\n| RCSB PDB | Protein and nucleic-acid structures | None | Structure search and entry metadata |\n| PRIDE Archive | Proteomics | None for public projects | Proteomics project metadata and accession |\n| Hugging Face Datasets | ML and research datasets | None for public records; gated datasets require access | Dataset repository metadata, card description, licence and gated flag |\n| OpenML | ML benchmark datasets | None for public metadata | Dataset metadata and accession |
+| Harvard Dataverse | Research datasets | None for public records | Dataset search metadata; file download is a separate step |
+| RCSB PDB | Protein and nucleic-acid structures | None | Structure search and entry metadata |
+| PRIDE Archive | Proteomics | None for public projects | Proteomics project metadata and accession |
+| Hugging Face Datasets | ML and research datasets | None for public records; gated datasets require access | Dataset repository metadata, card description, licence and gated flag |
+| OpenML | ML benchmark datasets | None for public metadata | Dataset metadata and accession |
 
 OpenAlex is the cross-disciplinary scholarly discovery fallback for domains without a dedicated adapter. Crossref remains the DOI metadata fallback. Dataset records and chemical properties are stored as source records but must not be interpreted as peer-reviewed causal claims.
 
