@@ -167,7 +167,9 @@ jobs:
                             stringsAsFactors=FALSE, quote="", comment.char="")
           if (ncol(ref) != 25L || nrow(ref) < 22000L)
             stop(paste("Unexpected GSE12837 RMA dimensions:", nrow(ref), "x", ncol(ref)))
-          columns <- sub("\\.CEL(\\.gz)?$", "", names(ref)[-1], ignore.case=TRUE)
+          columns <- sub("\\\\.CEL(\\\\.gz)?$", "", names(ref)[-1], ignore.case=TRUE)
+          cat("GSE12837 submitter RMA sample columns (raw):\n", paste(names(ref)[-1], collapse=" | "), "\n")
+          cat("GSE12837 submitter RMA sample columns (normalized):\n", paste(columns, collapse=" | "), "\n")
           title_to_gsm <- c(
             poly1="GSM15427", poly2="GSM15428", mono1="GSM15430", mono2="GSM15431",
             "CD34+_BM_1"="GSM321567", "CD34+_BM_2"="GSM321568",
