@@ -28,6 +28,14 @@ def build_parser() -> argparse.ArgumentParser:
                         choices=["auto","biology_medicine","physics_astronomy","chemistry_materials","computer_science_ai","earth_environment","mathematics_statistics","social_behavioral","engineering","history_archaeology","law_policy","economics_business","finance","philosophy_ethics","linguistics_literature","education","geography_urban","politics_governance","arts_culture","religion_theology","general_science"],
                         help="Research domain specialist; auto uses transparent keyword routing")
     parser.add_argument("--cycles", type=int, default=3)
+    parser.add_argument("--local-model-url", default=os.getenv("ORACLE_LOCAL_MODEL_URL", ""),
+                        help="Explicit self-hosted OpenAI-compatible model URL, e.g. http://127.0.0.1:8080/v1")
+    parser.add_argument("--local-model-name", default=os.getenv("ORACLE_LOCAL_MODEL_NAME", ""),
+                        help="Model identifier sent to the explicitly configured local inference server")
+    parser.add_argument("--local-model-max-tokens", type=int, default=1024,
+                        help="Maximum local-model completion tokens (1-32768)")
+    parser.add_argument("--local-model-timeout", type=float, default=120.0,
+                        help="Local-model request timeout in seconds (1-600)")
     parser.add_argument("--resume", dest="resume_id", help="Resume an existing run by ID")
     parser.add_argument("--db", default="data/oracle.sqlite3")
     parser.add_argument("--json", action="store_true", help="Print machine-readable run output")
@@ -1356,6 +1364,24 @@ def main() -> None:
         providers = ("europepmc", "crossref")
     else:
         providers = (args.provider,)
+    language_model = None
+    if bool(args.local_model_url) != bool(args.local_model_name):
+        raise SystemExit("--local-model-url and --local-model-name must be supplied together.")
+    if not 1 <= args.local_model_max_tokens <= 32768:
+        raise SystemExit("--local-model-max-tokens must be between 1 and 32768.")
+    if not 1 <= args.local_model_timeout <= 600:
+        raise SystemExit("--local-model-timeout must be between 1 and 600 seconds.")
+    if args.local_model_url:
+        from .language_model import SelfHostedLanguageModel, SelfHostedModelConfig
+        try:
+            language_model = SelfHostedLanguageModel(SelfHostedModelConfig(
+                base_url=args.local_model_url,
+                model=args.local_model_name,
+                timeout_seconds=args.local_model_timeout,
+                max_tokens=args.local_model_max_tokens,
+            ))
+        except ValueError as exc:
+            raise SystemExit(f"Invalid local-model configuration: {exc}") from exc
     orchestrator = OracleOrchestrator(
         store,
         literature_enabled=args.research_literature,
@@ -1370,6 +1396,7 @@ def main() -> None:
         citation_network_enabled=args.citation_network,
         incoming_citation_network_enabled=args.incoming_citations,
         research_domain=args.domain,
+        language_model=language_model,
     )
     if args.resume_id:
         run = orchestrator.resume(args.resume_id, additional_cycles=args.cycles)
