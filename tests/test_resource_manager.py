@@ -141,7 +141,7 @@ class ResourceManagerTests(unittest.TestCase):
         )
         self.assertEqual(
             resolve_literature_providers("Can quantum gravity be tested?", "auto"),
-            ("openalex", "arxiv", "crossref", "nasa_ads"),
+            ("openalex", "arxiv", "crossref"),
         )
         self.assertEqual(
             resolve_literature_providers("How does a polymer catalyst work?", "auto"),
