@@ -33,7 +33,7 @@ class LiteratureSearchReport:
     abstract_enrichment_skipped_no_identifier: int = 0
 
 class LiteratureClient:
-    PROVIDERS = ("europepmc", "crossref", "geo", "arxiv", "pubchem", "openalex", "gbif", "world_bank", "noaa_ncei", "clinical_trials", "zenodo", "harvard_dataverse", "sra", "pdb", "pride", "huggingface_datasets", "openml", "nasa_earthdata", "usgs", "figshare", "internet_archive", "loc", "nasa_ads", "pubmed", "genbank")
+    PROVIDERS = ("europepmc", "crossref", "geo", "arxiv", "pubchem", "openalex", "gbif", "world_bank", "noaa_ncei", "clinical_trials", "zenodo", "harvard_dataverse", "sra", "pdb", "pride", "huggingface_datasets", "openml", "nasa_earthdata", "usgs", "figshare", "internet_archive", "loc", "nasa_ads", "pubmed", "genbank", "inspire_hep", "ensembl")
     def __init__(self, timeout: float = 20.0, mailto: str = "",
                  max_abstract_enrichments: int = 10):
         if timeout <= 0:
@@ -426,6 +426,64 @@ class LiteratureClient:
                     "license": "Sequence record and submitter-specific terms apply",
                     "citation_count": None, "dataset": True, "dataset_accession": accession,
                 })
+        return records
+
+
+    def _search_inspire_hep(self, query: str, limit: int):
+        payload = self._get_json("https://inspirehep.net/api/literature?" + urlencode({
+            "q": query, "size": limit,
+        }))
+        hits = (payload.get("hits") or {}).get("hits") or []
+        records = []
+        for hit in hits[:limit]:
+            meta = hit.get("metadata") or {}
+            identifier = str(hit.get("id") or meta.get("control_number") or "")
+            titles = meta.get("titles") or []
+            title = str((titles[0] or {}).get("title") or identifier or "INSPIRE record")
+            authors = "; ".join(str((x.get("full_name") or x.get("name") or ""))
+                                for x in (meta.get("authors") or [])[:30])
+            abstracts = meta.get("abstracts") or []
+            abstract = str((abstracts[0] or {}).get("value") or "") if abstracts else ""
+            dois = meta.get("dois") or []
+            doi = str((dois[0] or {}).get("value") or "") if dois else ""
+            arxiv = meta.get("arxiv_eprints") or []
+            arxiv_id = str((arxiv[0] or {}).get("value") or "") if arxiv else ""
+            pub = meta.get("publication_info") or []
+            journal = str((pub[0] or {}).get("journal_title") or "INSPIRE-HEP") if pub else "INSPIRE-HEP"
+            year = str((pub[0] or {}).get("year") or "") if pub else ""
+            records.append({
+                "provider": "INSPIRE-HEP", "provider_id": identifier, "doi": doi,
+                "pmid": "", "pmcid": "", "title": self._clean(title), "authors": authors,
+                "journal": journal, "year": year,
+                "url": "https://inspirehep.net/literature/" + identifier if identifier else "https://inspirehep.net/",
+                "abstract": self._clean(abstract), "publication_type": "high-energy physics literature",
+                "open_access": bool(arxiv_id), "license": "Check linked publication and preprint licence",
+                "citation_count": meta.get("citation_count"), "arxiv_id": arxiv_id,
+            })
+        return records
+
+    def _search_ensembl(self, query: str, limit: int):
+        symbol = query.strip()
+        if not re.fullmatch(r"[A-Za-z0-9_.-]{1,32}", symbol):
+            return []
+        url = "https://rest.ensembl.org/xrefs/symbol/homo_sapiens/" + quote(symbol, safe="")
+        payload = self._get_json(url + "?content-type=application/json")
+        records = []
+        for item in payload[:limit] if isinstance(payload, list) else []:
+            identifier = str(item.get("id") or "")
+            dbname = str(item.get("dbname") or "Ensembl")
+            display = str(item.get("display_id") or symbol)
+            description = str(item.get("description") or "")
+            records.append({
+                "provider": "Ensembl", "provider_id": identifier, "doi": "",
+                "pmid": "", "pmcid": "", "title": self._clean(display),
+                "authors": "", "journal": dbname, "year": "",
+                "url": "https://www.ensembl.org/id/" + identifier if identifier else "https://www.ensembl.org/",
+                "abstract": self._clean(description or ("Cross-reference for human gene symbol " + symbol)),
+                "publication_type": "genome annotation cross-reference", "open_access": True,
+                "license": "Ensembl data and attribution terms apply", "citation_count": None,
+                "dataset": True, "dataset_accession": identifier, "gene_symbol": symbol,
+            })
         return records
 
     def _search_pubmed(self, query: str, limit: int):
@@ -974,7 +1032,7 @@ class LiteratureClient:
                     "huggingface_datasets":self._search_huggingface_datasets,"openml":self._search_openml,
                     "nasa_earthdata":self._search_nasa_earthdata,"usgs":self._search_usgs,
                     "figshare":self._search_figshare,"internet_archive":self._search_internet_archive,"loc":self._search_loc,"nasa_ads":self._search_nasa_ads,
-                    "pubmed":self._search_pubmed,"genbank":self._search_genbank}[provider]
+                    "pubmed":self._search_pubmed,"genbank":self._search_genbank,\n                    "inspire_hep":self._search_inspire_hep,"ensembl":self._search_ensembl}[provider]
                 jobs[pool.submit(fn,query,limit)]=provider
             for future in as_completed(jobs):
                 try: report.records.extend(future.result())
