@@ -137,7 +137,7 @@ class ResourceManagerTests(unittest.TestCase):
     def test_auto_source_selection_uses_domain_adapters(self):
         self.assertEqual(
             resolve_literature_providers("Can we identify aging mechanisms?", "auto"),
-            ("openalex", "europepmc", "crossref", "geo", "pubchem", "clinical_trials", "sra", "zenodo", "harvard_dataverse"),
+            ("openalex", "europepmc", "crossref", "geo", "pubchem", "clinical_trials", "sra", "zenodo", "harvard_dataverse", "pdb", "pride"),
         )
         self.assertEqual(
             resolve_literature_providers("Can quantum gravity be tested?", "auto"),
