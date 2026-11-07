@@ -29,6 +29,19 @@ class OracleTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             OracleOrchestrator(self.store).run("A question?", max_cycles=0)
 
+    def test_task_search_query_uses_focused_task_objective(self):
+        from oracle.models import ResearchTask
+        task = ResearchTask(
+            "Map mechanisms",
+            "Identify molecular pathways and competing biological explanations.",
+            2,
+        )
+        query = OracleOrchestrator._task_search_query(task)
+        self.assertIn("Map mechanisms", query)
+        self.assertIn("molecular pathways", query)
+        self.assertLessEqual(len(query), 350)
+        self.assertNotIn("Can we identify previously unknown", query)
+
     def test_integrated_run_completes_and_persists(self):
         run = OracleOrchestrator(self.store).run(
             "How does a fertilized egg develop into an organism?", max_cycles=2
