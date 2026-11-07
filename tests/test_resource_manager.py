@@ -2,6 +2,7 @@
 import unittest
 
 from oracle.resource_manager import ResourceManager
+from oracle.literature import LiteratureClient
 
 
 class ResourceManagerTests(unittest.TestCase):
@@ -30,6 +31,22 @@ class ResourceManagerTests(unittest.TestCase):
         self.assertIn("ncbi_geo", keys)
         self.assertIn("arxiv", keys)
         self.assertNotIn("noaa_ncei", keys)
+
+    def test_arxiv_entry_normalizes_to_common_literature_schema(self):
+        record = LiteratureClient._arxiv_record({
+            "id": "https://arxiv.org/abs/2601.12345",
+            "title": "  A New Method for Discovery  ",
+            "summary": "This is an abstract with useful scientific detail.",
+            "published": "2026-01-10T00:00:00Z",
+            "authors": ["A. Researcher", "B. Scientist"],
+            "categories": ["cs.AI"],
+        })
+        self.assertEqual(record["provider"], "arXiv")
+        self.assertEqual(record["title"], "A New Method for Discovery")
+        self.assertEqual(record["authors"], "A. Researcher; B. Scientist")
+        self.assertEqual(record["year"], "2026-01-10")
+        self.assertTrue(record["open_access"])
+        self.assertEqual(record["categories"], ["cs.AI"])
 
     def test_arxiv_resource_dispatches_to_literature_provider(self):
         class StubClient:
