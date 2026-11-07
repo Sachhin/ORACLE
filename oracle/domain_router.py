@@ -411,6 +411,10 @@ def resolve_domain(question: str, requested: str = "auto") -> tuple[DomainProfil
     text = " ".join(text.split())
     words = set(text.split())
     def matches(term: str) -> bool:
+        # Avoid treating the technical phrase "machine learning" as an
+        # education/learning-science signal by itself.
+        if term == "learning" and "machine learning" in text:
+            return False
         return term in words if " " not in term else term in text
 
     scores = {}
@@ -438,7 +442,7 @@ def resolve_domain(question: str, requested: str = "auto") -> tuple[DomainProfil
     secondary = [
         {"key": key, "label": _PROFILES[key].label, "score": score}
         for key, score in sorted(scores.items(), key=lambda item: (-item[1], item[0]))
-        if key != winner and score >= max(1, ranked[0] * 0.55)
+        if key != winner and score >= max(1, ranked[0] * 0.45)
     ]
     return profile, {
         "method": "keyword_router",
