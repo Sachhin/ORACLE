@@ -92,6 +92,14 @@ class ResourceManagerTests(unittest.TestCase):
             "aspirin", limit=3, resources=("pubchem",))
         self.assertEqual(result, ("aspirin", 3, ("pubchem",)))
 
+    def test_geo_provider_alias_dispatches_to_ncbi_geo_connector(self):
+        class StubClient:
+            def search(self, query, limit, providers):
+                return (query, limit, providers)
+        result = ResourceManager(StubClient()).search(
+            "human longevity", limit=5, resources=("geo",))
+        self.assertEqual(result, ("human longevity", 5, ("geo",)))
+
     def test_unknown_resource_is_rejected(self):
         with self.assertRaises(KeyError):
             ResourceManager.get_resource("made_up")
