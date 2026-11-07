@@ -197,11 +197,14 @@ def resolve_domain(question: str, requested: str = "auto") -> tuple[DomainProfil
         profile = _PROFILES[requested]
         return profile, {"method": "user_selected", "matched_terms": [], "confidence": 1.0}
 
-    text = " " + " ".join(question.casefold().replace("-", " ").split()) + " "
+    text = " ".join(question.casefold().replace("-", " ").split())
+    words = set(text.split())
+    def matches(term: str) -> bool:
+        return term in words if " " not in term else term in text
+
     scores = {}
     for key, profile in _PROFILES.items():
-        score = sum(1 for term in profile.search_terms
-                    if (" " + term + " ") in text or term in text)
+        score = sum(1 for term in profile.search_terms if matches(term))
         if score:
             scores[key] = score
     if not scores:
@@ -209,8 +212,7 @@ def resolve_domain(question: str, requested: str = "auto") -> tuple[DomainProfil
             "method": "keyword_fallback", "matched_terms": [], "confidence": 0.0}
     winner = max(scores, key=lambda key: (scores[key], key))
     profile = _PROFILES[winner]
-    matched = [term for term in profile.search_terms
-               if (" " + term + " ") in text or term in text]
+    matched = [term for term in profile.search_terms if matches(term)]
     ranked = sorted(scores.values(), reverse=True)
     confidence = round(ranked[0] / max(1, sum(ranked)), 3)
     return profile, {"method": "keyword_router", "matched_terms": matched,
