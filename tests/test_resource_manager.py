@@ -204,5 +204,68 @@ class ResourceManagerTests(unittest.TestCase):
         self.assertEqual(records[0]["provider"], "World Bank")
         self.assertEqual(records[0]["provider_id"], "SP.DYN.LE00.IN")
 
+
+    def test_clinical_trials_search_normalizes_study_records(self):
+        client = LiteratureClient()
+        payload = {"studies": [{"protocolSection": {
+            "identificationModule": {"nctId": "NCT01234567", "briefTitle": "Longevity study"},
+            "descriptionModule": {"briefSummary": "A human clinical study."},
+            "designModule": {"studyType": "OBSERVATIONAL"},
+            "statusModule": {"overallStatus": "COMPLETED", "studyFirstPostDateStruct": {"date": "2024-01-01"}},
+            "sponsorCollaboratorsModule": {"leadSponsor": {"name": "University"}},
+        }}]}
+        with patch.object(client, "_get_json", return_value=payload):
+            records = client._search_clinical_trials("longevity", 3)
+        self.assertEqual(records[0]["provider_id"], "NCT01234567")
+        self.assertIn("clinicaltrials.gov/study/NCT01234567", records[0]["url"])
+
+    def test_zenodo_search_preserves_doi_license_and_file_metadata(self):
+        client = LiteratureClient()
+        payload = {"hits": {"hits": [{
+            "id": 42, "doi": "10.5281/zenodo.42",
+            "metadata": {"title": "A dataset", "description": "Dataset summary",
+                         "publication_date": "2025-01-01",
+                         "creators": [{"name": "Researcher"}],
+                         "license": {"id": "cc-by-4.0"},
+                         "resource_type": {"type": "dataset"}},
+            "links": {"self_html": "https://zenodo.org/records/42"}, "files": [{"key": "data.csv"}],
+        }]}}
+        with patch.object(client, "_get_json", return_value=payload):
+            records = client._search_zenodo("dataset", 2)
+        self.assertEqual(records[0]["doi"], "10.5281/zenodo.42")
+        self.assertEqual(records[0]["license"], "cc-by-4.0")
+        self.assertEqual(records[0]["files"][0]["key"], "data.csv")
+
+    def test_dataverse_search_normalizes_dataset_records(self):
+        client = LiteratureClient()
+        payload = {"data": {"items": [{
+            "global_id": "doi:10.1234/ABC", "name": "Study dataset",
+            "description": "Dataset description", "url": "https://dataverse.harvard.edu/dataset.xhtml?id=1",
+        }]}}
+        with patch.object(client, "_get_json", return_value=payload):
+            records = client._search_dataverse("study", 2)
+        self.assertEqual(records[0]["provider_id"], "doi:10.1234/ABC")
+        self.assertEqual(records[0]["provider"], "Harvard Dataverse")
+
+    def test_sra_search_resolves_accession_and_source_url(self):
+        client = LiteratureClient()
+        payloads = [
+            {"esearchresult": {"idlist": ["123"]}},
+            {"result": {"123": {"title": "RNA sequencing study", "expXml": "<Experiment accession='SRX12345'/>"}}},
+        ]
+        with patch.object(client, "_get_json", side_effect=payloads):
+            records = client._search_sra("RNA sequencing", 2)
+        self.assertEqual(records[0]["dataset_accession"], "SRX12345")
+        self.assertIn("/sra/SRX12345", records[0]["url"])
+
+    def test_new_dataset_connectors_dispatch(self):
+        class StubClient:
+            def search(self, query, limit, providers):
+                return (query, limit, providers)
+        manager = ResourceManager(StubClient())
+        for key in ("clinical_trials", "zenodo", "harvard_dataverse", "sra"):
+            result = manager.search("test dataset", limit=2, resources=(key,))
+            self.assertEqual(result[2], (key,))
+
 if __name__ == "__main__":
     unittest.main()
