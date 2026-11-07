@@ -68,7 +68,7 @@ on:
         description: Literature providers
         required: true
         type: choice
-        options: [auto, all, both, biology, europepmc, crossref, geo, arxiv, pubchem, openalex, gbif, world_bank, noaa_ncei, clinical_trials, zenodo, harvard_dataverse, sra, pdb, pride, huggingface_datasets, openml, nasa_earthdata, usgs, figshare, internet_archive, loc, nasa_ads]
+        options: [auto, all, both, biology, europepmc, crossref, geo, arxiv, pubchem, openalex, gbif, world_bank, noaa_ncei, clinical_trials, zenodo, harvard_dataverse, sra, pdb, pride, huggingface_datasets, openml, nasa_earthdata, usgs, figshare, internet_archive, loc]
         default: all
 
 permissions:
