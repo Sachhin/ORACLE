@@ -342,17 +342,46 @@ class OracleOrchestrator:
                     "task_id": task.task_id, "name": task.name,
                     "cycle": cycle, "attempt": task.attempts,
                 }, False, f"task:{task.task_id}:attempt:{task.attempts}:started")
-                query = (run.question + " " + task.name + " " + task.description)[:500]
-                report = self._search_literature(query, min(5, self.literature_limit))
+                # Search the task's concrete objective first. Repeating the entire
+                # natural-language question plus generic planner prose often dilutes
+                # scholarly API relevance (and returns metadata-only noise).
+                task_terms = " ".join((task.name, task.description)).split()
+                query = " ".join(task_terms[:32])[:350]
+                report = self._search_literature(query, min(8, self.literature_limit))
                 self._literature_client.ingest(run, report)
+
+                # A focused task query can be too narrow for short/generic task
+                # descriptions. Retry once with the original question as a fallback,
+                # but only when the focused search produced no abstract/dataset evidence.
+                focused_source_ids = {
+                    source.source_id for source in run.sources
+                    if any(
+                        (item.get("doi") and source.doi and item["doi"].casefold() == source.doi.casefold())
+                        or (item.get("pmid") and source.pmid and item["pmid"] == source.pmid)
+                        or (item.get("url") and source.url and item["url"] == source.url)
+                        or (item.get("title") and source.title.casefold() == item["title"].strip().casefold())
+                        for item in report.records
+                    )
+                }
+                focused_evidence = [
+                    item for item in run.evidence
+                    if item.source_id in focused_source_ids and item.kind.value != "inference"
+                ]
+                fallback_report = None
+                if not focused_evidence and self._normalise(query) != self._normalise(run.question):
+                    fallback_report = self._search_literature(run.question, min(8, self.literature_limit))
+                    self._literature_client.ingest(run, fallback_report)
+                all_records = list(report.records)
+                if fallback_report is not None:
+                    all_records.extend(fallback_report.records)
                 titles = {str(item.get("title", "")).strip().casefold()
-                          for item in report.records if item.get("title")}
+                          for item in all_records if item.get("title")}
                 dois = {str(item.get("doi", "")).strip().casefold()
-                        for item in report.records if item.get("doi")}
+                        for item in all_records if item.get("doi")}
                 pmids = {str(item.get("pmid", "")).strip().casefold()
-                         for item in report.records if item.get("pmid")}
+                         for item in all_records if item.get("pmid")}
                 urls = {str(item.get("url", "")).strip()
-                        for item in report.records if item.get("url")}
+                        for item in all_records if item.get("url")}
                 source_ids = {
                     source.source_id for source in run.sources
                     if (source.title.strip().casefold() in titles
@@ -382,8 +411,10 @@ class OracleOrchestrator:
                     "task_id": task.task_id, "status": task.status,
                     "evidence_ids": task.evidence_ids,
                     "blocked_reason": task.blocked_reason,
-                    "records_retrieved": report.retrieved,
-                    "warnings": report.warnings,
+                    "focused_query": query,
+                    "fallback_used": fallback_report is not None,
+                    "records_retrieved": report.retrieved + (fallback_report.retrieved if fallback_report else 0),
+                    "warnings": report.warnings + (fallback_report.warnings if fallback_report else []),
                 }, False, f"task:{task.task_id}:attempt:{task.attempts}:finished")
                 events.append(f"Task {task.name}: {outcome} ({len(task.evidence_ids)} linked evidence record(s)).")
             except Exception as exc:
