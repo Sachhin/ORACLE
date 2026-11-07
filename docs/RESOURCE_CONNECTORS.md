@@ -19,7 +19,7 @@ This registry separates **working adapters** from **catalogued resources**. A li
 | NCBI SRA | Sequencing studies | None | Study/run metadata; raw reads require separate download tooling |
 | Zenodo | Cross-disciplinary research outputs | None for public records | Records, DOI, licence and file metadata |
 | Harvard Dataverse | Research datasets | None for public records | Dataset search metadata; file download is a separate step |
-| RCSB PDB | Protein and nucleic-acid structures | None | Structure search and entry metadata |
+| PubMed | Biomedical literature | None | NCBI E-utilities search and citation metadata |\n| NCBI GenBank | Nucleotide sequence records | None | NCBI E-utilities search and sequence-record metadata |\n| RCSB PDB | Protein and nucleic-acid structures | None | Structure search and entry metadata |
 | PRIDE Archive | Proteomics | None for public projects | Proteomics project metadata and accession |
 | Hugging Face Datasets | ML and research datasets | None for public records; gated datasets require access | Dataset repository metadata, card description, licence and gated flag |
 | OpenML | ML benchmark datasets | None for public metadata | Dataset metadata and accession |
