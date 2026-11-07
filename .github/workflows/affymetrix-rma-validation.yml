@@ -183,7 +183,7 @@ jobs:
           )
           gsm <- if (all(grepl("^GSM[0-9]+$", columns))) columns else unname(title_to_gsm[columns])
           if (length(gsm) != 24L || anyNA(gsm) || anyDuplicated(gsm))
-            stop("Submitter RMA matrix columns do not map uniquely to the 24 GEO sample accessions")
+            stop(paste0("Submitter RMA matrix columns do not map uniquely to the 24 GEO sample accessions; raw columns: ", paste(columns, collapse=" | ")))
           names(ref) <- c("feature", gsm)
           if (anyDuplicated(ref[[1]]) || any(!nzchar(as.character(ref[[1]]))))
             stop("Reference feature identifiers are missing or duplicated")
@@ -191,6 +191,16 @@ jobs:
                       sep="\t", quote=FALSE, row.names=FALSE, na="NA")
           writeLines(gsm, "data/gse12837/reference_samples.txt")
           RS
+      - name: Preserve GSE12837 reference inputs for mapping diagnosis
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oracle-gse12837-reference-mapping-diagnostics
+          path: |
+            data/gse12837/GSE12837_RMA.txt
+            data/gse12837/cel_paths.txt
+          if-no-files-found: ignore
+          retention-days: 14
       - name: Run ORACLE RMA on all 24 CEL files
         run: |
           mapfile -t CEL_FILES < data/gse12837/cel_paths.txt
