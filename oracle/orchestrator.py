@@ -95,6 +95,12 @@ class OracleOrchestrator:
     def _normalise(value: str) -> str:
         return " ".join(value.casefold().split())
 
+    @staticmethod
+    def _task_search_query(task) -> str:
+        """Build a focused scholarly query from the task, not repeated planner boilerplate."""
+        words = " ".join((task.name, task.description)).split()
+        return " ".join(words[:32])[:350]
+
     def _add_unique_evidence(self, run: ResearchRun, evidence_items: list) -> int:
         added = 0
         known = {
@@ -345,8 +351,7 @@ class OracleOrchestrator:
                 # Search the task's concrete objective first. Repeating the entire
                 # natural-language question plus generic planner prose often dilutes
                 # scholarly API relevance (and returns metadata-only noise).
-                task_terms = " ".join((task.name, task.description)).split()
-                query = " ".join(task_terms[:32])[:350]
+                query = self._task_search_query(task)
                 report = self._search_literature(query, min(8, self.literature_limit))
                 self._literature_client.ingest(run, report)
 
