@@ -30,10 +30,13 @@ arts/culture and religion, plus an interdisciplinary fallback. Routing reports
 matched terms, confidence, secondary-domain signals and a separate research-intent
 classification (for example, comparison, data analysis, causal analysis, proof,
 hypothesis discovery or experiment design). The current automatic classifier is
-a transparent keyword heuristic, not an LLM or a semantic guarantee. Profiles
-guide research planning; they do not claim that suggested external databases or
-specialist analysis tools ran. A universal router is not yet a universal set of
-source connectors or domain-specific execution engines.
+a transparent keyword heuristic, not an LLM or a semantic guarantee. With
+`--provider auto`, ORACLE selects only implemented adapters for the routed field
+(arXiv for relevant technical fields, PubChem for chemistry, Europe PMC/GEO for
+biology, and Crossref as the generic scholarly fallback). Profiles guide research
+planning; they do not claim that catalog-only databases or specialist tools ran.
+A universal router is not yet a universal set of source connectors or
+domain-specific execution engines.
 
 See [Hybrid domain-specialist research](docs/HYBRID_DOMAIN_RESEARCH.md) for the
 architecture, supported domains, command examples, and scientific-integrity limits.
