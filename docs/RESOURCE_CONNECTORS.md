@@ -23,11 +23,14 @@ OpenAlex is the cross-disciplinary scholarly discovery fallback for domains with
 - **Biology/medicine:** PDB, PRIDE, NCBI SRA, ClinicalTrials.gov.
 - **Earth/environment:** NOAA NCEI, NASA Earthdata (collection/login requirements vary), USGS ScienceBase, PANGAEA, OpenStreetMap.
 - **Materials/chemistry:** Materials Project (API key required), NOMAD, Crystallography Open Database.
-- **Engineering:** NASA Technical Reports Server.
-- **History/archaeology and arts:** Open Context, Internet Archive, Europeana (API key), Smithsonian Open Access (API key).
+- **Engineering:** NASA Technical Reports Server, GitHub repositories, Figshare.
+- **Computer science/AI:** Hugging Face Datasets, OpenML, Papers with Code, GitHub repositories.
+- **Mathematics:** zbMATH Open and OpenML.
+- **History/archaeology and arts:** Open Context, Internet Archive, Europeana (API key), Smithsonian Open Access (API key), Library of Congress.
 - **Philosophy:** PhilPapers.
 - **Social/behavioural science:** OSF, ICPSR, Harvard Dataverse, UN Data, World Bank.
 - **Education:** ERIC.
+- **General/interdisciplinary:** Zenodo, Figshare, OpenAlex and Crossref.
 
 Catalog-only entries are deliberately rejected by `ResourceManager.search()`; they are not silently treated as live connectors. Some sources require credentials, registration, or dataset-specific access and licences.
 
