@@ -41,7 +41,7 @@ class GoldenIntegrityBenchmark(unittest.TestCase):
                         link.stance == EvidenceStance.CONTEXTUAL and link.strength == 0.0
                         for link in run.evidence_claim_links
                     ))
-                    self.assertTrue(any("no external sources" in finding for finding in run.findings))
+                    self.assertTrue(any("External sources retrieved during this run: no" in finding for finding in run.findings))
                     persisted = store.load_run(run.run_id)
                     self.assertEqual(persisted.status, RunStatus.COMPLETED)
                     self.assertEqual(persisted.run_id, run.run_id)

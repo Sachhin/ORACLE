@@ -202,6 +202,7 @@ def generate_predictions(
     out.parent.mkdir(parents=True, exist_ok=True)
     partial = out.with_suffix(out.suffix + ".partial")
     coverage = 0
+    invalid_sentence_predictions: list[dict[str, Any]] = []
     with partial.open("w", encoding="utf-8") as handle:
         for claim_index, row in enumerate(claims):
             if claim_index and request_interval_seconds:
@@ -228,7 +229,15 @@ def generate_predictions(
                         or any(type(index) is not int or index < 0 or index >= len(allowed[doc_id]["abstract"])
                                for index in sentences)
                         or len(set(sentences)) != len(sentences)):
-                    raise ValueError(f"Claim {row['id']}/{doc_id}: invalid abstract sentence indices")
+                    # Invalid model sentence citations are scored as abstentions.
+                    # They are never written into the frozen prediction file.
+                    invalid_sentence_predictions.append({
+                        "claim_id": str(row["id"]),
+                        "document_id": doc_id,
+                        "reason": "invalid abstract sentence indices",
+                    })
+                    evidence = {}
+                    break
                 if doc_id in evidence:
                     raise ValueError(f"Claim {row['id']}: duplicate evidence document {doc_id}")
                 evidence[doc_id] = {"label": label, "sentences": sentences}
@@ -241,6 +250,8 @@ def generate_predictions(
         "split": "caller-supplied labelled split; predictions do not consume gold labels",
         "claim_count": len(claims),
         "prediction_coverage": coverage / len(claims),
+        "invalid_sentence_prediction_count": len(invalid_sentence_predictions),
+        "invalid_sentence_predictions": invalid_sentence_predictions,
         "model": getattr(provider, "model", model),
         "prompt_version": PROMPT_VERSION,
         "retrieval": {"method": "BM25", "top_k": top_k},

@@ -117,8 +117,13 @@ class SciFactPredictionTests(unittest.TestCase):
             provider = FakeProvider({"evidence": [
                 {"doc_id": "10", "label": "SUPPORT", "sentences": [5]}
             ]})
-            with self.assertRaisesRegex(ValueError, "invalid abstract sentence indices"):
-                generate_predictions(claims, corpus, output, provider_factory=lambda _: provider)
+            report = generate_predictions(
+                claims, corpus, output, provider_factory=lambda _: provider
+            )
+            prediction = json.loads(output.read_text(encoding="utf-8"))
+            self.assertEqual(prediction["evidence"], {})
+            self.assertEqual(report["invalid_sentence_prediction_count"], 1)
+            self.assertEqual(report["invalid_sentence_predictions"][0]["claim_id"], "1")
 
 
 if __name__ == "__main__":

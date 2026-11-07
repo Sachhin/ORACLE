@@ -32,6 +32,17 @@ on:
           - social_behavioral
           - engineering
           - general_science
+          - history_archaeology
+          - law_policy
+          - economics_business
+          - finance
+          - philosophy_ethics
+          - linguistics_literature
+          - education
+          - geography_urban
+          - politics_governance
+          - arts_culture
+          - religion_theology
         default: biology_medicine
       cycles:
         description: Bounded research cycles
@@ -57,7 +68,7 @@ on:
         description: Literature providers
         required: true
         type: choice
-        options: [all, both, europepmc, crossref, geo, arxiv, pubchem]
+        options: [auto, all, both, biology, europepmc, pubmed, crossref, geo, genbank, ensembl, arxiv, inspire_hep, pubchem, openalex, gbif, world_bank, noaa_ncei, clinical_trials, zenodo, harvard_dataverse, sra, pdb, pride, huggingface_datasets, openml, nasa_earthdata, usgs, figshare, internet_archive, loc]
         default: all
 
 permissions:
@@ -65,7 +76,7 @@ permissions:
 
 jobs:
   research:
-    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.id == 42332654496 && github.event.workflow_run.conclusion == 'success') }}
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
     env:

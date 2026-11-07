@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 
 from .models import ExperimentStatus, ResearchMode, ResearchRun
 from .literature import LiteratureClient
@@ -10,21 +11,23 @@ from .llm import GeminiClaimExtractor
 from .comparison import CrossPaperComparator
 from .orchestrator import OracleOrchestrator
 from .storage import ResearchStore
+from .resource_manager import resolve_literature_providers
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="oracle", description="Offline scientific research foundation")
     parser.add_argument("question", nargs="?", help="Scientific research question")
     parser.add_argument("--mode", choices=[m.value for m in ResearchMode], default=ResearchMode.BOTH.value)
+    parser.add_argument("--download-dataset-file", default="", metavar="HTTPS_URL",
+                        help="Download one public research file from an approved repository host")
+    parser.add_argument("--dataset-output", default="", metavar="PATH",
+                        help="Destination path required by --download-dataset-file")
     parser.add_argument("--list-resources", action="store_true",
                         help="List registered scientific resources and connector implementation status")
     parser.add_argument("--resource-domain", default="all",
                         help="Filter --list-resources by domain (or all)")
     parser.add_argument("--domain", default="auto",
-                        choices=["auto", "biology_medicine", "physics_astronomy",
-                                 "chemistry_materials", "computer_science_ai",
-                                 "earth_environment", "mathematics_statistics",
-                                 "social_behavioral", "engineering", "general_science"],
+                        choices=["auto","biology_medicine","physics_astronomy","chemistry_materials","computer_science_ai","earth_environment","mathematics_statistics","social_behavioral","engineering","history_archaeology","law_policy","economics_business","finance","philosophy_ethics","linguistics_literature","education","geography_urban","politics_governance","arts_culture","religion_theology","general_science"],
                         help="Research domain specialist; auto uses transparent keyword routing")
     parser.add_argument("--cycles", type=int, default=3)
     parser.add_argument("--resume", dest="resume_id", help="Resume an existing run by ID")
@@ -98,7 +101,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--dataset-max-mb", type=int, default=50,
                         help="Maximum size of each GEO supplementary download in MB (1-1000)")
     parser.add_argument("--limit", type=int, default=10, help="Maximum literature records (1-50)")
-    parser.add_argument("--provider", choices=["both", "all", "biology", "europepmc", "crossref", "geo", "arxiv", "pubchem"], default="both")
+    parser.add_argument("--provider", choices=["auto", "both", "all", "biology", "europepmc", "crossref", "geo", "arxiv", "pubchem", "openalex", "gbif", "world_bank", "noaa_ncei", "clinical_trials", "zenodo", "harvard_dataverse", "sra", "pdb", "pride", "huggingface_datasets", "openml", "nasa_earthdata", "usgs", "figshare", "internet_archive", "loc", "pubmed", "genbank", "inspire_hep", "ensembl"], default="both")
     parser.add_argument("--mailto", default="", help="Optional contact email for Crossref polite pool")
     parser.add_argument("--extract-claims", action="store_true", help="Extract quote-grounded candidates with Gemini")
     parser.add_argument("--gemini-model", default="gemini-2.5-flash", help="Gemini model for optional claim extraction, comparison, or research agents")
@@ -268,6 +271,19 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main() -> None:
     args = build_parser().parse_args()
+    if args.download_dataset_file:
+        if not args.dataset_output:
+            raise SystemExit("--download-dataset-file requires --dataset-output.")
+        from .dataset_download import download_dataset_file
+        try:
+            report = download_dataset_file(
+                args.download_dataset_file, args.dataset_output,
+                max_bytes=args.dataset_max_mb * 1_000_000,
+            )
+        except (OSError, ValueError, RuntimeError) as exc:
+            raise SystemExit(f"Research dataset download failed: {exc}") from exc
+        print(json.dumps(report, indent=2, ensure_ascii=False))
+        return
     if args.list_resources:
         from .resource_manager import ResourceManager
         try:
@@ -1276,7 +1292,16 @@ def main() -> None:
         raise SystemExit("--compare-papers and --review-evidence require --extract-claims.")
     if args.literature is not None:
         run = ResearchRun(question=args.literature)
-        providers = {"both": ("europepmc", "crossref"), "biology": ("europepmc", "crossref", "geo"), "all": ("europepmc", "crossref", "geo", "arxiv", "pubchem"), "arxiv": ("arxiv",), "pubchem": ("pubchem",), "europepmc": ("europepmc",), "crossref": ("crossref",), "geo": ("geo",)}[args.provider]
+        if args.provider == "auto":
+            providers = resolve_literature_providers(args.literature, args.domain)
+        elif args.provider == "all":
+            providers = tuple(p for p in LiteratureClient.PROVIDERS if p != "nasa_ads" or os.getenv("NASA_ADS_API_TOKEN"))
+        elif args.provider == "both":
+            providers = ("europepmc", "crossref")
+        elif args.provider == "biology":
+            providers = resolve_literature_providers(args.literature, "biology_medicine")
+        else:
+            providers = (args.provider,)
         client = LiteratureClient(mailto=args.mailto)
         report = client.search(args.literature, limit=args.limit, providers=providers)
         client.ingest(run, report)
@@ -1356,7 +1381,14 @@ def main() -> None:
             model=args.gemini_model,
             routing="fallback" if args.agent_provider == "auto" else "single",
         )
-    providers = {"both": ("europepmc", "crossref"), "biology": ("europepmc", "crossref", "geo"), "all": ("europepmc", "crossref", "geo", "arxiv", "pubchem"), "arxiv": ("arxiv",), "pubchem": ("pubchem",), "europepmc": ("europepmc",), "crossref": ("crossref",), "geo": ("geo",)}[args.provider]
+    if args.provider in {"auto", "all"}:
+        providers = resolve_literature_providers(args.question or "", args.domain)
+    elif args.provider == "biology":
+        providers = resolve_literature_providers(args.question or "", "biology_medicine")
+    elif args.provider == "both":
+        providers = ("europepmc", "crossref")
+    else:
+        providers = (args.provider,)
     orchestrator = OracleOrchestrator(
         store, agent_suite=agent_suite,
         literature_enabled=args.research_literature,

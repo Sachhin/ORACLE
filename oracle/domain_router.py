@@ -157,8 +157,8 @@ _PROFILES = {
          "Specify verification, safety and prototype validation"),
     ),
     "general_science": DomainProfile(
-        "general_science", "General / Interdisciplinary Science",
-        "Cross-disciplinary or not-yet-classified scientific questions.",
+        "general_science", "General / Interdisciplinary Research",
+        "Any topic not confidently classified; begin with neutral evidence mapping and select suitable sources after clarifying scope.",
         (), ("Crossref", "OpenAlex", "Europe PMC", "arXiv"),
         ("systematic question decomposition", "comparative evidence synthesis",
          "quantitative analysis where suitable", "uncertainty and sensitivity analysis"),
@@ -172,6 +172,206 @@ _PROFILES = {
     ),
 }
 
+
+# Extensible non-STEM and humanities/social research profiles. These profiles
+# describe suitable research practice and source discovery; they do not imply
+# that ORACLE has a dedicated connector for every listed source.
+_PROFILES.update({
+    "history_archaeology": DomainProfile(
+        "history_archaeology", "History & Archaeology",
+        "Historical periods, archival research, archaeology and material culture.",
+        ("history", "historical", "archaeology", "archaeological", "ancient", "medieval",
+         "empire", "civilization", "civilisation", "archive", "archival", "manuscript",
+         "artifact", "artefact", "historian", "past societies"),
+        ("JSTOR", "Internet Archive", "Europeana", "DPLA", "Open Context", "Zenodo"),
+        ("source criticism", "chronology and provenance analysis", "comparative historiography",
+         "archaeological context analysis", "triangulation across primary sources"),
+        ("primary versus secondary source distinction", "dating and provenance uncertainty",
+         "translation and transcription limits", "survival and sampling bias",
+         "independent corroboration"),
+        ("Define period, place, actors and historical claim",
+         "Locate primary sources, archives and material evidence",
+         "Compare competing interpretations and source provenance",
+         "Triangulate evidence and document uncertainty"),
+    ),
+    "law_policy": DomainProfile(
+        "law_policy", "Law & Public Policy",
+        "Legal systems, statutes, case law, regulation and public-policy analysis.",
+        ("law", "legal", "legislation", "statute", "regulation", "court", "judicial",
+         "constitutional", "policy", "regulatory", "rights", "jurisprudence", "case law"),
+        ("official legislation portals", "court and tribunal databases",
+         "government policy repositories", "WorldLII", "Google Scholar"),
+        ("jurisdiction and authority analysis", "doctrinal comparison",
+         "policy impact evaluation", "statutory interpretation", "comparative legal analysis"),
+        ("jurisdiction and effective date", "binding versus persuasive authority",
+         "amendment and repeal status", "primary authority verification",
+         "distinguish legal information from legal advice"),
+        ("Identify jurisdiction, date and legal question",
+         "Retrieve current primary legal authorities",
+         "Compare holdings, statutory text and policy evidence",
+         "Flag uncertainty and need for qualified legal review"),
+    ),
+    "economics_business": DomainProfile(
+        "economics_business", "Economics & Business",
+        "Markets, firms, trade, development, management and economic systems.",
+        ("economics", "economic", "business", "market", "markets", "company", "firm",
+         "trade", "inflation", "gdp", "gdp growth", "national income",
+         "income inequality", "unemployment", "poverty", "employment",
+         "productivity", "management", "entrepreneurship", "supply chain",
+         "consumer", "pricing"),
+        ("World Bank Open Data", "IMF Data", "OECD Data", "UNData",
+         "national statistical agencies", "OpenAlex", "SSRN"),
+        ("econometric identification", "time-series and panel analysis",
+         "market structure analysis", "cost-benefit analysis", "forecast backtesting"),
+        ("nominal versus real values", "selection and survivorship bias",
+         "causal identification", "data vintage and revisions", "external validity"),
+        ("Define market, geography, time horizon and outcome",
+         "Find official statistics and primary empirical studies",
+         "Compare mechanisms and alternative explanations",
+         "Test robustness, incentives and external validity"),
+    ),
+    "finance": DomainProfile(
+        "finance", "Finance & Investing Research",
+        "Financial markets, corporate finance, risk, banking and investment analysis.",
+        ("finance", "financial", "stock", "stocks", "bond", "bonds", "equity",
+         "portfolio", "investment", "investing", "banking", "credit", "derivative",
+         "valuation", "asset pricing", "risk premium"),
+        ("central-bank databases", "SEC EDGAR", "FRED", "World Bank Data",
+         "exchange filings and official market data"),
+        ("cash-flow and valuation analysis", "risk and scenario analysis",
+         "event studies", "time-series diagnostics", "portfolio risk decomposition"),
+        ("adjusted versus unadjusted prices", "look-ahead and survivorship bias",
+         "fees, taxes and liquidity", "out-of-sample validation",
+         "risk disclosure; no guaranteed-return claims"),
+        ("Define instrument, market, horizon and risk tolerance assumptions",
+         "Retrieve filings and authoritative market/economic data",
+         "Compare valuation, risk and competing scenarios",
+         "Backtest without look-ahead bias and state uncertainty"),
+    ),
+    "philosophy_ethics": DomainProfile(
+        "philosophy_ethics", "Philosophy & Ethics",
+        "Conceptual analysis, logic, epistemology, metaphysics and normative ethics.",
+        ("philosophy", "philosophical", "ethics", "ethical", "morality", "moral",
+         "epistemology", "metaphysics", "consciousness", "free will", "logic",
+         "normative", "utilitarian", "deontology", "ontology"),
+        ("PhilPapers", "Stanford Encyclopedia of Philosophy", "Internet Encyclopedia of Philosophy",
+         "JSTOR", "OpenAlex"),
+        ("conceptual distinction analysis", "argument reconstruction",
+         "formal logic", "counterexample testing", "normative framework comparison"),
+        ("define contested terms", "separate descriptive and normative premises",
+         "represent opposing arguments fairly", "check validity versus soundness",
+         "avoid presenting unresolved value judgments as facts"),
+        ("Clarify concepts and the exact philosophical question",
+         "Map major arguments and primary texts",
+         "Reconstruct premises, inferences and counterexamples",
+         "Compare frameworks and identify unresolved assumptions"),
+    ),
+    "linguistics_literature": DomainProfile(
+        "linguistics_literature", "Linguistics & Literature",
+        "Language structure, language change, texts, translation and literary studies.",
+        ("linguistics", "language", "linguistic", "grammar", "syntax", "semantics", "dialects",
+         "phonetics", "phonology", "pragmatics", "literature", "literary", "novel",
+         "poetry", "translation", "corpus", "dialect"),
+        ("ACL Anthology", "Linguistics Open Access", "DOAJ", "JSTOR",
+         "Wikimedia language resources", "OpenAlex"),
+        ("corpus analysis", "phonetic/statistical analysis", "discourse analysis",
+         "textual criticism", "comparative and historical linguistics"),
+        ("corpus representativeness", "annotation agreement", "translation ambiguity",
+         "genre and period context", "distinguish interpretation from measurable claims"),
+        ("Specify language, variety, period and text population",
+         "Find corpora, primary texts and peer-reviewed analyses",
+         "Compare structural or interpretive explanations",
+         "Check sampling, annotation and translation uncertainty"),
+    ),
+    "education": DomainProfile(
+        "education", "Education & Learning Sciences",
+        "Teaching, learning, assessment, educational systems and pedagogy.",
+        ("education", "educational", "teaching", "learning", "student", "school",
+         "university", "pedagogy", "curriculum", "literacy", "assessment", "classroom"),
+        ("ERIC", "UNESCO Institute for Statistics", "OECD Education", "IES",
+         "government education statistics"),
+        ("quasi-experimental evaluation", "multilevel modelling",
+         "learning-outcome measurement", "systematic review", "implementation analysis"),
+        ("baseline equivalence", "attrition and selection effects",
+         "validated outcome measures", "school/context clustering",
+         "equity and subgroup effects"),
+        ("Define learner population, setting and learning outcome",
+         "Retrieve education studies and official statistics",
+         "Audit intervention design, measures and confounders",
+         "Compare replication, implementation and subgroup outcomes"),
+    ),
+    "geography_urban": DomainProfile(
+        "geography_urban", "Geography & Urban Studies",
+        "Human and physical geography, cities, transport and spatial systems.",
+        ("geography", "geographic", "geospatial", "urban", "city", "cities",
+         "transport", "migration", "land use", "mapping", "spatial", "regional planning"),
+        ("OpenStreetMap", "WorldPop", "Natural Earth", "UNData",
+         "national census and geospatial portals"),
+        ("GIS and spatial statistics", "network analysis", "accessibility modelling",
+         "spatiotemporal analysis", "remote-sensing comparison"),
+        ("coordinate reference systems", "ecological fallacy",
+         "spatial autocorrelation", "boundary and resolution sensitivity",
+         "data coverage and temporal alignment"),
+        ("Define location, spatial scale and population",
+         "Find authoritative geospatial and census data",
+         "Compare spatial patterns and plausible drivers",
+         "Test sensitivity to boundaries, scale and time"),
+    ),
+    "politics_governance": DomainProfile(
+        "politics_governance", "Politics & Governance",
+        "Political institutions, public administration, elections and international relations.",
+        ("politics", "political", "governance", "government", "election", "democracy",
+         "parliament", "diplomacy", "international relations", "geopolitics", "electoral",
+         "public administration", "political party"),
+        ("official election commissions", "parliamentary records",
+         "V-Dem", "International IDEA", "World Bank Governance"),
+        ("comparative institutional analysis", "survey analysis",
+         "process tracing", "causal inference", "policy evaluation"),
+        ("source and sponsor transparency", "representative sampling",
+         "measurement comparability", "temporal and jurisdiction context",
+         "separate descriptive evidence from normative judgment"),
+        ("Define institutions, jurisdiction, period and outcomes",
+         "Locate primary government records and transparent datasets",
+         "Compare institutional and causal explanations",
+         "Audit measurement, selection and competing interpretations"),
+    ),
+    "arts_culture": DomainProfile(
+        "arts_culture", "Arts & Culture",
+        "Visual arts, music, media, cultural heritage and creative practice research.",
+        ("art", "arts", "culture", "cultural", "music", "film", "cinema",
+         "architecture", "design", "museum", "heritage", "media studies"),
+        ("Europeana", "Smithsonian Open Access", "DPLA", "UNESCO",
+         "museum and archive catalogues", "OpenAlex"),
+        ("formal and stylistic analysis", "historical contextualization",
+         "comparative interpretation", "provenance research", "audience-study analysis"),
+        ("work attribution and provenance", "date and cultural context",
+         "copyright and reproduction rights", "distinguish interpretation from fact",
+         "catalogue completeness and preservation bias"),
+        ("Define medium, period, region and cultural context",
+         "Locate primary works, catalogues and scholarly interpretations",
+         "Compare stylistic and historical explanations",
+         "Verify provenance and distinguish evidence from interpretation"),
+    ),
+    "religion_theology": DomainProfile(
+        "religion_theology", "Religion & Theology",
+        "Religious traditions, texts, institutions, history and theological arguments.",
+        ("religion", "religious", "theology", "theological", "scripture", "bible",
+         "quran", "torah", "hinduism", "buddhism", "buddhist", "islam", "christianity",
+         "judaism", "religious history", "ritual"),
+        ("primary religious text collections", "JSTOR", "ATLA Religion Database",
+         "Internet Archive", "OpenAlex"),
+        ("textual and historical criticism", "comparative theology",
+         "hermeneutic analysis", "historical contextualization", "argument comparison"),
+        ("tradition and denomination context", "translation and textual variants",
+         "primary versus later interpretation", "represent traditions respectfully",
+         "separate historical claims from faith commitments"),
+        ("Specify tradition, period, text and interpretive perspective",
+         "Locate primary texts and reputable scholarship",
+         "Compare interpretations and historical context",
+         "State where empirical and theological claims differ"),
+    ),
+})
+
 _ALIASES = {
     "biology": "biology_medicine", "medicine": "biology_medicine",
     "biomedical": "biology_medicine", "life_science": "biology_medicine",
@@ -181,6 +381,16 @@ _ALIASES = {
     "environment": "earth_environment", "earth_science": "earth_environment",
     "math": "mathematics_statistics", "statistics": "mathematics_statistics",
     "psychology": "social_behavioral", "social_science": "social_behavioral",
+    "history": "history_archaeology", "archaeology": "history_archaeology",
+    "law": "law_policy", "policy": "law_policy",
+    "business": "economics_business", "economics": "economics_business",
+    "investing": "finance", "financial": "finance",
+    "philosophy": "philosophy_ethics", "ethics": "philosophy_ethics",
+    "linguistics": "linguistics_literature", "literature": "linguistics_literature",
+    "education": "education", "geography": "geography_urban",
+    "urban": "geography_urban", "politics": "politics_governance",
+    "governance": "politics_governance", "arts": "arts_culture",
+    "culture": "arts_culture", "religion": "religion_theology",
 }
 
 
@@ -203,23 +413,76 @@ def resolve_domain(question: str, requested: str = "auto") -> tuple[DomainProfil
     text = " ".join(text.split())
     words = set(text.split())
     def matches(term: str) -> bool:
+        # Avoid treating the technical phrase "machine learning" as an
+        # education/learning-science signal by itself.
+        if term == "learning" and "machine learning" in text:
+            return False
         return term in words if " " not in term else term in text
 
     scores = {}
     for key, profile in _PROFILES.items():
-        score = sum(1 for term in profile.search_terms if matches(term))
+        # Multi-word phrases carry more weight than generic component words.
+        # This prevents "machine learning" from being classified as Education
+        # solely because it contains the word "learning".
+        score = sum(2 if " " in term else 1
+                    for term in profile.search_terms if matches(term))
         if score:
             scores[key] = score
     if not scores:
         return _PROFILES["general_science"], {
-            "method": "keyword_fallback", "matched_terms": [], "confidence": 0.0}
+            "method": "keyword_fallback", "matched_terms": [], "confidence": 0.0,
+            "secondary_domains": [], "research_intent": classify_research_intent(question),
+            "routing_note": "No domain-specific terms matched; using interdisciplinary research guidance."}
     winner = max(scores, key=lambda key: (scores[key], key))
     profile = _PROFILES[winner]
     matched = [term for term in profile.search_terms if matches(term)]
     ranked = sorted(scores.values(), reverse=True)
     confidence = round(ranked[0] / max(1, sum(ranked)), 3)
-    return profile, {"method": "keyword_router", "matched_terms": matched,
-                     "confidence": confidence, "scores": scores}
+    # Keep cross-disciplinary signals instead of silently discarding them.
+    # The current orchestrator still has one primary specialist profile, while
+    # these secondary labels are persisted for diagnostics and future adapters.
+    secondary = [
+        {"key": key, "label": _PROFILES[key].label, "score": score}
+        for key, score in sorted(scores.items(), key=lambda item: (-item[1], item[0]))
+        if key != winner and score >= max(1, ranked[0] * 0.45)
+    ]
+    return profile, {
+        "method": "keyword_router",
+        "matched_terms": matched,
+        "confidence": confidence,
+        "scores": scores,
+        "secondary_domains": secondary,
+        "research_intent": classify_research_intent(question),
+        "routing_note": (
+            "Keyword-based routing is a transparent heuristic, not semantic certainty. "
+            "Review the domain labels for ambiguous or interdisciplinary questions."
+        ),
+    }
+
+
+
+def classify_research_intent(question: str) -> dict:
+    """Classify the requested work separately from its subject domain."""
+    text = question.casefold()
+    patterns = [
+        ("literature_review", (r"\bliterature review\b", r"\bsystematic review\b", r"\bstate of the art\b", r"\bwhat is known\b")),
+        ("comparison", (r"\bcompare\b", r"\bcomparison\b", r"\bdifference between\b", r"\bversus\b", r"\bvs\.?\b")),
+        ("data_analysis", (r"\bdatasets?\b", r"\bdata analysis\b", r"\banaly[sz]e\b", r"\bcorrelation\b", r"\bregression\b", r"\bstatistics\b")),
+        ("causal_analysis", (r"\bcaus(e|al)\b", r"\bmechanism\b", r"\bdrives?\b", r"\beffect of\b", r"\bimpact of\b")),
+        ("hypothesis_discovery", (r"\bhypothes(is|es)\b", r"\bunknown mechanism\b", r"\bdiscover\b", r"\bnovel\b", r"\bnew theory\b")),
+        ("experiment_design", (r"\bexperiment\b", r"\bprotocol\b", r"\btest whether\b", r"\bhow could we test\b")),
+        ("proof_or_derivation", (r"\bprove\b", r"\bproof\b", r"\bderive\b", r"\btheorem\b", r"\bshow that\b")),
+        ("forecasting", (r"\bforecast\b", r"\bpredict\b", r"\bfuture trend\b", r"\bprojection\b")),
+    ]
+    matched = [name for name, expressions in patterns
+               if any(re.search(expression, text) for expression in expressions)]
+    if not matched:
+        matched = ["evidence_synthesis"]
+    return {
+        "primary": matched[0],
+        "all_detected": matched,
+        "method": "transparent_keyword_intent_classifier",
+    }
 
 
 def profile_dict(profile: DomainProfile) -> dict:

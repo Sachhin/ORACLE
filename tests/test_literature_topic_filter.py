@@ -31,3 +31,24 @@ def test_task_search_query_preserves_longevity_mission_context():
     )
 
     assert "human longevity aging mechanisms" in query
+
+
+
+def test_plain_language_young_old_gene_expression_question_routes_to_aging_profile():
+    query = "How does gene expression change between young and old humans?"
+    assert LiteratureClient._topic_profile(query) == "human_longevity"
+    assert len(LiteratureClient.geo_dataset_queries(query)) == 3
+
+
+def test_age_related_paper_is_kept_but_figure_caption_is_rejected():
+    query = "How does gene expression change between young and old humans?"
+    paper = {"title": "Age-related gene expression changes in human blood", "abstract": ""}
+    caption = {"title": "Figure 3. Gene decoding of age-related changes in expression", "abstract": ""}
+    assert LiteratureClient._passes_topic_gate(query, paper)
+    assert not LiteratureClient._passes_topic_gate(query, caption)
+
+
+def test_young_old_query_filters_unrelated_titles():
+    query = "How does gene expression change between young and old humans?"
+    unrelated = {"title": "Rice genes show drought-induced differential expression", "abstract": ""}
+    assert not LiteratureClient._passes_topic_gate(query, unrelated)

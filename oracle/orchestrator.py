@@ -645,8 +645,10 @@ class OracleOrchestrator:
                 }, event_key=f"run_stopped:{run.current_cycle}")
             else:
                 run.status = RunStatus.COMPLETED
+                external_sources = "yes" if run.sources else "no"
                 run.findings.append(
-                    "Offline baseline limitation: no external sources, live AI reasoning, or physical experiment was used by this cycle."
+                    "Deterministic baseline limitation: no live AI-model reasoning or physical experiment "
+                    f"was used. External sources retrieved during this run: {external_sources}."
                 )
                 self._event(run, "run_completed", {"cycles": run.current_cycle}, event_key="run_completed")
         except Exception as exc:

@@ -4,7 +4,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from html import unescape
-import json, re
+import json, re, os
 import xml.etree.ElementTree as ET
 from typing import Any
 from urllib.error import HTTPError, URLError
@@ -33,7 +33,7 @@ class LiteratureSearchReport:
     abstract_enrichment_skipped_no_identifier: int = 0
 
 class LiteratureClient:
-    PROVIDERS = ("europepmc", "crossref", "geo", "arxiv", "pubchem")
+    PROVIDERS = ("europepmc", "crossref", "geo", "arxiv", "pubchem", "openalex", "gbif", "world_bank", "noaa_ncei", "clinical_trials", "zenodo", "harvard_dataverse", "sra", "pdb", "pride", "huggingface_datasets", "openml", "nasa_earthdata", "usgs", "figshare", "internet_archive", "loc", "nasa_ads", "pubmed", "genbank", "inspire_hep", "ensembl")
     def __init__(self, timeout: float = 20.0, mailto: str = "",
                  max_abstract_enrichments: int = 10):
         if timeout <= 0:
@@ -43,9 +43,11 @@ class LiteratureClient:
         self.timeout, self.mailto = timeout, mailto.strip()
         self.max_abstract_enrichments = max_abstract_enrichments
 
-    def _get_json(self, url: str) -> dict[str, Any]:
-        req = Request(url, headers={"Accept":"application/json",
-            "User-Agent":"ORACLE-Scientific-Literature/2.0 (mailto: "+(self.mailto or "not-provided")+")"})
+    def _get_json(self, url: str, headers: dict[str, str] | None = None) -> dict[str, Any]:
+        request_headers = {"Accept":"application/json",
+            "User-Agent":"ORACLE-Scientific-Literature/2.0 (mailto: "+(self.mailto or "not-provided")+")"}
+        request_headers.update(headers or {})
+        req = Request(url, headers=request_headers)
         try:
             with urlopen(req, timeout=self.timeout) as response:
                 return json.loads(response.read(8_000_000).decode("utf-8"))
@@ -261,6 +263,583 @@ class LiteratureClient:
             })
         return records
 
+
+    def _search_openalex(self, query: str, limit: int):
+        params = {"search": query, "per-page": limit,
+                  "select": "id,doi,title,authorships,publication_year,primary_location,open_access,cited_by_count,type,abstract_inverted_index"}
+        if self.mailto:
+            params["mailto"] = self.mailto
+        data = self._get_json("https://api.openalex.org/works?" + urlencode(params))
+        records = []
+        for item in data.get("results", []):
+            inverted = item.get("abstract_inverted_index") or {}
+            words = sorted(((position, word) for word, positions in inverted.items()
+                            for position in positions), key=lambda pair: pair[0])
+            abstract = " ".join(word for _, word in words)
+            authors = "; ".join(
+                (entry.get("author") or {}).get("display_name", "")
+                for entry in item.get("authorships", [])[:30]
+                if (entry.get("author") or {}).get("display_name"))
+            location = item.get("primary_location") or {}
+            source = location.get("source") or {}
+            doi = str(item.get("doi") or "").replace("https://doi.org/", "").lower()
+            records.append({
+                "provider": "OpenAlex", "provider_id": item.get("id", ""),
+                "doi": doi, "pmid": "", "pmcid": "",
+                "title": self._clean(item.get("title") or "Untitled work"),
+                "authors": authors, "journal": source.get("display_name", ""),
+                "year": str(item.get("publication_year") or ""),
+                "url": item.get("doi") or item.get("id") or "",
+                "abstract": self._clean(abstract),
+                "publication_type": item.get("type") or "scholarly_work",
+                "open_access": bool((item.get("open_access") or {}).get("is_oa")),
+                "license": str((item.get("open_access") or {}).get("oa_status") or ""),
+                "citation_count": item.get("cited_by_count"),
+            })
+        return records
+
+    def _search_gbif(self, query: str, limit: int):
+        data = self._get_json("https://api.gbif.org/v1/occurrence/search?" +
+                              urlencode({"q": query, "limit": limit}))
+        records = []
+        for item in data.get("results", []):
+            key = item.get("key")
+            title = " ".join(filter(None, (
+                item.get("scientificName"), item.get("vernacularName"),
+                item.get("country"), str(item.get("year") or ""))))
+            records.append({
+                "provider": "GBIF", "provider_id": str(key or ""),
+                "doi": "", "pmid": "", "pmcid": "",
+                "title": title or f"GBIF occurrence {key}",
+                "authors": item.get("recordedBy", ""), "journal": "GBIF occurrence data",
+                "year": str(item.get("year") or ""),
+                "url": f"https://www.gbif.org/occurrence/{key}" if key else "https://www.gbif.org/",
+                "abstract": self._clean("; ".join(
+                    f"{k}: {item.get(k)}" for k in ("scientificName", "country",
+                    "stateProvince", "eventDate", "basisOfRecord", "datasetKey")
+                    if item.get(k) is not None)),
+                "publication_type": "biodiversity occurrence record",
+                "open_access": True, "license": item.get("license") or "",
+                "citation_count": None, "dataset": True,
+            })
+        return records
+
+    def _search_world_bank(self, query: str, limit: int):
+        data = self._get_json("https://api.worldbank.org/v2/indicator?" +
+                              urlencode({"format": "json", "per_page": 100, "source": 2}))
+        rows = data[1] if isinstance(data, list) and len(data) > 1 and isinstance(data[1], list) else []
+        terms = {term for term in re.findall(r"[a-z0-9]+", query.casefold()) if len(term) > 2}
+        ranked = []
+        for item in rows:
+            haystack = (str(item.get("name") or "") + " " + str(item.get("sourceNote") or "")).casefold()
+            score = sum(1 for term in terms if term in haystack)
+            if score:
+                ranked.append((score, item))
+        ranked.sort(key=lambda pair: (-pair[0], str(pair[1].get("id", ""))))
+        records = []
+        for _, item in ranked[:limit]:
+            code = str(item.get("id") or "")
+            records.append({
+                "provider": "World Bank", "provider_id": code,
+                "doi": "", "pmid": "", "pmcid": "",
+                "title": self._clean(str(item.get("name") or code)),
+                "authors": "World Bank", "journal": "World Development Indicators",
+                "year": "", "url": f"https://api.worldbank.org/v2/indicator/{quote(code)}?format=json",
+                "abstract": self._clean(str(item.get("sourceNote") or item.get("sourceOrganization") or "")),
+                "publication_type": "development indicator metadata",
+                "open_access": True, "license": "See World Bank data terms",
+                "citation_count": None, "dataset": True, "dataset_accession": code,
+            })
+        return records
+
+    def _search_noaa_ncei(self, query: str, limit: int):
+        url = "https://www.ncei.noaa.gov/access/services/search/v1/datasets?" + urlencode({"text": query, "limit": limit})
+        data = self._get_json(url)
+        rows = data if isinstance(data, list) else data.get("results", data.get("datasets", []))
+        records = []
+        for item in rows[:limit] if isinstance(rows, list) else []:
+            dataset_id = str(item.get("id") or item.get("dataset") or "")
+            title = str(item.get("name") or item.get("title") or dataset_id or "NOAA dataset")
+            records.append({
+                "provider": "NOAA NCEI", "provider_id": dataset_id,
+                "doi": "", "pmid": "", "pmcid": "", "title": self._clean(title),
+                "authors": "NOAA National Centers for Environmental Information",
+                "journal": "NOAA NCEI", "year": str(item.get("date_start") or "")[:4],
+                "url": item.get("url") or "https://www.ncei.noaa.gov/",
+                "abstract": self._clean(str(item.get("description") or item.get("summary") or "")),
+                "publication_type": "climate and environmental dataset",
+                "open_access": True, "license": "Check dataset-specific terms",
+                "citation_count": None, "dataset": True, "dataset_accession": dataset_id,
+            })
+        return records
+
+
+
+
+    def _search_ncbi_records(self, query: str, limit: int, database: str):
+        base = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/"
+        search = self._get_json(base + "esearch.fcgi?" + urlencode({
+            "db": database, "term": query, "retmax": limit, "retmode": "json",
+            "tool": "ORACLE", "email": self.mailto or "",
+        }))
+        ids = (search.get("esearchresult") or {}).get("idlist") or []
+        if not ids:
+            return []
+        summary = self._get_json(base + "esummary.fcgi?" + urlencode({
+            "db": database, "id": ",".join(ids), "retmode": "json",
+            "tool": "ORACLE", "email": self.mailto or "",
+        }))
+        result = summary.get("result") or {}
+        records = []
+        for uid in ids:
+            item = result.get(str(uid)) or {}
+            if database == "pubmed":
+                pmid = str(item.get("uid") or uid)
+                title = self._clean(str(item.get("title") or ""))
+                authors = "; ".join(
+                    str(author.get("name") or "") for author in item.get("authors", [])
+                    if author.get("name")
+                )
+                journal = str(item.get("fulljournalname") or item.get("source") or "")
+                year = str(item.get("pubdate") or "")[:4]
+                records.append({
+                    "provider": "PubMed", "provider_id": pmid, "doi": "",
+                    "pmid": pmid, "pmcid": "", "title": title, "authors": authors,
+                    "journal": journal, "year": year,
+                    "url": "https://pubmed.ncbi.nlm.nih.gov/" + pmid + "/",
+                    "abstract": "", "publication_type": "biomedical literature",
+                    "open_access": False, "license": "Check article-level access and licence",
+                    "citation_count": None, "dataset": False,
+                })
+            else:
+                accession = str(item.get("accessionversion") or item.get("caption") or uid)
+                title = self._clean(str(item.get("title") or accession))
+                organism = str(item.get("organism") or "")
+                length = str(item.get("slen") or "")
+                records.append({
+                    "provider": "NCBI GenBank", "provider_id": accession, "doi": "",
+                    "pmid": "", "pmcid": "", "title": title, "authors": "",
+                    "journal": "NCBI Nucleotide", "year": str(item.get("createdate") or "")[:4],
+                    "url": "https://www.ncbi.nlm.nih.gov/nuccore/" + accession,
+                    "abstract": self._clean("Organism: " + organism + ". Sequence length: " + length + " bp."),
+                    "publication_type": "nucleotide sequence record", "open_access": True,
+                    "license": "Sequence record and submitter-specific terms apply",
+                    "citation_count": None, "dataset": True, "dataset_accession": accession,
+                })
+        return records
+
+
+    def _search_inspire_hep(self, query: str, limit: int):
+        payload = self._get_json("https://inspirehep.net/api/literature?" + urlencode({
+            "q": query, "size": limit,
+        }))
+        hits = (payload.get("hits") or {}).get("hits") or []
+        records = []
+        for hit in hits[:limit]:
+            meta = hit.get("metadata") or {}
+            identifier = str(hit.get("id") or meta.get("control_number") or "")
+            titles = meta.get("titles") or []
+            title = str((titles[0] or {}).get("title") or identifier or "INSPIRE record")
+            authors = "; ".join(str((x.get("full_name") or x.get("name") or ""))
+                                for x in (meta.get("authors") or [])[:30])
+            abstracts = meta.get("abstracts") or []
+            abstract = str((abstracts[0] or {}).get("value") or "") if abstracts else ""
+            dois = meta.get("dois") or []
+            doi = str((dois[0] or {}).get("value") or "") if dois else ""
+            arxiv = meta.get("arxiv_eprints") or []
+            arxiv_id = str((arxiv[0] or {}).get("value") or "") if arxiv else ""
+            pub = meta.get("publication_info") or []
+            journal = str((pub[0] or {}).get("journal_title") or "INSPIRE-HEP") if pub else "INSPIRE-HEP"
+            year = str((pub[0] or {}).get("year") or "") if pub else ""
+            records.append({
+                "provider": "INSPIRE-HEP", "provider_id": identifier, "doi": doi,
+                "pmid": "", "pmcid": "", "title": self._clean(title), "authors": authors,
+                "journal": journal, "year": year,
+                "url": "https://inspirehep.net/literature/" + identifier if identifier else "https://inspirehep.net/",
+                "abstract": self._clean(abstract), "publication_type": "high-energy physics literature",
+                "open_access": bool(arxiv_id), "license": "Check linked publication and preprint licence",
+                "citation_count": meta.get("citation_count"), "arxiv_id": arxiv_id,
+            })
+        return records
+
+    def _search_ensembl(self, query: str, limit: int):
+        symbol = query.strip()
+        if not re.fullmatch(r"[A-Za-z0-9_.-]{1,32}", symbol):
+            return []
+        url = "https://rest.ensembl.org/xrefs/symbol/homo_sapiens/" + quote(symbol, safe="")
+        payload = self._get_json(url + "?content-type=application/json")
+        records = []
+        for item in payload[:limit] if isinstance(payload, list) else []:
+            identifier = str(item.get("id") or "")
+            dbname = str(item.get("dbname") or "Ensembl")
+            display = str(item.get("display_id") or symbol)
+            description = str(item.get("description") or "")
+            records.append({
+                "provider": "Ensembl", "provider_id": identifier, "doi": "",
+                "pmid": "", "pmcid": "", "title": self._clean(display),
+                "authors": "", "journal": dbname, "year": "",
+                "url": "https://www.ensembl.org/id/" + identifier if identifier else "https://www.ensembl.org/",
+                "abstract": self._clean(description or ("Cross-reference for human gene symbol " + symbol)),
+                "publication_type": "genome annotation cross-reference", "open_access": True,
+                "license": "Ensembl data and attribution terms apply", "citation_count": None,
+                "dataset": True, "dataset_accession": identifier, "gene_symbol": symbol,
+            })
+        return records
+
+    def _search_pubmed(self, query: str, limit: int):
+        return self._search_ncbi_records(query, limit, "pubmed")
+
+    def _search_genbank(self, query: str, limit: int):
+        return self._search_ncbi_records(query, limit, "nuccore")
+
+    def _search_pdb(self, query: str, limit: int):
+        search_query = {
+            "query": {"type": "terminal", "service": "full_text",
+                      "parameters": {"value": query}},
+            "return_type": "entry",
+            "request_options": {"paginate": {"start": 0, "rows": limit}},
+        }
+        payload = self._get_json("https://search.rcsb.org/rcsbsearch/v2/query?" + urlencode({
+            "json": json.dumps(search_query, separators=(",", ":"))
+        }))
+        identifiers = [str(x.get("identifier") or "") for x in payload.get("result_set", [])]
+        records = []
+        for pdb_id in identifiers[:limit]:
+            if not re.fullmatch(r"[0-9][A-Za-z0-9]{3}", pdb_id):
+                continue
+            item = self._get_json("https://data.rcsb.org/rest/v1/core/entry/" + quote(pdb_id))
+            title = (item.get("struct") or {}).get("title") or pdb_id
+            method = "; ".join(x.get("method", "") for x in item.get("exptl", []) if x.get("method"))
+            records.append({
+                "provider": "RCSB PDB", "provider_id": pdb_id, "doi": "", "pmid": "", "pmcid": "",
+                "title": self._clean(title), "authors": "", "journal": "Worldwide Protein Data Bank",
+                "year": str((item.get("rcsb_accession_info") or {}).get("initial_release_date") or "")[:4],
+                "url": "https://www.rcsb.org/structure/" + pdb_id,
+                "abstract": self._clean("Experimental structure. " + method),
+                "publication_type": "protein or nucleic-acid structure", "open_access": True,
+                "license": "PDB data use and attribution terms apply", "citation_count": None,
+                "dataset": True, "dataset_accession": pdb_id,
+            })
+        return records
+
+    def _search_pride(self, query: str, limit: int):
+        data = self._get_json("https://www.ebi.ac.uk/pride/ws/archive/v2/projects?" + urlencode({
+            "keyword": query, "page": 0, "size": limit
+        }))
+        if isinstance(data, list):
+            rows = data
+        else:
+            rows = data.get("content") or data.get("projects") or (data.get("_embedded") or {}).get("projects") or []
+        records = []
+        for item in rows[:limit]:
+            accession = str(item.get("accession") or item.get("projectAccession") or "")
+            title = item.get("title") or item.get("projectTitle") or accession or "PRIDE project"
+            records.append({
+                "provider": "PRIDE Archive", "provider_id": accession, "doi": str(item.get("doi") or ""),
+                "pmid": "", "pmcid": "", "title": self._clean(str(title)),
+                "authors": str(item.get("submitter") or ""), "journal": "PRIDE Archive",
+                "year": str(item.get("publicationDate") or item.get("submissionDate") or "")[:4],
+                "url": "https://www.ebi.ac.uk/pride/archive/projects/" + accession if accession else "https://www.ebi.ac.uk/pride/archive/",
+                "abstract": self._clean(str(item.get("projectDescription") or item.get("description") or "")),
+                "publication_type": "proteomics dataset", "open_access": True,
+                "license": "Project and file-level access/licence conditions apply",
+                "citation_count": None, "dataset": True, "dataset_accession": accession,
+            })
+        return records
+
+    def _search_huggingface_datasets(self, query: str, limit: int):
+        rows = self._get_json("https://huggingface.co/api/datasets?" + urlencode({
+            "search": query, "limit": limit, "full": "true"
+        }))
+        records = []
+        for item in rows[:limit] if isinstance(rows, list) else []:
+            repo_id = str(item.get("id") or item.get("name") or "")
+            card = item.get("cardData") or {}
+            records.append({
+                "provider": "Hugging Face Datasets", "provider_id": repo_id, "doi": "", "pmid": "", "pmcid": "",
+                "title": self._clean(repo_id), "authors": str(item.get("author") or ""),
+                "journal": "Hugging Face Hub", "year": "",
+                "url": "https://huggingface.co/datasets/" + repo_id if repo_id else "https://huggingface.co/datasets",
+                "abstract": self._clean(str(card.get("description") or card.get("task_categories") or "")),
+                "publication_type": "machine-learning dataset", "open_access": not bool(item.get("gated")),
+                "license": str(card.get("license") or "Check dataset card and access conditions"),
+                "citation_count": None, "dataset": True, "dataset_accession": repo_id,
+                "downloads": item.get("downloads"), "last_modified": item.get("lastModified"),
+            })
+        return records
+
+    def _search_openml(self, query: str, limit: int):
+        url = "https://www.openml.org/api/v1/json/data/list/data_name/" + quote(query, safe="") + "/limit/" + str(limit)
+        data = self._get_json(url)
+        container = data.get("data") or {}
+        rows = container.get("dataset") or []
+        if isinstance(rows, dict):
+            rows = [rows]
+        records = []
+        for item in rows[:limit]:
+            dataset_id = str(item.get("did") or item.get("id") or "")
+            name = item.get("name") or ("OpenML dataset " + dataset_id)
+            records.append({
+                "provider": "OpenML", "provider_id": dataset_id, "doi": "", "pmid": "", "pmcid": "",
+                "title": self._clean(str(name)), "authors": str(item.get("creator") or ""),
+                "journal": "OpenML", "year": str(item.get("upload_date") or "")[:4],
+                "url": "https://www.openml.org/d/" + dataset_id if dataset_id else "https://www.openml.org/",
+                "abstract": self._clean(str(item.get("description") or "")),
+                "publication_type": "machine-learning dataset", "open_access": True,
+                "license": str(item.get("licence") or item.get("license") or "Check dataset-level licence"),
+                "citation_count": None, "dataset": True, "dataset_accession": dataset_id,
+            })
+        return records
+
+
+    def _search_nasa_earthdata(self, query: str, limit: int):
+        data = self._get_json("https://cmr.earthdata.nasa.gov/search/collections.json?" + urlencode({
+            "keyword": query, "page_size": limit
+        }))
+        rows = (data.get("feed") or {}).get("entry") or []
+        records = []
+        for item in rows[:limit]:
+            concept = str(item.get("id") or "")
+            title = item.get("title") or concept or "NASA Earthdata collection"
+            links = item.get("links") or []
+            url = next((x.get("href") for x in links if x.get("rel", "").endswith("/metadata")), "")
+            records.append({
+                "provider": "NASA Earthdata", "provider_id": concept, "doi": "", "pmid": "", "pmcid": "",
+                "title": self._clean(str(title)), "authors": "NASA",
+                "journal": "NASA Earthdata CMR", "year": str(item.get("updated") or "")[:4],
+                "url": url or ("https://search.earthdata.nasa.gov/search?q=" + quote(query)),
+                "abstract": self._clean(str(item.get("summary") or "")),
+                "publication_type": "Earth observation data collection", "open_access": True,
+                "license": "Collection and granule access requirements vary; Earthdata Login may be required",
+                "citation_count": None, "dataset": True, "dataset_accession": concept,
+            })
+        return records
+
+    def _search_usgs(self, query: str, limit: int):
+        data = self._get_json("https://www.sciencebase.gov/catalog/items?" + urlencode({
+            "q": query, "format": "json", "max": limit
+        }))
+        rows = data.get("items") or []
+        records = []
+        for item in rows[:limit]:
+            identifier = str(item.get("id") or "")
+            title = item.get("title") or identifier or "USGS ScienceBase item"
+            records.append({
+                "provider": "USGS ScienceBase", "provider_id": identifier, "doi": "", "pmid": "", "pmcid": "",
+                "title": self._clean(str(title)), "authors": str(item.get("provenance") or {}).strip(),
+                "journal": "USGS ScienceBase", "year": str(item.get("dateCreated") or "")[:4],
+                "url": item.get("link") or ("https://www.sciencebase.gov/catalog/item/" + identifier),
+                "abstract": self._clean(str(item.get("summary") or "")),
+                "publication_type": "earth science data record", "open_access": True,
+                "license": "Item-specific access and reuse terms apply", "citation_count": None,
+                "dataset": True, "dataset_accession": identifier,
+            })
+        return records
+
+    def _search_figshare(self, query: str, limit: int):
+        data = self._get_json("https://api.figshare.com/v2/articles?" + urlencode({
+            "search": query, "limit": limit
+        }))
+        rows = data if isinstance(data, list) else data.get("items", [])
+        records = []
+        for item in rows[:limit]:
+            identifier = str(item.get("id") or "")
+            records.append({
+                "provider": "Figshare", "provider_id": identifier, "doi": str(item.get("doi") or ""),
+                "pmid": "", "pmcid": "", "title": self._clean(str(item.get("title") or identifier)),
+                "authors": "; ".join(str(x.get("full_name") or "") for x in item.get("authors", [])[:20]),
+                "journal": "Figshare", "year": str(item.get("published_date") or item.get("created_date") or "")[:4],
+                "url": item.get("url_public_html") or item.get("url") or "",
+                "abstract": self._clean(str(item.get("description") or "")),
+                "publication_type": str(item.get("defined_type_name") or "research output"),
+                "open_access": True, "license": str(item.get("license") or "Check item-level licence"),
+                "citation_count": None, "dataset": True, "dataset_accession": identifier,
+                "download_url": item.get("download_url") or "",
+            })
+        return records
+
+    def _search_internet_archive(self, query: str, limit: int):
+        data = self._get_json("https://archive.org/advancedsearch.php?" + urlencode({
+            "q": query, "fl[]": ["identifier", "title", "description", "creator", "date"],
+            "rows": limit, "output": "json"
+        }, doseq=True))
+        rows = (data.get("response") or {}).get("docs") or []
+        records = []
+        for item in rows[:limit]:
+            identifier = str(item.get("identifier") or "")
+            records.append({
+                "provider": "Internet Archive", "provider_id": identifier, "doi": "", "pmid": "", "pmcid": "",
+                "title": self._clean(str(item.get("title") or identifier)),
+                "authors": str(item.get("creator") or ""), "journal": "Internet Archive",
+                "year": str(item.get("date") or "")[:4],
+                "url": "https://archive.org/details/" + identifier if identifier else "https://archive.org/",
+                "abstract": self._clean(str(item.get("description") or "")),
+                "publication_type": "digitized primary source or archived item",
+                "open_access": True, "license": "Item-specific copyright, lending and reuse restrictions apply",
+                "citation_count": None, "dataset": False, "dataset_accession": identifier,
+            })
+        return records
+
+    def _search_loc(self, query: str, limit: int):
+        data = self._get_json("https://www.loc.gov/search/?" + urlencode({
+            "q": query, "fo": "json", "c": limit
+        }))
+        rows = data.get("results") or []
+        records = []
+        for item in rows[:limit]:
+            identifier = str(item.get("id") or item.get("url") or "")
+            title = item.get("title") or identifier or "Library of Congress item"
+            records.append({
+                "provider": "Library of Congress", "provider_id": identifier, "doi": "", "pmid": "", "pmcid": "",
+                "title": self._clean(str(title)), "authors": str(item.get("contributor") or ""),
+                "journal": "Library of Congress", "year": str(item.get("date") or "")[:4],
+                "url": item.get("url") or identifier, "abstract": self._clean(str(item.get("description") or "")),
+                "publication_type": "digital collection or primary source", "open_access": True,
+                "license": "Item-level rights statements apply", "citation_count": None,
+                "dataset": False, "dataset_accession": identifier,
+            })
+        return records
+
+
+    def _search_nasa_ads(self, query: str, limit: int):
+        token = os.environ.get("NASA_ADS_API_TOKEN", "").strip()
+        if not token:
+            raise LiteratureSearchError("NASA ADS requires NASA_ADS_API_TOKEN; configure it in the ORACLE runtime environment.")
+        data = self._get_json("https://api.adsabs.harvard.edu/v1/search/query?" + urlencode({
+            "q": query, "fl": "bibcode,title,author,year,abstract,doi,pub",
+            "rows": limit, "sort": "score desc"
+        }), headers={"Authorization": "Bearer " + token})
+        docs = (data.get("response") or {}).get("docs") or []
+        records = []
+        for item in docs[:limit]:
+            bibcode = str(item.get("bibcode") or "")
+            title_value = item.get("title") or ["NASA ADS record"]
+            title = title_value[0] if isinstance(title_value, list) and title_value else str(title_value)
+            doi_value = item.get("doi") or []
+            doi = doi_value[0] if isinstance(doi_value, list) and doi_value else str(doi_value or "")
+            authors = item.get("author") or []
+            records.append({
+                "provider": "NASA ADS", "provider_id": bibcode, "doi": doi.lower(),
+                "pmid": "", "pmcid": "", "title": self._clean(str(title)),
+                "authors": "; ".join(str(x) for x in authors[:30]),
+                "journal": str(item.get("pub") or ""), "year": str(item.get("year") or ""),
+                "url": "https://ui.adsabs.harvard.edu/abs/" + bibcode if bibcode else "https://ui.adsabs.harvard.edu/",
+                "abstract": self._clean(str(item.get("abstract") or "")),
+                "publication_type": "astronomy and physics scholarly record",
+                "open_access": False, "license": "Publication and provider-specific access terms apply",
+                "citation_count": None, "dataset": False, "dataset_accession": "",
+            })
+        return records
+
+    def _search_clinical_trials(self, query: str, limit: int):
+        data = self._get_json("https://clinicaltrials.gov/api/v2/studies?" + urlencode({
+            "query.term": query, "pageSize": limit, "format": "json",
+            "fields": "NCTId,BriefTitle,OfficialTitle,BriefSummary,StudyType,OverallStatus,StartDate,CompletionDate,LeadSponsorName"
+        }))
+        records = []
+        for item in data.get("studies", []):
+            protocol = item.get("protocolSection") or {}
+            ident = protocol.get("identificationModule") or {}
+            design = protocol.get("designModule") or {}
+            status = protocol.get("statusModule") or {}
+            desc = protocol.get("descriptionModule") or {}
+            sponsor = protocol.get("sponsorCollaboratorsModule") or {}
+            nct = (ident.get("nctId") or "").strip()
+            title = ident.get("briefTitle") or ident.get("officialTitle") or nct
+            summary = desc.get("briefSummary") or ""
+            records.append({
+                "provider": "ClinicalTrials.gov", "provider_id": nct,
+                "doi": "", "pmid": "", "pmcid": "", "title": self._clean(title),
+                "authors": (sponsor.get("leadSponsor") or {}).get("name", ""),
+                "journal": "ClinicalTrials.gov", "year": str((status.get("studyFirstPostDateStruct") or {}).get("date") or "")[:4],
+                "url": "https://clinicaltrials.gov/study/" + nct if nct else "https://clinicaltrials.gov/",
+                "abstract": self._clean(summary), "publication_type": design.get("studyType") or "clinical study",
+                "open_access": True, "license": "Study registry record; linked documents have separate rights",
+                "citation_count": None, "dataset": True, "dataset_accession": nct,
+                "study_status": (status.get("overallStatus") or ""),
+            })
+        return records
+
+    def _search_zenodo(self, query: str, limit: int):
+        data = self._get_json("https://zenodo.org/api/records?" + urlencode({
+            "q": query, "size": limit, "sort": "mostrecent"
+        }))
+        records = []
+        for item in data.get("hits", {}).get("hits", []):
+            metadata = item.get("metadata") or {}
+            doi = str(metadata.get("doi") or item.get("doi") or "").lower()
+            identifier = str(item.get("id") or "")
+            creators = metadata.get("creators") or []
+            records.append({
+                "provider": "Zenodo", "provider_id": identifier, "doi": doi,
+                "pmid": "", "pmcid": "",
+                "title": self._clean(metadata.get("title") or f"Zenodo record {identifier}"),
+                "authors": "; ".join(str(x.get("name") or "") for x in creators[:30]),
+                "journal": "Zenodo repository", "year": str((metadata.get("publication_date") or "")[:4]),
+                "url": item.get("links", {}).get("self_html") or item.get("links", {}).get("html") or "",
+                "abstract": self._clean(metadata.get("description") or ""),
+                "publication_type": metadata.get("resource_type", {}).get("type") or "research output",
+                "open_access": True, "license": (metadata.get("license") or {}).get("id", ""),
+                "citation_count": None, "dataset": True, "dataset_accession": identifier,
+                "files": item.get("files") or [],
+            })
+        return records
+
+    def _search_dataverse(self, query: str, limit: int):
+        data = self._get_json("https://dataverse.harvard.edu/api/search?" + urlencode({
+            "q": query, "type": "dataset", "per_page": limit, "start": 0
+        }))
+        response = data.get("data") or {}
+        records = []
+        for item in response.get("items", []):
+            pid = str(item.get("global_id") or item.get("entity_id") or "")
+            name = item.get("name") or item.get("title") or pid
+            description = item.get("description") or ""
+            records.append({
+                "provider": "Harvard Dataverse", "provider_id": pid,
+                "doi": pid.replace("doi:", "") if pid.startswith("doi:") else "",
+                "pmid": "", "pmcid": "", "title": self._clean(name),
+                "authors": "", "journal": item.get("type", "Dataverse dataset"),
+                "year": str(item.get("published_at") or "")[:4],
+                "url": item.get("url") or ("https://dataverse.harvard.edu/dataset.xhtml?persistentId=" + quote(pid, safe="") if pid else ""),
+                "abstract": self._clean(description), "publication_type": "research dataset",
+                "open_access": True, "license": "Check dataset-level licence and access conditions",
+                "citation_count": None, "dataset": True, "dataset_accession": pid,
+            })
+        return records
+
+    def _search_sra(self, query: str, limit: int):
+        base = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/"
+        search = self._get_json(base + "esearch.fcgi?" + urlencode({
+            "db": "sra", "term": query, "retmax": limit, "retmode": "json"
+        }))
+        ids = (search.get("esearchresult") or {}).get("idlist") or []
+        if not ids:
+            return []
+        summary = self._get_json(base + "esummary.fcgi?" + urlencode({
+            "db": "sra", "id": ",".join(ids), "retmode": "json"
+        }))
+        result = summary.get("result") or {}
+        records = []
+        for uid in ids:
+            item = result.get(str(uid)) or {}
+            exp = item.get("expXml") or item.get("expxml") or ""
+            title = item.get("title") or item.get("caption") or f"SRA record {uid}"
+            accession_match = re.search(r"(SR[APRXZ]\d+)", str(exp) + " " + str(item.get("accession") or ""))
+            accession = accession_match.group(1) if accession_match else str(item.get("accession") or uid)
+            records.append({
+                "provider": "NCBI SRA", "provider_id": str(uid),
+                "doi": "", "pmid": "", "pmcid": "", "title": self._clean(str(title)),
+                "authors": "", "journal": "NCBI Sequence Read Archive",
+                "year": str(item.get("published") or "")[:4],
+                "url": "https://www.ncbi.nlm.nih.gov/sra/" + accession,
+                "abstract": self._clean(str(item.get("summary") or item.get("description") or title)),
+                "publication_type": "sequencing dataset", "open_access": True,
+                "license": "Study-level access and reuse terms apply", "citation_count": None,
+                "dataset": True, "dataset_accession": accession,
+            })
+        return records
+
     def _enrich_missing_abstracts(self, records: list[dict[str, Any]]) -> dict[str, int]:
         """Recover missing abstracts by exact identifiers and report every outcome."""
         stats = {"attempted": 0, "recovered": 0, "no_match": 0, "failed": 0, "skipped_no_identifier": 0}
@@ -319,10 +898,26 @@ class LiteratureClient:
 
     @staticmethod
     def _topic_profile(query: str) -> str:
-        """Recognize broad research intents that need a domain-specific relevance gate."""
-        text = query.casefold()
-        if any(term in text for term in ("longevity", "lifespan", "life span", "healthspan",
-                                         "centenarian", "aging", "ageing", "senescence")):
+        """Recognize longevity and age-comparison wording, including plain-language questions."""
+        text = re.sub(r"[^a-z0-9]+", " ", query.casefold()).strip()
+        terms = set(text.split())
+        explicit_aging = any(term in text for term in (
+            "longevity", "lifespan", "life span", "healthspan", "centenarian",
+            "aging", "ageing", "senescence", "geroscience", "age related",
+            "age associated", "age dependent", "old age", "older adult",
+            "older adults", "elderly",
+        ))
+        young_old_comparison = (
+            {"young", "old"}.issubset(terms)
+            or {"younger", "older"}.issubset(terms)
+            or ({"young", "older"}.issubset(terms))
+            or ({"younger", "old"}.issubset(terms))
+        )
+        age_expression = (
+            "gene expression" in text
+            and bool(terms & {"age", "aged", "adult", "adults", "young", "older", "old"})
+        )
+        if explicit_aging or young_old_comparison or age_expression:
             return "human_longevity"
         return ""
 
@@ -365,8 +960,14 @@ class LiteratureClient:
             return True
         title = str(record.get("title", "")).casefold()
         abstract = str(record.get("abstract", "")).casefold()
+        # Search APIs sometimes return figure/table captions as if they were papers.
+        if re.match(r"^\s*(figure|fig\.?|table|supplement(?:ary|al)?)\s*(?:\d|[:.\-])", title):
+            return False
         anchors = ("longevity", "lifespan", "life span", "healthspan", "centenarian",
-                   "aging", "ageing", "senescence", "geroscience", "geroprotector")
+                   "aging", "ageing", "senescence", "geroscience", "geroprotector",
+                   "age-related", "age related", "age-associated", "age associated",
+                   "age-dependent", "age dependent", "older adult", "older adults",
+                   "old age", "elderly")
         return any(term in title or term in abstract for term in anchors)
 
     @classmethod
@@ -416,12 +1017,23 @@ class LiteratureClient:
         if not 1 <= limit <= 50: raise ValueError("limit must be between 1 and 50.")
         selected=tuple(dict.fromkeys(providers))
         if not selected or any(p not in self.PROVIDERS for p in selected):
-            raise ValueError("providers must be europepmc, crossref, geo, arxiv, and/or pubchem.")
+            raise ValueError("Unsupported literature/data provider selected.")
         report=LiteratureSearchReport(query, list(selected))
         jobs={}
         with ThreadPoolExecutor(max_workers=len(selected)) as pool:
             for provider in selected:
-                fn={"europepmc":self._search_europepmc,"crossref":self._search_crossref,"geo":self._search_geo,"arxiv":self._search_arxiv,"pubchem":self._search_pubchem}[provider]
+                fn={"europepmc":self._search_europepmc,"crossref":self._search_crossref,
+                    "geo":self._search_geo,"arxiv":self._search_arxiv,
+                    "pubchem":self._search_pubchem,"openalex":self._search_openalex,
+                    "gbif":self._search_gbif,"world_bank":self._search_world_bank,"noaa_ncei":self._search_noaa_ncei,
+                    "clinical_trials":self._search_clinical_trials,"zenodo":self._search_zenodo,
+                    "harvard_dataverse":self._search_dataverse,"sra":self._search_sra,
+                    "pdb":self._search_pdb,"pride":self._search_pride,
+                    "huggingface_datasets":self._search_huggingface_datasets,"openml":self._search_openml,
+                    "nasa_earthdata":self._search_nasa_earthdata,"usgs":self._search_usgs,
+                    "figshare":self._search_figshare,"internet_archive":self._search_internet_archive,"loc":self._search_loc,"nasa_ads":self._search_nasa_ads,
+                    "pubmed":self._search_pubmed,"genbank":self._search_genbank,
+                    "inspire_hep":self._search_inspire_hep,"ensembl":self._search_ensembl}[provider]
                 jobs[pool.submit(fn,query,limit)]=provider
             for future in as_completed(jobs):
                 try: report.records.extend(future.result())
@@ -500,15 +1112,20 @@ class LiteratureClient:
             abstract=item.get("abstract","").strip()
             if not abstract:
                 report.warnings.append("No abstract supplied: "+title); continue
-            target_locator = ("GEO dataset summary" if item.get("dataset") else
+            is_dataset = bool(item.get("dataset"))
+            target_locator = ("GEO dataset summary" if item.get("provider") == "NCBI GEO" else
+                              "Dataset record" if is_dataset else
                               "Compound properties" if item.get("provider") == "PubChem" else "Abstract")
             evidence=next((e for e in run.evidence if e.source_id==source.source_id and e.locator==target_locator),None)
             if evidence is None:
-                evidence=Evidence(claim=abstract[:12000],source=title,kind=(EvidenceKind.DATASET if item.get("dataset") else EvidenceKind.SOURCE),
-                    method=("GEO dataset summary retrieved from NCBI E-utilities" if item.get("dataset") else
+                evidence=Evidence(claim=abstract[:12000],source=title,kind=(EvidenceKind.DATASET if is_dataset else EvidenceKind.SOURCE),
+                    method=("GEO dataset summary retrieved from NCBI E-utilities" if item.get("provider") == "NCBI GEO" else
+                            "Dataset metadata retrieved from "+item.get("provider","data provider") if is_dataset else
                             "Structured compound properties retrieved from PubChem PUG REST" if item.get("provider") == "PubChem" else
                             "Abstract retrieved from "+item.get("provider","scholarly metadata API")),
-                    limitations=("Structured chemical metadata, not a peer-reviewed mechanistic claim." if item.get("provider") == "PubChem" else "Abstract only; full text and methods may not have been accessed."),
+                    limitations=("Dataset/indicator/occurrence metadata only; inspect the linked data and its study design before scientific interpretation." if is_dataset else
+                                 "Structured chemical metadata, not a peer-reviewed mechanistic claim." if item.get("provider") == "PubChem" else
+                                 "Abstract only; full text and methods may not have been accessed."),
                     confidence="unassessed",source_id=source.source_id,locator=target_locator,reliability=0.5,
                     dependence_group=("doi:"+doi if doi else "pmid:"+pmid if pmid else ""))
                 run.evidence.append(evidence); report.evidence_records+=1
