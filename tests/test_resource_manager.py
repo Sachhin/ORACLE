@@ -113,22 +113,72 @@ class ResourceManagerTests(unittest.TestCase):
     def test_auto_source_selection_uses_domain_adapters(self):
         self.assertEqual(
             resolve_literature_providers("Can we identify aging mechanisms?", "auto"),
-            ("europepmc", "crossref", "geo", "pubchem"),
+            ("openalex", "europepmc", "crossref", "geo", "pubchem"),
         )
         self.assertEqual(
             resolve_literature_providers("Can quantum gravity be tested?", "auto"),
-            ("arxiv", "crossref"),
+            ("openalex", "arxiv", "crossref"),
         )
         self.assertEqual(
             resolve_literature_providers("How does a polymer catalyst work?", "auto"),
-            ("pubchem", "crossref"),
+            ("openalex", "pubchem", "crossref"),
         )
 
-    def test_auto_source_selection_uses_generic_crossref_for_unconnected_fields(self):
+    def test_auto_source_selection_uses_openalex_for_humanities_and_social_sciences(self):
         self.assertEqual(
             resolve_literature_providers("How did the Roman Empire collapse?", "auto"),
-            ("crossref",),
+            ("openalex", "crossref"),
         )
+        self.assertEqual(
+            resolve_literature_providers("What predicts national income inequality?", "auto"),
+            ("openalex", "crossref", "world_bank"),
+        )
+        self.assertEqual(
+            resolve_literature_providers("How is climate change affecting biodiversity?", "auto"),
+            ("openalex", "crossref", "gbif", "noaa_ncei"),
+        )
+
+    def test_openalex_inverted_abstract_is_reconstructed(self):
+        client = LiteratureClient()
+        payload = {"results": [{
+            "id": "https://openalex.org/W1", "doi": "https://doi.org/10.1/example",
+            "title": "A test paper", "publication_year": 2024,
+            "authorships": [{"author": {"display_name": "A Scientist"}}],
+            "primary_location": {"source": {"display_name": "Test Journal"}},
+            "open_access": {"is_oa": True, "oa_status": "gold"},
+            "cited_by_count": 12, "type": "article",
+            "abstract_inverted_index": {"World": [1], "Hello": [0], "again.": [2]},
+        }]}
+        with patch.object(client, "_get_json", return_value=payload):
+            records = client._search_openalex("test", 2)
+        self.assertEqual(records[0]["abstract"], "Hello World again.")
+        self.assertEqual(records[0]["provider"], "OpenAlex")
+        self.assertTrue(records[0]["open_access"])
+
+    def test_gbif_search_normalizes_occurrence_records(self):
+        client = LiteratureClient()
+        with patch.object(client, "_get_json", return_value={"results": [{
+            "key": 123, "scientificName": "Homo sapiens", "country": "India",
+            "year": 2025, "license": "CC_BY_4_0", "basisOfRecord": "HUMAN_OBSERVATION",
+        }]}):
+            records = client._search_gbif("human", 3)
+        self.assertEqual(records[0]["provider"], "GBIF")
+        self.assertIn("Homo sapiens", records[0]["abstract"])
+        self.assertEqual(records[0]["url"], "https://www.gbif.org/occurrence/123")
+
+    def test_world_bank_search_ranks_indicator_metadata(self):
+        client = LiteratureClient()
+        payload = [ {"page": 1}, [
+            {"id": "SP.DYN.LE00.IN", "name": "Life expectancy at birth",
+             "sourceNote": "Average number of years."},
+            {"id": "NY.GDP.MKTP.CD", "name": "GDP current US dollars",
+             "sourceNote": "Gross domestic product."},
+        ]]
+        with patch.object(client, "_get_json", return_value=payload):
+            records = client._search_world_bank("life expectancy", 1)
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records[0]["provider"], "World Bank")
+        self.assertEqual(records[0]["provider_id"], "SP.DYN.LE00.IN")
 
 if __name__ == "__main__":
     unittest.main()
