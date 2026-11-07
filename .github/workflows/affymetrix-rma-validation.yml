@@ -163,7 +163,7 @@ jobs:
       - name: Parse the local GEO RMA reference matrix
         run: |
           Rscript - <<'RS'
-          ref <- read.delim("data/gse12837/GSE12837_RMA.txt", check.names=FALSE,
+          ref <- read.delim("data/gse12837/GSE12837_RMA.txt", skip=1, check.names=FALSE,
                             stringsAsFactors=FALSE, quote="", comment.char="")
           if (ncol(ref) != 25L || nrow(ref) < 22000L)
             stop(paste("Unexpected GSE12837 RMA dimensions:", nrow(ref), "x", ncol(ref)))
