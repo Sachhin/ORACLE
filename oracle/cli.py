@@ -7,8 +7,6 @@ import os
 
 from .models import ExperimentStatus, ResearchMode, ResearchRun
 from .literature import LiteratureClient
-from .llm import GeminiClaimExtractor
-from .comparison import CrossPaperComparator
 from .orchestrator import OracleOrchestrator
 from .storage import ResearchStore
 from .resource_manager import resolve_literature_providers
@@ -103,13 +101,6 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--limit", type=int, default=10, help="Maximum literature records (1-50)")
     parser.add_argument("--provider", choices=["auto", "both", "all", "biology", "europepmc", "crossref", "geo", "arxiv", "pubchem", "openalex", "gbif", "world_bank", "noaa_ncei", "clinical_trials", "zenodo", "harvard_dataverse", "sra", "pdb", "pride", "huggingface_datasets", "openml", "nasa_earthdata", "usgs", "figshare", "internet_archive", "loc", "pubmed", "genbank", "inspire_hep", "ensembl", "nasa_ads"], default="both")
     parser.add_argument("--mailto", default="", help="Optional contact email for Crossref polite pool")
-    parser.add_argument("--extract-claims", action="store_true", help="Extract quote-grounded candidates with Gemini")
-    parser.add_argument("--gemini-model", default="gemini-2.5-flash", help="Gemini model for optional claim extraction, comparison, or research agents")
-    parser.add_argument("--agent-provider", choices=["deterministic", "gemini", "auto"], default="deterministic",
-                        help="Research-agent backend; auto enables configured provider failover")
-    parser.add_argument("--compare-papers", action="store_true", help="Compare extracted claims across distinct papers")
-    parser.add_argument("--review-evidence", action="store_true",
-                        help="Ask Gemini for quote-grounded support/refute/contextual suggestions; requires human review")
     parser.add_argument("--propose-protocol", metavar="RUN_ID",
                         help="Add a domain-specific proposed experiment protocol to a saved run")
     parser.add_argument("--protocol-domain",
@@ -1286,10 +1277,6 @@ def main() -> None:
         raise SystemExit("--full-text and GEO file options require --literature or --research-literature.")
     if not 1 <= args.dataset_max_mb <= 1000:
         raise SystemExit("--dataset-max-mb must be between 1 and 1000.")
-    if (args.extract_claims or args.compare_papers) and args.literature is None and not args.research_literature:
-        raise SystemExit("--extract-claims and --compare-papers require --literature or --research-literature.")
-    if (args.compare_papers or args.review_evidence) and not args.extract_claims:
-        raise SystemExit("--compare-papers and --review-evidence require --extract-claims.")
     if args.literature is not None:
         run = ResearchRun(question=args.literature)
         if args.provider == "auto":
@@ -1333,13 +1320,9 @@ def main() -> None:
             if args.analyze_geo_files:
                 from .geo_analysis import GEOExpressionAnalyzer
                 geo_analysis_report = GEOExpressionAnalyzer().analyze(run)
-        extraction_report = GeminiClaimExtractor(model=args.gemini_model).extract(run) if args.extract_claims else None
-        comparison_report = CrossPaperComparator(model=args.gemini_model).compare(run) if args.compare_papers else None
-        from .evidence_review import GeminiEvidenceReviewer
-        evidence_review_report = GeminiEvidenceReviewer(model=args.gemini_model).review(run) if args.review_evidence else None
         store.save_run(run)
         if args.json:
-            print(json.dumps({"run": run.to_dict(), "literature_report": report.__dict__, "claim_extraction_report": (extraction_report.__dict__ if extraction_report else None), "comparison_report": (comparison_report.__dict__ if comparison_report else None), "evidence_review_report": (evidence_review_report.__dict__ if evidence_review_report else None), "full_text_report": (full_text_report.__dict__ if full_text_report else None), "geo_discovery_report": (geo_discovery_report.__dict__ if geo_discovery_report else None), "geo_download_report": (geo_download_report.__dict__ if geo_download_report else None), "geo_analysis_report": (geo_analysis_report.__dict__ if geo_analysis_report else None), "citation_report": (citation_report.__dict__ if citation_report else None), "incoming_citation_report": (incoming_citation_report.__dict__ if incoming_citation_report else None)}, indent=2, ensure_ascii=False))
+            print(json.dumps({"run": run.to_dict(), "literature_report": report.__dict__, "full_text_report": (full_text_report.__dict__ if full_text_report else None), "geo_discovery_report": (geo_discovery_report.__dict__ if geo_discovery_report else None), "geo_download_report": (geo_download_report.__dict__ if geo_download_report else None), "geo_analysis_report": (geo_analysis_report.__dict__ if geo_analysis_report else None), "citation_report": (citation_report.__dict__ if citation_report else None), "incoming_citation_report": (incoming_citation_report.__dict__ if incoming_citation_report else None)}, indent=2, ensure_ascii=False))
             return
         print(f"ORACLE literature run: {run.run_id}")
         print(f"Retrieved: {report.retrieved} | Sources: {report.ingested_sources} | Abstracts: {report.evidence_records} | Candidate statements: {report.candidate_statements}")
@@ -1350,15 +1333,6 @@ def main() -> None:
         for warning in report.warnings:
             print(f"WARNING: {warning}")
         print("Extracted sentences are unreviewed candidates, not validated claims.")
-        if extraction_report:
-            print(f"Gemini: {extraction_report.candidates_created} quote-validated candidates; {extraction_report.candidates_rejected} rejected.")
-            print("Gemini candidates remain contextual, zero-weight, and unreviewed.")
-        if comparison_report:
-            print(f"Cross-paper comparison: {comparison_report.comparisons_created} review candidates from {comparison_report.pairs_submitted} pairs; {comparison_report.comparisons_rejected} rejected.")
-            print("Comparisons are pending review; no claim status or evidence stance was changed.")
-        if evidence_review_report:
-            print(f"Evidence review: {evidence_review_report.candidates_created} quote-grounded suggestions; {evidence_review_report.candidates_rejected} rejected.")
-            print("Evidence review suggestions are pending human review; no evidence stance or weight was changed.")
         if full_text_report:
             print(f"Open-access full text: {full_text_report.full_text_records} retrieved; {full_text_report.skipped_license} skipped by licence; {full_text_report.skipped_no_pmcid} without PMCID.")
         if geo_discovery_report:
@@ -1374,13 +1348,6 @@ def main() -> None:
         if incoming_citation_report:
             print(f"Incoming citations: {incoming_citation_report.links_created} citing works discovered.")
         return
-    agent_suite = None
-    if args.agent_provider in {"gemini", "auto"}:
-        from .model_agents import GeminiAgentSuite
-        agent_suite = GeminiAgentSuite(
-            model=args.gemini_model,
-            routing="fallback" if args.agent_provider == "auto" else "single",
-        )
     if args.provider in {"auto", "all"}:
         providers = resolve_literature_providers(args.question or "", args.domain)
     elif args.provider == "biology":
@@ -1390,14 +1357,11 @@ def main() -> None:
     else:
         providers = (args.provider,)
     orchestrator = OracleOrchestrator(
-        store, agent_suite=agent_suite,
+        store,
         literature_enabled=args.research_literature,
         literature_providers=providers,
         literature_limit=args.limit,
         literature_mailto=args.mailto,
-        extract_literature_claims=args.extract_claims,
-        compare_literature_papers=args.compare_papers,
-        review_literature_evidence=args.review_evidence,
         full_text_enabled=args.full_text,
         geo_files_enabled=args.discover_geo_files or args.download_geo_files or args.analyze_geo_files,
         geo_download_enabled=args.download_geo_files or args.analyze_geo_files,
@@ -1405,7 +1369,6 @@ def main() -> None:
         geo_max_file_bytes=args.dataset_max_mb * 1_000_000,
         citation_network_enabled=args.citation_network,
         incoming_citation_network_enabled=args.incoming_citations,
-        gemini_model=args.gemini_model,
         research_domain=args.domain,
     )
     if args.resume_id:
