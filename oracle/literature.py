@@ -29,10 +29,14 @@ class LiteratureSearchReport:
 
 class LiteratureClient:
     PROVIDERS = ("europepmc", "crossref", "geo", "arxiv", "pubchem")
-    def __init__(self, timeout: float = 20.0, mailto: str = ""):
+    def __init__(self, timeout: float = 20.0, mailto: str = "",
+                 max_abstract_enrichments: int = 10):
         if timeout <= 0:
             raise ValueError("timeout must be positive")
+        if not 0 <= max_abstract_enrichments <= 20:
+            raise ValueError("max_abstract_enrichments must be between 0 and 20")
         self.timeout, self.mailto = timeout, mailto.strip()
+        self.max_abstract_enrichments = max_abstract_enrichments
 
     def _get_json(self, url: str) -> dict[str, Any]:
         req = Request(url, headers={"Accept":"application/json",
@@ -212,6 +216,53 @@ class LiteratureClient:
             })
         return records
 
+    def _enrich_missing_abstracts(self, records: list[dict[str, Any]]) -> None:
+        """Recover abstracts omitted by one index using exact PMID/DOI lookups."""
+        remaining = self.max_abstract_enrichments
+        for record in records:
+            if remaining <= 0:
+                break
+            if record.get("abstract") or not (record.get("pmid") or record.get("doi")):
+                continue
+            identifier = ("EXT_ID:" + str(record["pmid"]) if record.get("pmid")
+                          else "DOI:" + str(record["doi"]))
+            url = "https://www.ebi.ac.uk/europepmc/webservices/rest/search?" + urlencode({
+                "query": identifier, "format": "json", "resultType": "core", "pageSize": 1,
+            })
+            remaining -= 1
+            try:
+                data = self._get_json(url)
+                hits = data.get("resultList", {}).get("result", [])
+                if not hits:
+                    continue
+                match = self._epmc_record(hits[0])
+                same_pmid = bool(record.get("pmid") and match.get("pmid") == str(record["pmid"]))
+                same_doi = bool(record.get("doi") and match.get("doi", "").casefold()
+                                == str(record["doi"]).casefold())
+                if not (same_pmid or same_doi):
+                    continue
+                for key in ("abstract", "pmcid", "license", "open_access", "pmid", "doi"):
+                    if match.get(key) not in (None, "") and (
+                        key in {"abstract", "pmcid", "license"} or not record.get(key)
+                    ):
+                        record[key] = match[key]
+            except Exception:
+                continue
+
+    @staticmethod
+    def _relevance_score(query: str, record: dict[str, Any]) -> int:
+        """Prefer records whose title/abstract actually discuss the requested topic."""
+        stop = {"the", "and", "for", "with", "from", "that", "this", "into",
+                "can", "does", "how", "what", "are", "was", "were", "in", "of",
+                "to", "a", "an", "is", "on", "by", "their", "human"}
+        terms = {token for token in re.findall(r"[a-z0-9]+", query.casefold())
+                 if len(token) >= 3 and token not in stop}
+        if not terms:
+            return 0
+        title = set(re.findall(r"[a-z0-9]+", str(record.get("title", "")).casefold()))
+        abstract = set(re.findall(r"[a-z0-9]+", str(record.get("abstract", "")).casefold()))
+        return 4 * len(terms & title) + len(terms & abstract)
+
     def search(self, query: str, limit: int=10, providers=("europepmc","crossref")) -> LiteratureSearchReport:
         query=query.strip()
         if not query: raise ValueError("Literature query cannot be empty.")
@@ -239,7 +290,12 @@ class LiteratureClient:
                 current=merged[key]
                 for k,v in item.items():
                     if v not in (None,"",[],False) and current.get(k) in (None,"",[],False): current[k]=v
-        report.records=list(merged.values())[:limit]; report.retrieved=len(report.records)
+        records = list(merged.values())
+        self._enrich_missing_abstracts(records)
+        # Provider completion order is nondeterministic; rank by topical overlap.
+        records.sort(key=lambda item: self._relevance_score(query, item), reverse=True)
+        report.records = records[:limit]
+        report.retrieved = len(report.records)
         return report
 
     @staticmethod
