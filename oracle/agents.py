@@ -16,6 +16,7 @@ class AgentContext:
     hypotheses: list[Hypothesis] = field(default_factory=list)
     findings: list[str] = field(default_factory=list)
     tasks: list[ResearchTask] = field(default_factory=list)
+    domain_profile: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -36,7 +37,16 @@ class PlannerAgent:
             ResearchTask("Identify gaps", "List unknowns, missing evidence, and testable questions.", 2),
             ResearchTask("Challenge assumptions", "Look for alternative explanations and possible falsifiers.", 1),
         ]
-        return AgentResult(self.name, "Created a balanced starter research plan.", tasks)
+        profile = context.domain_profile
+        for index, template in enumerate(profile.get("task_templates", [])[:4], start=1):
+            tasks.append(ResearchTask(
+                f"{profile.get('label', 'Domain')} specialist: {template}",
+                f"Apply this domain-specific research lens to: {context.question}. "
+                f"Suitable methods: {', '.join(profile.get('analysis_methods', [])[:5])}. "
+                "Do not claim a method was run unless its tool actually executed.",
+                min(5, index + 1),
+            ))
+        return AgentResult(self.name, "Created a balanced domain-aware research plan.", tasks)
 
 
 class ResearcherAgent:
