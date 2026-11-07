@@ -72,8 +72,7 @@ _RESOURCES = (
         capabilities=("technical_reports", "engineering_research")),
     ScientificResource("nasa_ads", "NASA Astrophysics Data System", ("physics_astronomy",),
         "https://api.adsabs.harvard.edu/v1", "public_api", "api_token",
-        "ADS API token required; abstracts and metadata subject to provider terms",
-        capabilities=("astronomy_literature", "citation_search")),
+        "ADS API token required; abstracts and metadata subject to provider terms", "nasa_ads", ("astronomy_literature", "citation_search")),
     ScientificResource("open_context", "Open Context", ("history_archaeology",),
         "https://opencontext.org", "public_catalog", "none",
         "Dataset-specific open licences apply", capabilities=("archaeology_datasets",)),
@@ -173,7 +172,7 @@ def resolve_literature_providers(question: str, requested_domain: str = "auto") 
     profile, _ = resolve_domain(question, requested_domain)
     by_domain = {
         "biology_medicine": ("openalex", "europepmc", "crossref", "geo", "pubchem", "clinical_trials", "sra", "zenodo", "harvard_dataverse", "pdb", "pride", "figshare"),
-        "physics_astronomy": ("openalex", "arxiv", "crossref"),
+        "physics_astronomy": ("openalex", "arxiv", "crossref", "nasa_ads"),
         "computer_science_ai": ("openalex", "arxiv", "crossref", "huggingface_datasets", "openml"),
         "mathematics_statistics": ("openalex", "arxiv", "crossref", "openml"),
         "chemistry_materials": ("openalex", "pubchem", "crossref"),
@@ -216,7 +215,7 @@ class ResourceManager:
             {**asdict(resource),
              "domains": list(resource.domains),
              "capabilities": list(resource.capabilities),
-             "status": "implemented" if resource.connector in {"europepmc", "crossref", "geo", "arxiv", "pubchem", "openalex", "gbif", "world_bank", "noaa_ncei", "clinical_trials", "zenodo", "harvard_dataverse", "sra", "pdb", "pride", "huggingface_datasets", "openml", "nasa_earthdata", "usgs", "figshare", "internet_archive", "loc"}
+             "status": "implemented" if resource.connector in {"europepmc", "crossref", "geo", "arxiv", "pubchem", "openalex", "gbif", "world_bank", "noaa_ncei", "clinical_trials", "zenodo", "harvard_dataverse", "sra", "pdb", "pride", "huggingface_datasets", "openml", "nasa_earthdata", "usgs", "figshare", "internet_archive", "loc", "nasa_ads"}
                        else "catalog_only"}
             for resource in _RESOURCES
             if domain in {"all", "auto"} or "all" in resource.domains
