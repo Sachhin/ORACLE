@@ -38,14 +38,14 @@ class PlannerAgent:
             ResearchTask("Challenge assumptions", "Look for alternative explanations and possible falsifiers.", 1),
         ]
         profile = context.domain_profile
-        for index, template in enumerate(profile.get("task_templates", [])[:4], start=1):
-            tasks.append(ResearchTask(
-                f"{profile.get('label', 'Domain')} specialist: {template}",
-                f"Apply this domain-specific research lens to: {context.question}. "
-                f"Suitable methods: {', '.join(profile.get('analysis_methods', [])[:5])}. "
-                "Do not claim a method was run unless its tool actually executed.",
-                min(5, index + 1),
-            ))
+        # Enrich the existing bounded plan in place. Do not add tasks here:
+        # literature retrieval relies on the original task budget/semantics.
+        for task, template in zip(tasks, profile.get("task_templates", [])):
+            methods = ", ".join(profile.get("analysis_methods", [])[:5])
+            task.description += (
+                f" Domain-specialist lens: {template}. Suitable methods: {methods}. "
+                "Do not claim a method was run unless its tool actually executed."
+            )
         return AgentResult(self.name, "Created a balanced domain-aware research plan.", tasks)
 
 
