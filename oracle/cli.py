@@ -95,7 +95,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--dataset-max-mb", type=int, default=50,
                         help="Maximum size of each GEO supplementary download in MB (1-1000)")
     parser.add_argument("--limit", type=int, default=10, help="Maximum literature records (1-50)")
-    parser.add_argument("--provider", choices=["both", "all", "biology", "europepmc", "crossref", "geo", "arxiv", "pubchem"], default="both")
+    parser.add_argument("--provider", choices=["auto", "both", "all", "biology", "europepmc", "crossref", "geo", "arxiv", "pubchem"], default="both")
     parser.add_argument("--mailto", default="", help="Optional contact email for Crossref polite pool")
     parser.add_argument("--extract-claims", action="store_true", help="Extract quote-grounded candidates with Gemini")
     parser.add_argument("--gemini-model", default="gemini-2.5-flash", help="Gemini model for optional claim extraction, comparison, or research agents")
@@ -1273,7 +1273,7 @@ def main() -> None:
         raise SystemExit("--compare-papers and --review-evidence require --extract-claims.")
     if args.literature is not None:
         run = ResearchRun(question=args.literature)
-        providers = {"both": ("europepmc", "crossref"), "biology": ("europepmc", "crossref", "geo"), "all": ("europepmc", "crossref", "geo", "arxiv", "pubchem"), "arxiv": ("arxiv",), "pubchem": ("pubchem",), "europepmc": ("europepmc",), "crossref": ("crossref",), "geo": ("geo",)}[args.provider]
+        providers = (__import__("oracle.resource_manager", fromlist=["resolve_literature_providers"]).resolve_literature_providers(args.literature, args.domain) if args.provider == "auto" else {"both": ("europepmc", "crossref"), "biology": ("europepmc", "crossref", "geo"), "all": ("europepmc", "crossref", "geo", "arxiv", "pubchem"), "arxiv": ("arxiv",), "pubchem": ("pubchem",), "europepmc": ("europepmc",), "crossref": ("crossref",), "geo": ("geo",)}[args.provider])
         client = LiteratureClient(mailto=args.mailto)
         report = client.search(args.literature, limit=args.limit, providers=providers)
         client.ingest(run, report)
@@ -1353,7 +1353,7 @@ def main() -> None:
             model=args.gemini_model,
             routing="fallback" if args.agent_provider == "auto" else "single",
         )
-    providers = {"both": ("europepmc", "crossref"), "biology": ("europepmc", "crossref", "geo"), "all": ("europepmc", "crossref", "geo", "arxiv", "pubchem"), "arxiv": ("arxiv",), "pubchem": ("pubchem",), "europepmc": ("europepmc",), "crossref": ("crossref",), "geo": ("geo",)}[args.provider]
+    providers = (__import__("oracle.resource_manager", fromlist=["resolve_literature_providers"]).resolve_literature_providers(args.question or "", args.domain) if args.provider == "auto" else {"both": ("europepmc", "crossref"), "biology": ("europepmc", "crossref", "geo"), "all": ("europepmc", "crossref", "geo", "arxiv", "pubchem"), "arxiv": ("arxiv",), "pubchem": ("pubchem",), "europepmc": ("europepmc",), "crossref": ("crossref",), "geo": ("geo",)}[args.provider])
     orchestrator = OracleOrchestrator(
         store, agent_suite=agent_suite,
         literature_enabled=args.research_literature,
