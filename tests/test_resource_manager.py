@@ -39,7 +39,7 @@ class ResourceManagerTests(unittest.TestCase):
         items = {item["key"]: item for item in ResourceManager.list_resources()}
         for key in ("openalex", "gbif", "world_bank", "pdb", "pride", "openml", "huggingface_datasets", "pubmed", "genbank", "ensembl", "inspire_hep", "ensembl", "inspire_hep", "nasa_earthdata", "usgs", "figshare", "internet_archive", "loc"):
             self.assertEqual(items[key]["status"], "implemented")
-        for key in ("materials_project", "nomad", "nasa_ads",
+        for key in ("materials_project", "nomad",
                     "pangaea",
                     "eric", "philpapers", "icpsr",
                     "europeana", "smithsonian_open_access"):
@@ -141,7 +141,7 @@ class ResourceManagerTests(unittest.TestCase):
         )
         self.assertEqual(
             resolve_literature_providers("Can quantum gravity be tested?", "auto"),
-            ("openalex", "arxiv", "crossref", "inspire_hep"),
+            ("openalex", "arxiv", "crossref", "inspire_hep", "nasa_ads"),
         )
         self.assertEqual(
             resolve_literature_providers("How does a polymer catalyst work?", "auto"),
