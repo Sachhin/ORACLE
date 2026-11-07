@@ -16,6 +16,9 @@ class FullTextReport:
     full_text_records: int = 0
     skipped_no_pmcid: int = 0
     skipped_license: int = 0
+    eligible_sources: int = 0
+    fetch_attempts: int = 0
+    fetch_failures: int = 0
     warnings: list[str] = field(default_factory=list)
 
 
@@ -112,10 +115,13 @@ class OpenAccessFullTextClient:
                 for item in run.evidence
             ):
                 continue
+            report.eligible_sources += 1
+            report.fetch_attempts += 1
             try:
                 xml_payload = self._fetch_xml(source.pmcid)
                 text = self._extract_body(xml_payload)
             except Exception as exc:
+                report.fetch_failures += 1
                 report.warnings.append(f"{source.pmcid}: {exc}")
                 continue
             if not text:
@@ -146,6 +152,8 @@ class OpenAccessFullTextClient:
             report.full_text_records += 1
         run.findings.append(
             f"Open-access full text: {report.full_text_records} article bodies retrieved; "
-            f"{report.skipped_no_pmcid} lacked PMCID; {report.skipped_license} skipped by licence."
+            f"{report.skipped_no_pmcid} lacked PMCID; {report.skipped_license} skipped by licence; "
+            f"{report.eligible_sources} eligible; {report.fetch_attempts} fetch attempts; "
+            f"{report.fetch_failures} fetch failures."
         )
         return report
