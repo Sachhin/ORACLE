@@ -33,12 +33,14 @@ class OracleTests(unittest.TestCase):
         from oracle.models import ResearchTask
         task = ResearchTask(
             "Map mechanisms",
-            "Identify molecular pathways and competing biological explanations.",
+            "Clarify the boundaries and key terms in: exercise and biological aging. Domain-specialist lens: cohort audit. Suitable methods: omics QC.",
             2,
         )
         query = OracleOrchestrator._task_search_query(task)
         self.assertIn("Map mechanisms", query)
-        self.assertIn("molecular pathways", query)
+        self.assertIn("exercise and biological aging", query)
+        self.assertNotIn("Clarify the boundaries", query)
+        self.assertNotIn("Domain-specialist lens", query)
         self.assertLessEqual(len(query), 350)
         self.assertNotIn("Can we identify previously unknown", query)
 
