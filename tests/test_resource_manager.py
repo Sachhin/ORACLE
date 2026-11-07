@@ -2,7 +2,7 @@
 import unittest
 from unittest.mock import patch
 
-from oracle.resource_manager import ResourceManager
+from oracle.resource_manager import ResourceManager, resolve_literature_providers
 from oracle.literature import LiteratureClient
 
 
@@ -109,6 +109,26 @@ class ResourceManagerTests(unittest.TestCase):
         with self.assertRaisesRegex(NotImplementedError, "catalog metadata only"):
             manager.search("battery cathode", resources=("materials_project",))
 
+
+    def test_auto_source_selection_uses_domain_adapters(self):
+        self.assertEqual(
+            resolve_literature_providers("Can we identify aging mechanisms?", "auto"),
+            ("europepmc", "crossref", "geo", "pubchem"),
+        )
+        self.assertEqual(
+            resolve_literature_providers("Can quantum gravity be tested?", "auto"),
+            ("arxiv", "crossref"),
+        )
+        self.assertEqual(
+            resolve_literature_providers("How does a polymer catalyst work?", "auto"),
+            ("pubchem", "crossref"),
+        )
+
+    def test_auto_source_selection_uses_generic_crossref_for_unconnected_fields(self):
+        self.assertEqual(
+            resolve_literature_providers("How did the Roman Empire collapse?", "auto"),
+            ("crossref",),
+        )
 
 if __name__ == "__main__":
     unittest.main()
