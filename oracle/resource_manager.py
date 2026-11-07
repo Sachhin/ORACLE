@@ -112,7 +112,7 @@ class ResourceManager:
         unsupported: list[str] = []
         for key in dict.fromkeys(resources):
             item = self.get_resource(key)
-            if item["connector"] in {"europepmc", "crossref", "geo", "arxiv"}:
+            if item["connector"] in {"europepmc", "crossref", "geo", "arxiv", "pubchem"}:
                 providers.append(item["connector"])
             else:
                 unsupported.append(key)
