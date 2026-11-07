@@ -67,7 +67,7 @@ Status reflects code currently present on the main branch. Checked items are imp
 - [x] Cross-Python-version golden-byte normalization check exercised by the Python 3.10–3.14 CI matrix (does not replace an independent implementation comparison)
 - [x] Independent edgeR TMM factor comparison against `edgeR::calcNormFactors` on the same raw-count matrix (live numerical tolerance assertion in CI)
 - [x] External-reference comparison CLI with provenance enforcement, file hashes, feature overlap checks, expression-matrix metrics, and DE call concordance
-- [x] External trusted limma-voom comparisons against published GSE176260 expression/weight matrices, same-study GSE176261 expression/weight matrices (PASS after full-cohort TMM correction; expression RMSE 0.0397, weights RMSE 0.0412; Bioconductor 3.13 and 3.22 sensitivity audits PASS), and independent GSE64099 published DE results; [ ] complete real Affymetrix CEL/RMA reference comparison
+- [x] External trusted limma-voom comparisons against published GSE176260 expression/weight matrices, same-study GSE176261 expression/weight matrices (PASS after full-cohort TMM correction; expression RMSE 0.0397, weights RMSE 0.0412; Bioconductor 3.13 and 3.22 sensitivity audits PASS), independent GSE64099 published DE results, and full 24-sample GSE12837 GPL96 CEL/RMA reference comparison PASS (RMSE 7.14e-10, Pearson 1.000).
 
 ## Milestone 5 — Evaluation and scientific validation
 - [x] Cross-domain golden-question integrity benchmark for the deterministic baseline
