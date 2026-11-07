@@ -33,7 +33,7 @@ class LiteratureSearchReport:
     abstract_enrichment_skipped_no_identifier: int = 0
 
 class LiteratureClient:
-    PROVIDERS = ("europepmc", "crossref", "geo", "arxiv", "pubchem", "openalex", "gbif", "world_bank", "noaa_ncei", "clinical_trials", "zenodo", "harvard_dataverse", "sra")
+    PROVIDERS = ("europepmc", "crossref", "geo", "arxiv", "pubchem", "openalex", "gbif", "world_bank", "noaa_ncei", "clinical_trials", "zenodo", "harvard_dataverse", "sra", "pdb", "pride", "huggingface_datasets", "openml")
     def __init__(self, timeout: float = 20.0, mailto: str = "",
                  max_abstract_enrichments: int = 10):
         if timeout <= 0:
@@ -372,6 +372,106 @@ class LiteratureClient:
         return records
 
 
+
+    def _search_pdb(self, query: str, limit: int):
+        search_query = {
+            "query": {"type": "terminal", "service": "full_text",
+                      "parameters": {"value": query}},
+            "return_type": "entry",
+            "request_options": {"paginate": {"start": 0, "rows": limit}},
+        }
+        payload = self._get_json("https://search.rcsb.org/rcsbsearch/v2/query?" + urlencode({
+            "json": json.dumps(search_query, separators=(",", ":"))
+        }))
+        identifiers = [str(x.get("identifier") or "") for x in payload.get("result_set", [])]
+        records = []
+        for pdb_id in identifiers[:limit]:
+            if not re.fullmatch(r"[0-9][A-Za-z0-9]{3}", pdb_id):
+                continue
+            item = self._get_json("https://data.rcsb.org/rest/v1/core/entry/" + quote(pdb_id))
+            title = (item.get("struct") or {}).get("title") or pdb_id
+            method = "; ".join(x.get("method", "") for x in item.get("exptl", []) if x.get("method"))
+            records.append({
+                "provider": "RCSB PDB", "provider_id": pdb_id, "doi": "", "pmid": "", "pmcid": "",
+                "title": self._clean(title), "authors": "", "journal": "Worldwide Protein Data Bank",
+                "year": str((item.get("rcsb_accession_info") or {}).get("initial_release_date") or "")[:4],
+                "url": "https://www.rcsb.org/structure/" + pdb_id,
+                "abstract": self._clean("Experimental structure. " + method),
+                "publication_type": "protein or nucleic-acid structure", "open_access": True,
+                "license": "PDB data use and attribution terms apply", "citation_count": None,
+                "dataset": True, "dataset_accession": pdb_id,
+            })
+        return records
+
+    def _search_pride(self, query: str, limit: int):
+        data = self._get_json("https://www.ebi.ac.uk/pride/ws/archive/v2/projects?" + urlencode({
+            "keyword": query, "page": 0, "size": limit
+        }))
+        if isinstance(data, list):
+            rows = data
+        else:
+            rows = data.get("content") or data.get("projects") or (data.get("_embedded") or {}).get("projects") or []
+        records = []
+        for item in rows[:limit]:
+            accession = str(item.get("accession") or item.get("projectAccession") or "")
+            title = item.get("title") or item.get("projectTitle") or accession or "PRIDE project"
+            records.append({
+                "provider": "PRIDE Archive", "provider_id": accession, "doi": str(item.get("doi") or ""),
+                "pmid": "", "pmcid": "", "title": self._clean(str(title)),
+                "authors": str(item.get("submitter") or ""), "journal": "PRIDE Archive",
+                "year": str(item.get("publicationDate") or item.get("submissionDate") or "")[:4],
+                "url": "https://www.ebi.ac.uk/pride/archive/projects/" + accession if accession else "https://www.ebi.ac.uk/pride/archive/",
+                "abstract": self._clean(str(item.get("projectDescription") or item.get("description") or "")),
+                "publication_type": "proteomics dataset", "open_access": True,
+                "license": "Project and file-level access/licence conditions apply",
+                "citation_count": None, "dataset": True, "dataset_accession": accession,
+            })
+        return records
+
+    def _search_huggingface_datasets(self, query: str, limit: int):
+        rows = self._get_json("https://huggingface.co/api/datasets?" + urlencode({
+            "search": query, "limit": limit, "full": "true"
+        }))
+        records = []
+        for item in rows[:limit] if isinstance(rows, list) else []:
+            repo_id = str(item.get("id") or item.get("name") or "")
+            card = item.get("cardData") or {}
+            records.append({
+                "provider": "Hugging Face Datasets", "provider_id": repo_id, "doi": "", "pmid": "", "pmcid": "",
+                "title": self._clean(repo_id), "authors": str(item.get("author") or ""),
+                "journal": "Hugging Face Hub", "year": "",
+                "url": "https://huggingface.co/datasets/" + repo_id if repo_id else "https://huggingface.co/datasets",
+                "abstract": self._clean(str(card.get("description") or card.get("task_categories") or "")),
+                "publication_type": "machine-learning dataset", "open_access": not bool(item.get("gated")),
+                "license": str(card.get("license") or "Check dataset card and access conditions"),
+                "citation_count": None, "dataset": True, "dataset_accession": repo_id,
+                "downloads": item.get("downloads"), "last_modified": item.get("lastModified"),
+            })
+        return records
+
+    def _search_openml(self, query: str, limit: int):
+        url = "https://www.openml.org/api/v1/json/data/list/data_name/" + quote(query, safe="") + "/limit/" + str(limit)
+        data = self._get_json(url)
+        container = data.get("data") or {}
+        rows = container.get("dataset") or []
+        if isinstance(rows, dict):
+            rows = [rows]
+        records = []
+        for item in rows[:limit]:
+            dataset_id = str(item.get("did") or item.get("id") or "")
+            name = item.get("name") or ("OpenML dataset " + dataset_id)
+            records.append({
+                "provider": "OpenML", "provider_id": dataset_id, "doi": "", "pmid": "", "pmcid": "",
+                "title": self._clean(str(name)), "authors": str(item.get("creator") or ""),
+                "journal": "OpenML", "year": str(item.get("upload_date") or "")[:4],
+                "url": "https://www.openml.org/d/" + dataset_id if dataset_id else "https://www.openml.org/",
+                "abstract": self._clean(str(item.get("description") or "")),
+                "publication_type": "machine-learning dataset", "open_access": True,
+                "license": str(item.get("licence") or item.get("license") or "Check dataset-level licence"),
+                "citation_count": None, "dataset": True, "dataset_accession": dataset_id,
+            })
+        return records
+
     def _search_clinical_trials(self, query: str, limit: int):
         data = self._get_json("https://clinicaltrials.gov/api/v2/studies?" + urlencode({
             "query.term": query, "pageSize": limit, "format": "json",
@@ -668,7 +768,7 @@ class LiteratureClient:
                     "pubchem":self._search_pubchem,"openalex":self._search_openalex,
                     "gbif":self._search_gbif,"world_bank":self._search_world_bank,"noaa_ncei":self._search_noaa_ncei,
                     "clinical_trials":self._search_clinical_trials,"zenodo":self._search_zenodo,
-                    "harvard_dataverse":self._search_dataverse,"sra":self._search_sra}[provider]
+                    "harvard_dataverse":self._search_dataverse,"sra":self._search_sra,\n                    "pdb":self._search_pdb,"pride":self._search_pride,\n                    "huggingface_datasets":self._search_huggingface_datasets,"openml":self._search_openml}[provider]
                 jobs[pool.submit(fn,query,limit)]=provider
             for future in as_completed(jobs):
                 try: report.records.extend(future.result())
