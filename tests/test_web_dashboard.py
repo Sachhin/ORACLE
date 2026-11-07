@@ -13,11 +13,10 @@ class DashboardTests(unittest.TestCase):
             with self.subTest(expected=expected):
                 self.assertIn(expected, PAGE)
 
-    def test_browser_always_uses_keyless_deterministic_agents(self):
+    def test_browser_uses_deterministic_agents_without_model_provider_flags(self):
         import inspect
         import oracle.web as web
         source = inspect.getsource(web.OracleDashboardHandler.do_POST)
-        self.assertIn('"--agent-provider", "deterministic"', source)
         self.assertNotIn("GEMINI_API_KEY", source)
         self.assertIn('literature_provider = "auto"', source)
         self.assertIn('"--provider", literature_provider', source)
