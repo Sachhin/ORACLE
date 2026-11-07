@@ -76,7 +76,7 @@ Status reflects code currently present on the main branch. Checked items are imp
 - [x] Machine-validated benchmark ingestion requirements for frozen source packets, two independent reviewers, adjudication, and paired baseline/candidate scores
 - [ ] Curated expert-scored scientific answer benchmark set with multiple reviewers and adjudicated labels (rubric, starter questions, and adjudication protocol exist; real labels remain pending)
 - [x] Evidence benchmark requires two named human annotations per case, records reviewer agreement, and validates adjudication on disagreement
-- [x] SciFact 20-claim live Gemini pilot generated, scored and uploaded (coverage 6.67% of the 300-claim dev split; pilot metrics are not treated as full-split performance); [ ] full 300-claim dev prediction/scoring run 42332253805 in progress after changing main-push default to MAX_CLAIMS=0.
+- [x] SciFact 20-claim live Gemini pilot generated, scored and uploaded (20/300 dev claims; coverage 6.67%; pilot-only stance accuracy 0.85, abstract evidence F1 0.833, sentence evidence F1 0.579; frozen predictions and subset-scoped rescore artifact run 42332689562); [ ] full 300-claim dev prediction/scoring run 42332654496 in progress using Gemini Flash Lite with 4.2-second pacing and provider-guided per-minute 429 retries. The free-tier daily quotas for Gemini 3.8/3.5 Flash were exhausted, so these models are excluded from this run.
 - [ ] Empirical evidence attribution, entailment, contradiction, and hallucination benchmark results (frozen ORACLE predictions and expert adjudication remain pending)
 - [x] Reproducibility and regression suite across Python 3.10–3.14 CI matrix
 - [x] High-impact claim review requires independent source groups, reviewer identity, and rationale
