@@ -96,13 +96,19 @@ class OracleOrchestrator:
         return " ".join(value.casefold().split())
 
     @staticmethod
-    def _task_search_query(task) -> str:
-        """Build a focused scholarly query without planner/profile boilerplate."""
+    def _task_search_query(task, research_question: str = "") -> str:
+        """Build a focused query while preserving the mission's scientific topic."""
         description = task.description.split(" Domain-specialist lens:", 1)[0]
         if " in: " in description:
             description = description.split(" in: ", 1)[1]
         words = " ".join((task.name, description)).split()
-        return " ".join(words[:32])[:350]
+        focused = " ".join(words[:24])
+        # Keep mission anchors in every task search. Otherwise generic planner tasks
+        # such as "look for overlooked mechanisms" lose the longevity context.
+        if any(term in research_question.casefold() for term in
+               ("longevity", "lifespan", "healthspan", "aging", "ageing", "centenarian")):
+            focused += " human longevity aging mechanisms"
+        return focused[:350]
 
     def _add_unique_evidence(self, run: ResearchRun, evidence_items: list) -> int:
         added = 0
@@ -354,7 +360,7 @@ class OracleOrchestrator:
                 # Search the task's concrete objective first. Repeating the entire
                 # natural-language question plus generic planner prose often dilutes
                 # scholarly API relevance (and returns metadata-only noise).
-                query = self._task_search_query(task)
+                query = self._task_search_query(task, run.question)
                 report = self._search_literature(query, min(8, self.literature_limit))
                 self._literature_client.ingest(run, report)
 
