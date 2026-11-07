@@ -7,7 +7,7 @@ This registry separates **working adapters** from **catalogued resources**. A li
 | Adapter | Coverage | Authentication | Output / scope |
 |---|---|---|---|
 | Europe PMC | Biology and medicine | None | Papers, abstracts and eligible open-access full text |
-| PubMed | Biomedical literature | None | NCBI E-utilities search and citation metadata |
+| INSPIRE-HEP | High-energy physics literature | None | Literature, DOI, arXiv and citation metadata |\n| Ensembl | Human gene annotation | None | Human gene-symbol cross-reference lookup (not free-text gene discovery) |\n| PubMed | Biomedical literature | None | NCBI E-utilities search and citation metadata |
 | Crossref | All scholarly fields | None | DOI, publication and reference metadata |
 | OpenAlex | All scholarly disciplines | Optional mailto | Works, authors, venues, OA status and citation metadata |
 | NCBI GEO | Functional genomics | None | GEO Series and supplementary-file metadata |
