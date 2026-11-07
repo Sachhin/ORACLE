@@ -1,49 +1,44 @@
-# ORACLE API-free autonomous scientist
+# ORACLE hybrid autonomous AI Scientist
 
 ## Product decision
-Upgrade the existing ORACLE repository in place. Do not install a local LLM and do not use Gemini, hosted LLM APIs, paid inference services, or model API keys. The phone is the control and operating device; scientific computation and data retrieval use the existing Python toolchain and public scientific resources.
+ORACLE is a hybrid system with a model-independent scientific core and an optional language-reasoning layer.
 
-## What ORACLE can honestly be without an LLM
-ORACLE can become an autonomous, reproducible computational research system. It can plan bounded investigations, retrieve papers and datasets, extract and link evidence, identify gaps, generate competing candidate hypotheses using explicit operators, run statistical/computational tests, challenge candidates against counter-evidence, and decide what to investigate next. It cannot claim open-ended language-model creativity or human-level scientific reasoning. Tasks requiring those capabilities must be labelled as unsupported rather than simulated.
+- **Native core:** research orchestration, public-source retrieval, evidence extraction/provenance, knowledge graph, statistical analysis, computational experiments, skeptic/auditor checks, checkpoints, and decisions.
+- **Language layer:** an open-weight LLM running on a computer/server controlled by the operator. The phone is the control device; no model weights or inference runtime need to be installed on the Pixel.
+- **No Gemini integration:** no Gemini SDK, Gemini API key, paid hosted inference service, vendor endpoint, or automatic provider fallback.
+- **Self-hosted connection:** the initial adapter speaks the common OpenAI-compatible HTTP protocol to an explicitly configured self-hosted runtime such as llama.cpp, Ollama, or vLLM. This is a network connection to the operator's own server, not a commercial hosted-model API. The user must provide and control the compute host; ORACLE does not provision free compute.
+- **Graceful degradation:** if the model is not configured or unavailable, the native scientific core remains usable and clearly reports that language-assisted reasoning is unavailable.
 
-## Target architecture
-1. **Research controller** — bounded state machine with task budgets, checkpoints, resume, retries, and progress-based stopping.
-2. **Source acquisition** — executable connectors for literature, citation networks, ontologies, and public datasets. Record retrieval time, query, source identifiers, licence/access constraints, and checksums.
-3. **Evidence pipeline** — normalize records, extract claims/measurements, preserve exact source spans/locators, deduplicate, and attach provenance.
-4. **Knowledge and gap engine** — evidence graph, contradiction candidates, missing populations/conditions, under-tested links, and cross-domain candidate links.
-5. **Hypothesis search** — explicit, inspectable operators generate alternatives from observed gaps and relationships. Every candidate records its generating rule, input evidence, assumptions, predictions, and falsifiers.
-6. **Skeptic and auditor** — deterministic checks for confounding, reverse causality, selection bias, sample-size limitations, multiple testing, leakage, unsupported causal language, source quality, and provenance.
-7. **Computational experiment engine** — execute only allowlisted analysis tools; predefine outcomes and controls; record environment, parameters, inputs, outputs, and checksums. Distinguish proposed, simulated, and actually performed experiments.
-8. **Decision and learning loop** — prioritize next actions using transparent evidence coverage, testability, uncertainty, cost, and replication criteria. Update the plan after each result.
-9. **Phone-first operation** — low-memory sequential tasks, resumable jobs, bounded downloads, and a simple dashboard/CLI. No model weights or local inference server.
+## Trust boundary
+The LLM proposes interpretations, plans, summaries, and candidate hypotheses. It is not a source of scientific evidence. Model output must be tied back to retrieved evidence, remain labelled as a proposal, and pass deterministic validation. It cannot directly mark a claim as established, mark an experiment as performed, or execute arbitrary code/tools. Store model identity and non-secret settings for reproducibility; never store credentials in run logs.
 
-## Required agent roles
-- Planner: convert a question into bounded, source-specific tasks and measurable success criteria.
-- Researcher: retrieve and extract source-backed evidence; never invent citations.
-- Explorer: identify gaps, alternative domains, and overlooked testable relationships from the evidence graph.
-- Hypothesis: generate multiple falsifiable candidates using named rules/operators and retain alternatives.
-- Skeptic: search for counter-evidence and methodological weaknesses.
-- Experiment: choose and run registered computational analyses when data and tools permit; otherwise produce a clearly labelled proposal.
-- Auditor: validate provenance, calculations, assumptions, and claim status.
-- Novelty assessor: compare against retrieved prior art and report coverage limits; never assert absolute novelty.
+## Current implementation slice
+`oracle/language_model.py` provides a small optional client for an explicitly configured self-hosted OpenAI-compatible chat-completion endpoint. It has no vendor SDK, no API-key field, no automatic endpoint, and no dependency beyond Python's standard library. It validates message shape, enforces request bounds, and reports connection failures without affecting the native core.
+
+This adapter is an integration boundary, not a complete language-reasoning agent. It is not yet wired into the orchestrator or agent roles, and it does not install, download, or host a model.
+
+## Runtime options
+Self-hosted inference servers commonly expose compatible HTTP endpoints:
+- llama.cpp server
+- Ollama OpenAI-compatible endpoint
+- vLLM server
+
+Choose the runtime according to the actual host hardware. vLLM is designed around GPU-backed serving; llama.cpp supports CPU and GPU inference; Ollama offers a simpler model-management experience. ORACLE does not assume a particular runtime or model.
 
 ## Implementation sequence
-1. Remove the abandoned local-LLM client and its tests/docs; preserve the existing deterministic scientific core.
-2. Audit every existing connector and classify it as metadata-only, full-text, dataset-download, parser, or executable analysis. Do not describe catalogued connectors as operational until tested.
-3. Add typed hypothesis-generation operators and provenance for every generated candidate.
-4. Add evidence-gap and contradiction scoring with transparent formulas and tests.
-5. Connect gap outputs to task selection so later cycles actually investigate newly identified gaps.
-6. Add bounded allowlisted computational experiment execution and immutable run manifests.
-7. Add end-to-end tests using real public datasets, independent replication, and failure/recovery cases.
-8. Benchmark outputs against fixed baselines; report unsupported capabilities and limitations.
+1. Finalize the hybrid architecture and trust boundary.
+2. Add the optional self-hosted model adapter and tests (no Gemini or paid provider).
+3. Add typed model task contracts and structured response validation.
+4. Integrate optional language reasoning into Planner, Explorer, Hypothesis, and synthesis roles while preserving deterministic fallback.
+5. Add adversarial tests: malformed output, hallucinated citations, unavailable model, prompt injection in retrieved papers, and attempted tool escalation.
+6. Add evaluation against deterministic baselines and human-reviewed research tasks.
+7. Only then select and benchmark a suitable open-weight model against the actual compute host.
 
 ## Acceptance gates
-- No LLM package, model files, inference server, hosted LLM endpoint, or API-key configuration is required.
-- A fresh install can run the deterministic research pipeline without model setup.
-- Each agent produces typed, testable outputs with provenance.
-- Every generated hypothesis is falsifiable, has competing alternatives, and records its generation method.
-- Tool execution is allowlisted, bounded, and logged with inputs/outputs.
-- Interrupted runs resume without losing evidence or repeating completed expensive work.
-- Real dataset analyses reproduce from recorded manifests and pass independent validation.
-- Scientific claims are not promoted from heuristic scores or unvalidated correlations.
-- Benchmarks demonstrate measurable capability; no unsupported claim of AGI or human-level autonomous science.
+- A fresh install runs the native scientific pipeline without any model setup.
+- No Gemini dependency, paid hosted inference, API key, or model weights on the phone.
+- The language layer connects only to an explicitly configured operator-controlled server.
+- The adapter is optional, bounded, and fails closed without disabling native research.
+- Model proposals cannot bypass evidence provenance, statistical validation, skeptic review, or auditor checks.
+- All outputs distinguish source evidence, deterministic analysis, and model-generated proposals.
+- Real scientific claims and benchmarks remain pending until executed and independently validated.
