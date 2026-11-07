@@ -150,7 +150,7 @@ class ResourceManagerTests(unittest.TestCase):
         )
         self.assertEqual(
             resolve_literature_providers("How is climate change affecting biodiversity?", "auto"),
-            ("openalex", "crossref", "gbif", "noaa_ncei"),
+            ("openalex", "crossref", "gbif"),
         )
 
     def test_openalex_inverted_abstract_is_reconstructed(self):
