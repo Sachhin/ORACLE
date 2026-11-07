@@ -8,10 +8,18 @@ class DashboardTests(unittest.TestCase):
     def test_page_exposes_research_controls_and_history(self):
         for expected in (
             "Start a research mission", "Research question", "Deep research",
-            "Autonomous discovery", "Research history", "/api/run", "/api/runs",
+            "Autonomous discovery", "Research history", "No API key required", "/api/run", "/api/runs",
         ):
             with self.subTest(expected=expected):
                 self.assertIn(expected, PAGE)
+
+    def test_browser_runs_without_model_api_credentials(self):
+        import inspect
+        import oracle.web as web
+        source = inspect.getsource(web.OracleDashboardHandler.do_POST)
+        self.assertIn('"--agent-provider", "deterministic"', source)
+        self.assertNotIn("GEMINI_API_KEY", source)
+        self.assertNotIn('id="agent"', PAGE)
 
     def test_dashboard_is_loopback_only_by_default(self):
         # The server entry point defaults to 127.0.0.1 and rejects public binds.
