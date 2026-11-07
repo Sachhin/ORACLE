@@ -177,7 +177,7 @@ class OracleDashboardHandler(BaseHTTPRequestHandler):
             literature_provider = "auto"
             command = [sys.executable, "-m", "oracle", question, "--mode", mode,
                 "--domain", domain, "--cycles", str(cycles), "--limit", str(limit),
-                "--agent-provider", "deterministic", "--research-literature", "--provider", literature_provider,
+"--research-literature", "--provider", literature_provider,
                 "--db", os.environ.get("ORACLE_DB", "data/oracle.sqlite3"), "--json"]
             if payload.get("full_text"):
                 command.append("--full-text")
