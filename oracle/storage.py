@@ -143,7 +143,7 @@ class ResearchStore:
     def save_run(self, run: ResearchRun) -> None:
         run.touch()
         payload = json.dumps(run.to_dict(), ensure_ascii=False)
-        with self._connect() as db:
+        with self._session() as db:
             db.execute("""
                 INSERT INTO runs(run_id,status,question,payload,updated_at)
                 VALUES(?,?,?,?,?)
@@ -154,7 +154,7 @@ class ResearchStore:
             self._sync_graph(db, run)
 
     def load_payload(self, run_id: str) -> dict[str, Any] | None:
-        with self._connect() as db:
+        with self._session() as db:
             row = db.execute("SELECT payload FROM runs WHERE run_id=?", (run_id,)).fetchone()
         return json.loads(row["payload"]) if row else None
 
@@ -206,7 +206,7 @@ class ResearchStore:
 
     def log_event(self, run_id: str, event_type: str, payload: dict[str, Any],
                   event_key: str | None = None) -> None:
-        with self._connect() as db:
+        with self._session() as db:
             db.execute(
                 "INSERT OR IGNORE INTO events(run_id,event_type,payload,created_at,event_key) VALUES(?,?,?,?,?)",
                 (run_id, event_type, json.dumps(payload, ensure_ascii=False), utc_now(), event_key),
@@ -247,7 +247,7 @@ class ResearchStore:
             raise ValueError("Each claim needs linked source-backed evidence.")
         link = CrossRunClaimLink(run_a_id, claim_a_id, run_b_id, claim_b_id,
                                  relation, rationale.strip(), evidence_a, evidence_b)
-        with self._connect() as db:
+        with self._session() as db:
             db.execute(
                 """INSERT INTO cross_run_claim_links
                    (link_id,run_a_id,claim_a_id,run_b_id,claim_b_id,relation,status,payload,created_at)
@@ -258,7 +258,7 @@ class ResearchStore:
         return link
 
     def list_cross_run_claim_links(self, run_id: str | None = None) -> list[dict[str, Any]]:
-        with self._connect() as db:
+        with self._session() as db:
             if run_id:
                 rows = db.execute(
                     "SELECT payload FROM cross_run_claim_links WHERE run_a_id=? OR run_b_id=? ORDER BY created_at",
@@ -274,7 +274,7 @@ class ResearchStore:
             raise ValueError("Review status must be accepted, rejected, or needs_context.")
         if not reviewer_note.strip():
             raise ValueError("A human review note is required.")
-        with self._connect() as db:
+        with self._session() as db:
             row = db.execute("SELECT payload FROM cross_run_claim_links WHERE link_id=?", (link_id,)).fetchone()
             if row is None:
                 raise ValueError(f"Unknown cross-run claim link: {link_id}")
@@ -327,7 +327,7 @@ class ResearchStore:
             "scores": normalized_scores, "reviewer_note": reviewer_note.strip(),
             "source_ids": selected_sources, "created_at": utc_now(),
         }
-        with self._connect() as db:
+        with self._session() as db:
             db.execute(
                 "INSERT INTO answer_quality_reviews(review_id,run_id,reviewer,payload,created_at) VALUES(?,?,?,?,?)",
                 (review["review_id"], run_id, review["reviewer"],
@@ -336,7 +336,7 @@ class ResearchStore:
         return review
 
     def list_answer_quality_reviews(self, run_id: str) -> list[dict[str, Any]]:
-        with self._connect() as db:
+        with self._session() as db:
             rows = db.execute(
                 "SELECT payload FROM answer_quality_reviews WHERE run_id=? ORDER BY created_at",
                 (run_id,),
@@ -345,7 +345,7 @@ class ResearchStore:
 
     def list_differential_expression_analyses(self, run_id: str) -> list[dict[str, Any]]:
         """Return persisted DE analyses in creation order, including their full result payloads."""
-        with self._connect() as db:
+        with self._session() as db:
             rows = db.execute(
                 """SELECT payload FROM differential_expression_analyses
                    WHERE run_id=? ORDER BY rowid""", (run_id,)
@@ -353,7 +353,7 @@ class ResearchStore:
         return [json.loads(row["payload"]) for row in rows]
 
     def list_events(self, run_id: str) -> list[dict[str, Any]]:
-        with self._connect() as db:
+        with self._session() as db:
             rows = db.execute(
                 "SELECT event_type,payload,created_at,event_key FROM events WHERE run_id=? ORDER BY event_id",
                 (run_id,),
@@ -366,7 +366,7 @@ class ResearchStore:
         """List recent research runs without loading every full knowledge graph."""
         if not 1 <= limit <= 500:
             raise ValueError("limit must be between 1 and 500.")
-        with self._connect() as db:
+        with self._session() as db:
             rows = db.execute(
                 "SELECT run_id,status,question,updated_at FROM runs ORDER BY updated_at DESC LIMIT ?",
                 (limit,),
@@ -374,7 +374,7 @@ class ResearchStore:
         return [dict(row) for row in rows]
 
     def list_resumable_runs(self) -> list[dict[str, Any]]:
-        with self._connect() as db:
+        with self._session() as db:
             rows = db.execute(
                 "SELECT run_id,question,status,updated_at FROM runs WHERE status IN ('running','paused','failed','stopped') ORDER BY updated_at DESC"
             ).fetchall()
