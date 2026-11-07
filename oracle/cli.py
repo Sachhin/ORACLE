@@ -1407,7 +1407,8 @@ def main() -> None:
     experiment_counts = {status.value: sum(1 for item in run.experiments if item.status == status)
                          for status in ExperimentStatus}
     print("Experiments: " + " | ".join(f"{name}: {count}" for name, count in experiment_counts.items()))
-    print("\nFindings and limitations:")
+    print("
+Findings and limitations:")
     for finding in run.findings:
         print(f"- {finding}")
 
