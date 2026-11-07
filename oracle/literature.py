@@ -358,11 +358,57 @@ class LiteratureClient:
         """
         if cls._topic_profile(query) != "human_longevity":
             return True
+        # GEO datasets are selected by a dedicated, human-organism-constrained
+        # NCBI query. Their accession/title may not repeat the search term, so do
+        # not discard them using the publication-title relevance gate.
+        if record.get("dataset") and str(record.get("dataset_accession", "")).upper().startswith("GSE"):
+            return True
         title = str(record.get("title", "")).casefold()
         abstract = str(record.get("abstract", "")).casefold()
         anchors = ("longevity", "lifespan", "life span", "healthspan", "centenarian",
                    "aging", "ageing", "senescence", "geroscience", "geroprotector")
         return any(term in title or term in abstract for term in anchors)
+
+    @classmethod
+    def geo_dataset_queries(cls, query: str) -> list[str]:
+        """Return bounded, human-specific GEO searches for a longevity mission."""
+        if cls._topic_profile(query) == "human_longevity":
+            return [
+                '("longevity"[All Fields] OR "life span"[All Fields] OR "lifespan"[All Fields] OR "healthspan"[All Fields] OR "centenarian"[All Fields]) AND "Homo sapiens"[Organism]',
+                '("aging"[All Fields] OR "ageing"[All Fields] OR "senescence"[All Fields]) AND "Homo sapiens"[Organism]',
+                '("aging"[All Fields] OR "ageing"[All Fields]) AND ("mitochondria"[All Fields] OR "autophagy"[All Fields] OR "DNA repair"[All Fields] OR "proteostasis"[All Fields] OR "epigenetic"[All Fields]) AND "Homo sapiens"[Organism]',
+            ]
+        return [f'({query.strip()}) AND "Homo sapiens"[Organism]']
+
+    def search_geo_datasets(self, query: str, limit: int = 20) -> LiteratureSearchReport:
+        """Search NCBI GEO independently of the paper search and deduplicate GSE accessions."""
+        if not query.strip():
+            raise ValueError("GEO dataset search query cannot be empty.")
+        if not 1 <= limit <= 50:
+            raise ValueError("GEO dataset limit must be between 1 and 50.")
+        queries = self.geo_dataset_queries(query)
+        report = LiteratureSearchReport(
+            query="; ".join(queries), providers=["geo"]
+        )
+        by_accession: dict[str, dict[str, Any]] = {}
+        per_query_limit = min(20, limit)
+        for geo_query in queries:
+            try:
+                for item in self._search_geo(geo_query, per_query_limit):
+                    accession = str(item.get("dataset_accession") or "").upper()
+                    if not re.fullmatch(r"GSE\\d+", accession):
+                        report.warnings.append(
+                            f"Skipped GEO result without a valid GSE accession: {item.get('title', 'untitled')}"
+                        )
+                        continue
+                    by_accession.setdefault(accession, item)
+            except Exception as exc:
+                report.warnings.append(f"NCBI GEO query failed ({geo_query[:90]}): {exc}")
+        report.records = list(by_accession.values())[:limit]
+        report.retrieved = len(report.records)
+        if not report.records and not report.warnings:
+            report.warnings.append("NCBI GEO returned no human GEO Series for the targeted searches.")
+        return report
 
     def search(self, query: str, limit: int=10, providers=("europepmc","crossref")) -> LiteratureSearchReport:
         query=query.strip()
