@@ -48,7 +48,7 @@ button:disabled{opacity:.5;cursor:wait}.muted{color:var(--muted)}.status{padding
 <div><label>Domain</label><select id="domain"><option value="auto">Automatic</option><option value="biology_medicine">Biology & medicine</option><option value="physics_astronomy">Physics & astronomy</option><option value="chemistry_materials">Chemistry & materials</option><option value="computer_science_ai">Computer science & AI</option><option value="earth_environment">Earth & environment</option><option value="mathematics_statistics">Mathematics & statistics</option><option value="social_behavioral">Social & behavioural science</option><option value="engineering">Engineering</option><option value="general_science">General science</option></select></div></div>
 <div class="grid"><div><label>Research cycles (1–8)</label><input id="cycles" type="number" min="1" max="8" value="3"></div>
 <div><label>Literature records (1–50)</label><input id="limit" type="number" min="1" max="50" value="20"></div></div>
-<div class="status">No API key required. Uses ORACLE’s deterministic research workflow; model-based reasoning is not enabled.</div>
+<div class="status">No API key is required for the baseline. If GEMINI_API_KEY is configured in the server environment, Gemini reasoning runs with deterministic fallback; otherwise the deterministic baseline is used.</div>
 <label class="check"><input id="fulltext" type="checkbox" checked> Retrieve eligible open-access full text</label>
 <label class="check"><input id="citations" type="checkbox" checked> Expand citation network</label>
 <button id="start" type="submit">Start research</button>
@@ -172,9 +172,11 @@ class OracleDashboardHandler(BaseHTTPRequestHandler):
             job_dir.mkdir(parents=True, exist_ok=True)
             job_id = uuid.uuid4().hex
             output, log = job_dir / f"{job_id}.json", job_dir / f"{job_id}.log"
+            agent_provider = "auto" if os.environ.get("GEMINI_API_KEY", "").strip() else "deterministic"
+            literature_provider = "biology" if domain == "biology_medicine" else "both"
             command = [sys.executable, "-m", "oracle", question, "--mode", mode,
                 "--domain", domain, "--cycles", str(cycles), "--limit", str(limit),
-                "--agent-provider", "deterministic", "--research-literature", "--provider", "both",
+                "--agent-provider", agent_provider, "--research-literature", "--provider", literature_provider,
                 "--db", os.environ.get("ORACLE_DB", "data/oracle.sqlite3"), "--json"]
             if payload.get("full_text"):
                 command.append("--full-text")
