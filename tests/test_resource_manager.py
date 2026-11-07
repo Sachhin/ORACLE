@@ -30,8 +30,8 @@ class ResourceManagerTests(unittest.TestCase):
         self.assertIn("europepmc", keys)
         self.assertIn("crossref", keys)
         self.assertIn("ncbi_geo", keys)
-        self.assertIn("arxiv", keys)
-        self.assertNotIn("pubchem", keys)
+        self.assertNotIn("arxiv", keys)
+        self.assertIn("pubchem", keys)
         self.assertNotIn("noaa_ncei", keys)
 
     def test_arxiv_entry_normalizes_to_common_literature_schema(self):
