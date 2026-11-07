@@ -1032,7 +1032,8 @@ class LiteratureClient:
                     "huggingface_datasets":self._search_huggingface_datasets,"openml":self._search_openml,
                     "nasa_earthdata":self._search_nasa_earthdata,"usgs":self._search_usgs,
                     "figshare":self._search_figshare,"internet_archive":self._search_internet_archive,"loc":self._search_loc,"nasa_ads":self._search_nasa_ads,
-                    "pubmed":self._search_pubmed,"genbank":self._search_genbank,\n                    "inspire_hep":self._search_inspire_hep,"ensembl":self._search_ensembl}[provider]
+                    "pubmed":self._search_pubmed,"genbank":self._search_genbank,
+                    "inspire_hep":self._search_inspire_hep,"ensembl":self._search_ensembl}[provider]
                 jobs[pool.submit(fn,query,limit)]=provider
             for future in as_completed(jobs):
                 try: report.records.extend(future.result())
