@@ -51,9 +51,8 @@ Automatic routing is the default and preserves existing command lines:
 
 ```bash
 python -m oracle "Can we identify previously unknown biological mechanisms involved in human longevity?" \
-  --domain auto --mode both --cycles 3 --agent-provider gemini \
-  --research-literature --provider all --extract-claims --compare-papers \
-  --review-evidence --full-text --discover-geo-files --json
+  --domain auto --mode both --cycles 3 \
+  --research-literature --provider all --full-text --discover-geo-files --json
 ```
 
 To override routing, use any profile key listed above, or `--domain auto`.
