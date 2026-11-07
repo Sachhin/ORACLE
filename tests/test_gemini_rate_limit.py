@@ -24,7 +24,7 @@ class GeminiPerMinuteRetryTests(unittest.TestCase):
                 return False
             def read(self, *_):
                 return json.dumps({
-                    "candidates": [{"content": {"parts": [{"text": "{\\"ok\\": true}"}]}}]
+                                        "candidates": [{"content": {"parts": [{"text": json.dumps({"ok": True})}]}}]
                 }).encode()
 
         provider = GeminiJSONProvider(api_key="test-key", model="gemini-3.5-flash-lite", max_retries=1)
