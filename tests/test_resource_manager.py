@@ -267,6 +267,46 @@ class ResourceManagerTests(unittest.TestCase):
             result = manager.search("test dataset", limit=2, resources=(key,))
             self.assertEqual(result[2], (key,))
 
+
+    def test_pdb_search_retrieves_structure_metadata(self):
+        client = LiteratureClient()
+        payloads = [
+            {"result_set": [{"identifier": "1ABC"}]},
+            {"struct": {"title": "Test protein"}, "exptl": [{"method": "X-RAY DIFFRACTION"}],
+             "rcsb_accession_info": {"initial_release_date": "2024-01-01T00:00:00Z"}},
+        ]
+        with patch.object(client, "_get_json", side_effect=payloads):
+            records = client._search_pdb("test protein", 2)
+        self.assertEqual(records[0]["dataset_accession"], "1ABC")
+        self.assertIn("X-RAY", records[0]["abstract"])
+
+    def test_pride_search_normalizes_proteomics_project(self):
+        client = LiteratureClient()
+        payload = {"content": [{"accession": "PXD012345", "title": "Proteomics study",
+                                "projectDescription": "Mass spectrometry data"}]}
+        with patch.object(client, "_get_json", return_value=payload):
+            records = client._search_pride("proteomics", 2)
+        self.assertEqual(records[0]["dataset_accession"], "PXD012345")
+        self.assertIn("pride/archive/projects/PXD012345", records[0]["url"])
+
+    def test_huggingface_search_preserves_gated_and_license_metadata(self):
+        client = LiteratureClient()
+        payload = [{"id": "org/longevity-data", "gated": "auto",
+                    "cardData": {"description": "A dataset", "license": "cc-by-4.0"}}]
+        with patch.object(client, "_get_json", return_value=payload):
+            records = client._search_huggingface_datasets("longevity", 2)
+        self.assertFalse(records[0]["open_access"])
+        self.assertEqual(records[0]["license"], "cc-by-4.0")
+
+    def test_openml_search_normalizes_dataset_identifier(self):
+        client = LiteratureClient()
+        payload = {"data": {"dataset": [{"did": "42", "name": "A benchmark",
+                                         "licence": "Public"}]}}
+        with patch.object(client, "_get_json", return_value=payload):
+            records = client._search_openml("benchmark", 2)
+        self.assertEqual(records[0]["dataset_accession"], "42")
+        self.assertIn("/d/42", records[0]["url"])
+
 if __name__ == "__main__":
     unittest.main()
 
