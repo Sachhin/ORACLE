@@ -1,0 +1,152 @@
+name: ORACLE longevity research mission
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/oracle-research-mission.yml"
+  workflow_dispatch:
+    inputs:
+      question:
+        description: Scientific research question
+        required: true
+        type: string
+        default: "Can we identify previously unknown biological mechanisms involved in human longevity?"
+      mode:
+        description: Research mode
+        required: true
+        type: choice
+        options: [both, deep_research, autonomous_discovery]
+        default: both
+      domain:
+        description: Specialist domain
+        required: true
+        type: choice
+        options:
+          - biology_medicine
+          - physics_astronomy
+          - chemistry_materials
+          - computer_science_ai
+          - earth_environment
+          - mathematics_statistics
+          - social_behavioral
+          - engineering
+          - general_science
+        default: biology_medicine
+      cycles:
+        description: Bounded research cycles
+        required: true
+        type: number
+        default: 3
+      model:
+        description: Gemini model
+        required: true
+        type: string
+        default: gemini-3.5-flash-lite
+      limit:
+        description: Maximum literature records per search
+        required: true
+        type: number
+        default: 30
+      dataset_max_mb:
+        description: Maximum size of each GEO supplementary file in MB
+        required: true
+        type: number
+        default: 50
+      provider:
+        description: Literature providers
+        required: true
+        type: choice
+        options: [all, both, europepmc, crossref, geo, arxiv, pubchem]
+        default: all
+
+permissions:
+  contents: read
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      QUESTION: ${{ github.event_name == 'workflow_dispatch' && inputs.question || 'Can we identify previously unknown biological mechanisms involved in human longevity?' }}
+      MODE: ${{ github.event_name == 'workflow_dispatch' && inputs.mode || 'both' }}
+      DOMAIN: ${{ github.event_name == 'workflow_dispatch' && inputs.domain || 'biology_medicine' }}
+      CYCLES: ${{ github.event_name == 'workflow_dispatch' && inputs.cycles || '3' }}
+      MODEL: ${{ github.event_name == 'workflow_dispatch' && inputs.model || 'gemini-3.5-flash-lite' }}
+      LIMIT: ${{ github.event_name == 'workflow_dispatch' && inputs.limit || '30' }}
+      DATASET_MAX_MB: ${{ github.event_name == 'workflow_dispatch' && inputs.dataset_max_mb || '50' }}
+      PROVIDER: ${{ github.event_name == 'workflow_dispatch' && inputs.provider || 'all' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Verify Gemini credential
+        shell: bash
+        run: |
+          if [ -z "$GEMINI_API_KEY" ]; then
+            echo "::error::GEMINI_API_KEY is missing from repository Actions secrets."
+            exit 1
+          fi
+      - name: Run full ORACLE literature and discovery mission
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts data
+          python -m oracle "$QUESTION" \
+            --mode "$MODE" \
+            --domain "$DOMAIN" \
+            --cycles "$CYCLES" \
+            --agent-provider auto \
+            --gemini-model "$MODEL" \
+            --research-literature \
+            --full-text \
+            --citation-network \
+            --incoming-citations \
+            --discover-geo-files \
+            --download-geo-files \
+            --analyze-geo-files \
+            --dataset-max-mb "$DATASET_MAX_MB" \
+            --limit "$LIMIT" \
+            --provider "$PROVIDER" \
+            --db data/oracle.sqlite3 \
+            --json > artifacts/oracle_research_run.json
+      - name: Summarize research run
+        if: always()
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          path = Path("artifacts/oracle_research_run.json")
+          lines = ["## ORACLE research mission"]
+          if path.exists():
+              try:
+                  data = json.loads(path.read_text())
+                  lines.extend([
+                      f"- Question: {data.get('question', 'see full report')}",
+                      f"- Run ID: {data.get('run_id', 'see full report')}",
+                      f"- Status: {data.get('status', 'see full report')}",
+                      f"- Mode: {data.get('mode', 'see full report')}",
+                      f"- Cycles: {data.get('current_cycle', data.get('cycles', 'see full report'))}",
+                  ])
+              except Exception as exc:
+                  lines.append(f"- JSON summary unavailable: {exc}")
+          else:
+              lines.append("- Research output file was not produced; inspect the job log.")
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as handle:
+              handle.write("\n".join(lines) + "\n")
+          PY
+      - name: Upload ORACLE run database and research outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oracle-longevity-research-${{ github.run_id }}
+          path: |
+            artifacts/
+            data/oracle.sqlite3
+            data/geo/
+          if-no-files-found: warn
+          retention-days: 90
