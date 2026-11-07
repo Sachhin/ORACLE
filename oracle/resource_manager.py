@@ -2,7 +2,7 @@
 
 The catalog is metadata, not a claim that every listed API has an implemented
 client. Search dispatch is enabled only for providers backed by a tested
-ORACLE adapter (currently Europe PMC, Crossref, NCBI GEO, and arXiv).
+ORACLE adapter (currently Europe PMC, Crossref, NCBI GEO, arXiv, and PubChem).
 """
 from __future__ import annotations
 
@@ -50,8 +50,8 @@ _RESOURCES = (
         "Article licences vary by submission", "arxiv", ("preprint_search", "literature_search")),
     ScientificResource("pubchem", "PubChem", ("chemistry_materials", "biology_medicine"),
         "https://pubchem.ncbi.nlm.nih.gov/rest/pug", "public_api", "none",
-        "PubChem data are generally public; linked records may carry separate terms",
-        capabilities=("chemical_metadata", "compound_search")),
+        "PubChem data are generally public; linked records may carry separate terms", "pubchem",
+        ("chemical_metadata", "compound_search")),
     ScientificResource("materials_project", "Materials Project", ("chemistry_materials",),
         "https://api.materialsproject.org", "public_api", "api_key",
         "Check Materials Project terms and attribution", capabilities=("materials_data",)),
@@ -89,7 +89,7 @@ class ResourceManager:
             {**asdict(resource),
              "domains": list(resource.domains),
              "capabilities": list(resource.capabilities),
-             "status": "implemented" if resource.connector in {"europepmc", "crossref", "geo", "arxiv"}
+             "status": "implemented" if resource.connector in {"europepmc", "crossref", "geo", "arxiv", "pubchem"}
                        else "catalog_only"}
             for resource in _RESOURCES
             if domain in {"all", "auto"} or "all" in resource.domains
