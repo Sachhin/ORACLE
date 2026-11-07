@@ -76,7 +76,18 @@ class LanguageReasoningAgent:
         ]
         try:
             raw = self.model.generate(messages, temperature=0.2)
-            payload = json.loads(raw)
+            response_text = raw.strip()
+            # Small local models often wrap otherwise-valid JSON in Markdown fences.
+            # Accept only a complete fenced JSON block; do not extract arbitrary
+            # substrings from prose, which could hide malformed or ambiguous output.
+            if response_text.startswith("```"):
+                lines = response_text.splitlines()
+                if (len(lines) < 3
+                        or lines[0].strip() not in ("```", "```json")
+                        or lines[-1].strip() != "```"):
+                    raise ValueError("response contains an unsupported Markdown code fence")
+                response_text = "\\n".join(lines[1:-1]).strip()
+            payload = json.loads(response_text)
             if not isinstance(payload, dict):
                 raise ValueError("response must be a JSON object")
             directions = payload.get("directions", [])
