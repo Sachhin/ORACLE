@@ -16,6 +16,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="oracle", description="Offline scientific research foundation")
     parser.add_argument("question", nargs="?", help="Scientific research question")
     parser.add_argument("--mode", choices=[m.value for m in ResearchMode], default=ResearchMode.BOTH.value)
+    parser.add_argument("--list-resources", action="store_true",
+                        help="List registered scientific resources and connector implementation status")
+    parser.add_argument("--resource-domain", default="all",
+                        help="Filter --list-resources by domain (or all)")
     parser.add_argument("--domain", default="auto",
                         choices=["auto", "biology_medicine", "physics_astronomy",
                                  "chemistry_materials", "computer_science_ai",
@@ -264,6 +268,20 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main() -> None:
     args = build_parser().parse_args()
+    if args.list_resources:
+        from .resource_manager import ResourceManager
+        try:
+            resources = ResourceManager.list_resources(args.resource_domain)
+        except ValueError as exc:
+            raise SystemExit(str(exc)) from exc
+        if args.json:
+            print(json.dumps(resources, indent=2, ensure_ascii=False))
+        else:
+            for item in resources:
+                print(f"- {item['key']} | {item['status']} | {item['name']}")
+                print(f"  API: {item['api_url']} | Auth: {item['authentication']}")
+                print(f"  Capabilities: {', '.join(item['capabilities']) or 'metadata only'}")
+        return
     if args.paired_answer_benchmark:
         from .model_comparison import run_paired_answer_benchmark
         try:
