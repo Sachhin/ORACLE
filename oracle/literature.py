@@ -33,7 +33,7 @@ class LiteratureSearchReport:
     abstract_enrichment_skipped_no_identifier: int = 0
 
 class LiteratureClient:
-    PROVIDERS = ("europepmc", "crossref", "geo", "arxiv", "pubchem", "openalex", "gbif", "world_bank", "noaa_ncei", "clinical_trials", "zenodo", "harvard_dataverse", "sra", "pdb", "pride", "huggingface_datasets", "openml", "nasa_earthdata", "usgs", "figshare", "internet_archive", "loc", "nasa_ads")
+    PROVIDERS = ("europepmc", "crossref", "geo", "arxiv", "pubchem", "openalex", "gbif", "world_bank", "noaa_ncei", "clinical_trials", "zenodo", "harvard_dataverse", "sra", "pdb", "pride", "huggingface_datasets", "openml", "nasa_earthdata", "usgs", "figshare", "internet_archive", "loc", "nasa_ads", "pubmed", "genbank")
     def __init__(self, timeout: float = 20.0, mailto: str = "",
                  max_abstract_enrichments: int = 10):
         if timeout <= 0:
@@ -374,6 +374,65 @@ class LiteratureClient:
         return records
 
 
+
+
+    def _search_ncbi_records(self, query: str, limit: int, database: str):
+        base = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/"
+        search = self._get_json(base + "esearch.fcgi?" + urlencode({
+            "db": database, "term": query, "retmax": limit, "retmode": "json",
+            "tool": "ORACLE", "email": self.mailto or "",
+        }))
+        ids = (search.get("esearchresult") or {}).get("idlist") or []
+        if not ids:
+            return []
+        summary = self._get_json(base + "esummary.fcgi?" + urlencode({
+            "db": database, "id": ",".join(ids), "retmode": "json",
+            "tool": "ORACLE", "email": self.mailto or "",
+        }))
+        result = summary.get("result") or {}
+        records = []
+        for uid in ids:
+            item = result.get(str(uid)) or {}
+            if database == "pubmed":
+                pmid = str(item.get("uid") or uid)
+                title = self._clean(str(item.get("title") or ""))
+                authors = "; ".join(
+                    str(author.get("name") or "") for author in item.get("authors", [])
+                    if author.get("name")
+                )
+                journal = str(item.get("fulljournalname") or item.get("source") or "")
+                year = str(item.get("pubdate") or "")[:4]
+                records.append({
+                    "provider": "PubMed", "provider_id": pmid, "doi": "",
+                    "pmid": pmid, "pmcid": "", "title": title, "authors": authors,
+                    "journal": journal, "year": year,
+                    "url": "https://pubmed.ncbi.nlm.nih.gov/" + pmid + "/",
+                    "abstract": "", "publication_type": "biomedical literature",
+                    "open_access": False, "license": "Check article-level access and licence",
+                    "citation_count": None, "dataset": False,
+                })
+            else:
+                accession = str(item.get("accessionversion") or item.get("caption") or uid)
+                title = self._clean(str(item.get("title") or accession))
+                organism = str(item.get("organism") or "")
+                length = str(item.get("slen") or "")
+                records.append({
+                    "provider": "NCBI GenBank", "provider_id": accession, "doi": "",
+                    "pmid": "", "pmcid": "", "title": title, "authors": "",
+                    "journal": "NCBI Nucleotide", "year": str(item.get("createdate") or "")[:4],
+                    "url": "https://www.ncbi.nlm.nih.gov/nuccore/" + accession,
+                    "abstract": self._clean("Organism: " + organism + ". Sequence length: " + length + " bp."),
+                    "publication_type": "nucleotide sequence record", "open_access": True,
+                    "license": "Sequence record and submitter-specific terms apply",
+                    "citation_count": None, "dataset": True, "dataset_accession": accession,
+                })
+        return records
+
+    def _search_pubmed(self, query: str, limit: int):
+        return self._search_ncbi_records(query, limit, "pubmed")
+
+    def _search_genbank(self, query: str, limit: int):
+        return self._search_ncbi_records(query, limit, "nuccore")
 
     def _search_pdb(self, query: str, limit: int):
         search_query = {
@@ -914,7 +973,7 @@ class LiteratureClient:
                     "pdb":self._search_pdb,"pride":self._search_pride,
                     "huggingface_datasets":self._search_huggingface_datasets,"openml":self._search_openml,
                     "nasa_earthdata":self._search_nasa_earthdata,"usgs":self._search_usgs,
-                    "figshare":self._search_figshare,"internet_archive":self._search_internet_archive,"loc":self._search_loc,"nasa_ads":self._search_nasa_ads}[provider]
+                    "figshare":self._search_figshare,"internet_archive":self._search_internet_archive,"loc":self._search_loc,"nasa_ads":self._search_nasa_ads,\n                    "pubmed":self._search_pubmed,"genbank":self._search_genbank}[provider]
                 jobs[pool.submit(fn,query,limit)]=provider
             for future in as_completed(jobs):
                 try: report.records.extend(future.result())
