@@ -1,4 +1,3 @@
-import io
 import json
 import unittest
 from urllib.error import HTTPError
@@ -42,7 +41,7 @@ class GeminiPerMinuteRetryTests(unittest.TestCase):
                 "message": "Generate content requests per day limit exceeded on Free Tier."
             }
         }).encode()
-        error = HTTPError("https://example.invalid", 429, "Too Many Requests", {}, io.BytesIO(detail))
+        error = _BodyHTTPError(detail)
         provider = GeminiJSONProvider(api_key="test-key", model="gemini-3.8-flash", max_retries=2)
         with patch("oracle.model_agents.urlopen", side_effect=error) as request:
             with self.assertRaisesRegex(GeminiAgentError, "daily quota appears exhausted"):
@@ -51,9 +50,7 @@ class GeminiPerMinuteRetryTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
-
-class _BodyHTTPError(HTTPError):
+    unittest.main()class _BodyHTTPError(HTTPError):
     def __init__(self, payload):
         super().__init__("https://example.invalid", 429, "Too Many Requests", {}, None)
         self.payload = payload
