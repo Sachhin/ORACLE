@@ -20,6 +20,19 @@ python -m oracle --imputation-holdout counts_or_expression.tsv --imputation-mech
 
 The report compares row-median, column-median, and global-median MAE/RMSE/bias under MCAR, MAR, or MNAR masking. It measures reconstruction of values that were observed before masking; it does not establish accuracy on truly missing measurements or infer the study's actual missingness mechanism.
 
+## Hybrid domain-specialist research
+
+ORACLE now has an opt-in/automatic domain-routing layer while retaining one
+shared research lifecycle. Automatic routing is the default; select a specialist
+explicitly with `--domain`. Supported profiles cover biology/medicine,
+physics/astronomy, chemistry/materials, computer science/AI, earth/environment,
+mathematics/statistics, social/behavioral science, engineering, and general
+science. Profiles guide research planning and model-agent prompts; they do not
+claim that suggested external databases or specialist analysis tools ran.
+
+See [Hybrid domain-specialist research](docs/HYBRID_DOMAIN_RESEARCH.md) for the
+architecture, supported domains, command examples, and scientific-integrity limits.
+
 ## Current build status
 
 The offline research foundation remains usable without credentials. Optional network literature retrieval uses public scholarly APIs; optional Gemini extraction and cross-paper comparison use a real model only when explicitly enabled. The baseline agents remain deterministic scaffolding. The orchestrator measures unique research progress, suppresses repeated scaffold records, checks core graph invariants, and stops after repeated no-progress cycles. Review agents receive the current cycle's newly generated evidence and hypotheses; novelty and cross-domain agents are restricted to source-backed records; adaptive replanning receives the latest task/evidence state. This is safer, more coherent lifecycle control, not proof of autonomous scientific reasoning.
