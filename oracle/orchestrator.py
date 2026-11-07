@@ -36,7 +36,8 @@ class OracleOrchestrator:
                  max_tasks: int = 50,
                  max_task_attempts: int = 3,
                  gemini_model: str = "gemini-2.5-flash",
-                 literature_client=None) -> None:
+                 literature_client=None,
+                 research_domain: str = "auto") -> None:
         if not 1 <= max_no_progress_cycles <= 10:
             raise ValueError("max_no_progress_cycles must be between 1 and 10.")
         if not 1 <= literature_limit <= 50:
@@ -61,6 +62,9 @@ class OracleOrchestrator:
         self.incoming_citation_network_enabled = incoming_citation_network_enabled
         self.task_manager = TaskManager(max_attempts=max_task_attempts, max_tasks=max_tasks)
         self.gemini_model = gemini_model
+        self.research_domain = research_domain
+        self.domain_profile: dict = {}
+        self.domain_diagnostics: dict = {}
         # Injectable for deterministic tests; production creates the public-API client lazily.
         self._literature_client = literature_client
         # Every agent implements run(context) -> AgentResult. Deterministic
@@ -194,9 +198,22 @@ class OracleOrchestrator:
             raise ValueError("Research question cannot be empty.")
         if not 1 <= max_cycles <= 20:
             raise ValueError("max_cycles must be between 1 and 20.")
+        from .domain_router import profile_dict, resolve_domain
+        profile, diagnostics = resolve_domain(question, self.research_domain)
+        self.domain_profile = profile_dict(profile)
+        self.domain_diagnostics = diagnostics
         run = ResearchRun(question=question, mode=mode, max_cycles=max_cycles,
                           status=RunStatus.RUNNING)
+        run.findings.append(
+            f"Domain routing: {profile.label} ({diagnostics.get('method')}; "
+            f"confidence={diagnostics.get('confidence', 0.0)}). "
+            "This selects research guidance only; specialist tools must still be explicitly executed."
+        )
         self.store.save_run(run)
+        self._event(run, "domain_routed", {
+            "domain": profile.key, "label": profile.label,
+            "diagnostics": diagnostics, "profile": self.domain_profile,
+        }, event_key="domain_routed")
         self._event(run, "run_started", {"mode": mode.value, "max_cycles": max_cycles}, event_key="run_started")
         return self._execute(run)
 
@@ -208,13 +225,31 @@ class OracleOrchestrator:
             raise ValueError(f"Research run not found: {run_id}")
         if run.status not in (RunStatus.RUNNING, RunStatus.PAUSED, RunStatus.FAILED, RunStatus.STOPPED):
             raise ValueError(f"Run cannot be resumed from status: {run.status.value}")
+        from .domain_router import profile_dict, resolve_domain
+        profile, diagnostics = resolve_domain(run.question, self.research_domain)
+        self.domain_profile = profile_dict(profile)
+        self.domain_diagnostics = diagnostics
         run.max_cycles = min(100, run.max_cycles + additional_cycles)
         run.status = RunStatus.RUNNING
         # An explicit resume is a user-authorised fresh attempt, not an endless retry.
         run.consecutive_no_progress_cycles = 0
+        self._event(run, "domain_routed", {
+            "domain": profile.key, "label": profile.label,
+            "diagnostics": diagnostics, "profile": self.domain_profile,
+        }, event_key=f"domain-routed-resume:{run.current_cycle}:{run.max_cycles}")
         self._event(run, "run_resumed", {"from_cycle": run.current_cycle,
                                          "new_cycle_limit": run.max_cycles}, event_key=f"resume:{run.current_cycle}:{run.max_cycles}")
         return self._execute(run)
+
+    def _search_literature(self, query: str, limit: int):
+        """Route research retrieval through the auditable resource registry."""
+        from .resource_manager import ResourceManager
+        from .literature import LiteratureClient
+        client = self._literature_client or LiteratureClient(mailto=self.literature_mailto)
+        self._literature_client = client
+        return ResourceManager(client).search(
+            query, limit=limit, resources=self.literature_providers,
+        )
 
     def _prepare_literature(self, run: ResearchRun) -> None:
         """Optionally retrieve source-backed literature before the reasoning cycle."""
@@ -224,14 +259,8 @@ class OracleOrchestrator:
                 and not self.incoming_citation_network_enabled):
             return
         if self.literature_enabled and not run.sources:
-            from .literature import LiteratureClient
-            client = self._literature_client or LiteratureClient(mailto=self.literature_mailto)
-            self._literature_client = client
-            report = client.search(
-                run.question, limit=self.literature_limit,
-                providers=self.literature_providers,
-            )
-            client.ingest(run, report)
+            report = self._search_literature(run.question, self.literature_limit)
+            self._literature_client.ingest(run, report)
             run.findings.append(
                 f"Literature retrieval: {report.retrieved} records retrieved; "
                 f"{report.ingested_sources} sources and {report.evidence_records} evidence records ingested."
@@ -297,9 +326,6 @@ class OracleOrchestrator:
         """
         if not self.literature_enabled:
             return []
-        from .literature import LiteratureClient
-        client = self._literature_client or LiteratureClient(mailto=self.literature_mailto)
-        self._literature_client = client
         candidates = sorted(
             (task for task in run.tasks
              if task.status in {"pending", "blocked"}
@@ -317,11 +343,8 @@ class OracleOrchestrator:
                     "cycle": cycle, "attempt": task.attempts,
                 }, False, f"task:{task.task_id}:attempt:{task.attempts}:started")
                 query = (run.question + " " + task.name + " " + task.description)[:500]
-                report = client.search(
-                    query, limit=min(5, self.literature_limit),
-                    providers=self.literature_providers,
-                )
-                client.ingest(run, report)
+                report = self._search_literature(query, min(5, self.literature_limit))
+                self._literature_client.ingest(run, report)
                 titles = {str(item.get("title", "")).strip().casefold()
                           for item in report.records if item.get("title")}
                 dois = {str(item.get("doi", "")).strip().casefold()
@@ -384,7 +407,9 @@ class OracleOrchestrator:
         try:
             self._prepare_literature(run)
             if not run.tasks:
-                plan = self.planner.run(AgentContext(run.question, 0, run.mode.value))
+                plan = self.planner.run(AgentContext(
+                    run.question, 0, run.mode.value, domain_profile=self.domain_profile,
+                ))
                 self.task_manager.validate_plan(plan.items)
                 run.tasks.extend(plan.items)
                 self._event(run, "plan_created", {"task_count": len(run.tasks)})
@@ -399,6 +424,7 @@ class OracleOrchestrator:
                 context = AgentContext(
                     run.question, cycle, run.mode.value,
                     run.evidence, run.hypotheses, run.findings, run.tasks,
+                    self.domain_profile,
                 )
 
                 research = self.researcher.run(context)
@@ -436,6 +462,7 @@ class OracleOrchestrator:
                 review_context = AgentContext(
                     run.question, cycle, run.mode.value,
                     run.evidence, run.hypotheses, run.findings, run.tasks,
+                    self.domain_profile,
                 )
                 skeptic = self.skeptic.run(review_context)
                 audit = self.auditor.run(review_context)
