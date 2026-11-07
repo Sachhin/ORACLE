@@ -16,6 +16,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="oracle", description="Offline scientific research foundation")
     parser.add_argument("question", nargs="?", help="Scientific research question")
     parser.add_argument("--mode", choices=[m.value for m in ResearchMode], default=ResearchMode.BOTH.value)
+    parser.add_argument("--domain", default="auto",
+                        choices=["auto", "biology_medicine", "physics_astronomy",
+                                 "chemistry_materials", "computer_science_ai",
+                                 "earth_environment", "mathematics_statistics",
+                                 "social_behavioral", "engineering", "general_science"],
+                        help="Research domain specialist; auto uses transparent keyword routing")
     parser.add_argument("--cycles", type=int, default=3)
     parser.add_argument("--resume", dest="resume_id", help="Resume an existing run by ID")
     parser.add_argument("--db", default="data/oracle.sqlite3")
@@ -1350,6 +1356,7 @@ def main() -> None:
         citation_network_enabled=args.citation_network,
         incoming_citation_network_enabled=args.incoming_citations,
         gemini_model=args.gemini_model,
+        research_domain=args.domain,
     )
     if args.resume_id:
         run = orchestrator.resume(args.resume_id, additional_cycles=args.cycles)
