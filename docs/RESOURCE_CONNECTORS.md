@@ -13,7 +13,12 @@ This registry separates **working adapters** from **catalogued resources**. A li
 | PubChem | Chemistry and molecular biology | None | Compound properties (not mechanistic evidence) |
 | OpenAlex | All scholarly disciplines | Optional mailto | Works, authors, venues, OA status, citation counts |
 | GBIF | Biodiversity and organism occurrence records | None | Occurrence records and dataset identifiers |
-| World Bank | Economics, development and social indicators | None | Indicator catalogue metadata (not yet country/time-series observations) |\n| NOAA NCEI | Climate and environmental datasets | None for catalogue search | Dataset search metadata |\n| ClinicalTrials.gov | Clinical and observational studies | None | Study registry records and summaries |\n| NCBI SRA | Sequencing studies | None | Study/run metadata; raw reads require separate download tooling |\n| Zenodo | Cross-disciplinary research outputs | None for public records | Records, DOI, licence and file metadata |\n| Harvard Dataverse | Research datasets | None for public records | Dataset search metadata; file download is a separate step |
+| World Bank | Economics, development and social indicators | None | Indicator catalogue metadata (not yet country/time-series observations) |
+| NOAA NCEI | Climate and environmental datasets | None for catalogue search | Dataset search metadata |
+| ClinicalTrials.gov | Clinical and observational studies | None | Study registry records and summaries |
+| NCBI SRA | Sequencing studies | None | Study/run metadata; raw reads require separate download tooling |
+| Zenodo | Cross-disciplinary research outputs | None for public records | Records, DOI, licence and file metadata |
+| Harvard Dataverse | Research datasets | None for public records | Dataset search metadata; file download is a separate step |
 
 OpenAlex is the cross-disciplinary scholarly discovery fallback for domains without a dedicated adapter. Crossref remains the DOI metadata fallback. Dataset records and chemical properties are stored as source records but must not be interpreted as peer-reviewed causal claims.
 
