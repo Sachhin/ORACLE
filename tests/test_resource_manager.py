@@ -352,6 +352,17 @@ class ResourceManagerTests(unittest.TestCase):
             records = client._search_loc("history", 2)
         self.assertEqual(records[0]["provider"], "Library of Congress")
 
+
+    def test_nasa_ads_requires_token_and_uses_bearer_auth(self):
+        client = LiteratureClient()
+        payload = {"response": {"docs": [{"bibcode": "2025ApJ...1A", "title": ["Longevity stars"],
+                    "author": ["A. Scientist"], "year": "2025", "abstract": "An abstract."}]}}
+        with patch.dict("os.environ", {"NASA_ADS_API_TOKEN": "test-token"}):
+            with patch.object(client, "_get_json", return_value=payload) as request:
+                records = client._search_nasa_ads("stars", 2)
+        self.assertEqual(records[0]["provider_id"], "2025ApJ...1A")
+        self.assertEqual(request.call_args.kwargs["headers"]["Authorization"], "Bearer test-token")
+
 if __name__ == "__main__":
     unittest.main()
 
