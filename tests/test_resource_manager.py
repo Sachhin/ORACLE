@@ -141,7 +141,7 @@ class ResourceManagerTests(unittest.TestCase):
         )
         self.assertEqual(
             resolve_literature_providers("Can quantum gravity be tested?", "auto"),
-            ("openalex", "arxiv", "crossref"),
+            ("openalex", "arxiv", "crossref", "nasa_ads"),
         )
         self.assertEqual(
             resolve_literature_providers("How does a polymer catalyst work?", "auto"),
@@ -159,7 +159,7 @@ class ResourceManagerTests(unittest.TestCase):
         )
         self.assertEqual(
             resolve_literature_providers("How is climate change affecting biodiversity?", "auto"),
-            ("openalex", "crossref", "gbif", "noaa_ncei", "zenodo"),
+            ("openalex", "crossref", "gbif", "noaa_ncei", "zenodo", "nasa_earthdata", "usgs", "figshare"),
         )
 
     def test_openalex_inverted_abstract_is_reconstructed(self):
