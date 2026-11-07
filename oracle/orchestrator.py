@@ -456,6 +456,7 @@ class OracleOrchestrator:
     def _execute(self, run: ResearchRun) -> ResearchRun:
         checkpoint = deepcopy(run)
         final_action = "conclude"
+        language_reasoning_succeeded = False
         try:
             self._prepare_literature(run)
             if not run.tasks:
@@ -509,6 +510,9 @@ class OracleOrchestrator:
 
                 if self.language_reasoner is not None:
                     language_result = self.language_reasoner.run(context)
+                    language_reasoning_succeeded = language_result.summary.startswith(
+                        "Generated provisional language-assisted research proposals"
+                    )
                     language_directions = [
                         item for item in language_result.items if isinstance(item, str)
                     ]
@@ -629,9 +633,16 @@ class OracleOrchestrator:
             else:
                 run.status = RunStatus.COMPLETED
                 external_sources = "yes" if run.sources else "no"
+                if self.language_reasoner is None:
+                    language_status = "not configured"
+                elif language_reasoning_succeeded:
+                    language_status = "completed (provisional proposals only)"
+                else:
+                    language_status = "configured but did not produce valid proposals"
                 run.findings.append(
-                    "Deterministic baseline limitation: no live AI-model reasoning or physical experiment "
-                    f"was used. External sources retrieved during this run: {external_sources}."
+                    "Scientific core: deterministic; optional language-model reasoning: "
+                    f"{language_status}. Physical experiments performed: no. "
+                    f"External sources retrieved during this run: {external_sources}."
                 )
                 self._event(run, "run_completed", {"cycles": run.current_cycle}, event_key="run_completed")
         except Exception as exc:
