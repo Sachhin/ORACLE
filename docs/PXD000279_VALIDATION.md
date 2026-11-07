@@ -33,7 +33,7 @@ Ecoli30; 92-94 L = Ecoli10), and fails closed if that exact layout is absent.
 ## Empirical report
 
 GitHub Actions run
-[42253421249](https://github.com/Sachhin/ORACLE/actions/runs/42253421249)
+[42329122343](https://github.com/Sachhin/ORACLE/actions/runs/42253421249)
 downloaded the published MaxQuant output and generated a hashed report:
 
 - 5,019 proteins in the scored universe; 612 / 30,114 LFQ cells missing
@@ -42,6 +42,15 @@ downloaded the published MaxQuant output and generated a hashed report:
   row-median: -0.504; MinProb: -0.549.
 - E. coli expected log2 fold change: log2(3) = 1.585. Observed-only median:
   1.219; row-median: 1.205; MinProb: 1.226.
+| Species | Method | MAE | RMSE |
+|---|---|---:|---:|
+| Human | Observed-only | 0.5559 | 0.6531 |
+| Human | Row-median | 0.5415 | 0.6326 |
+| Human | MinProb | 0.8705 | 1.3616 |
+| E. coli | Observed-only | 0.4624 | 0.5774 |
+| E. coli | Row-median | 0.4716 | 0.5840 |
+| E. coli | MinProb | 0.6123 | 0.9831 |
+
 - The row-median baseline did not outperform observed-only on the E. coli
   median ratio error; MinProb was worse on the reported MAE/RMSE metrics.
 
