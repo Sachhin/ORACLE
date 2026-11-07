@@ -174,7 +174,7 @@ class OracleDashboardHandler(BaseHTTPRequestHandler):
             job_dir.mkdir(parents=True, exist_ok=True)
             job_id = uuid.uuid4().hex
             output, log = job_dir / f"{job_id}.json", job_dir / f"{job_id}.log"
-            literature_provider = "biology" if domain == "biology_medicine" else "both"
+            literature_provider = "auto"
             command = [sys.executable, "-m", "oracle", question, "--mode", mode,
                 "--domain", domain, "--cycles", str(cycles), "--limit", str(limit),
                 "--agent-provider", "deterministic", "--research-literature", "--provider", literature_provider,
