@@ -3,7 +3,7 @@
 The catalog is metadata, not a claim that every listed API has an implemented
 client. Search dispatch is enabled only for providers backed by an executable
 ORACLE adapter (Europe PMC, Crossref, NCBI GEO, arXiv, PubChem, OpenAlex,
-GBIF, and World Bank).
+GBIF, World Bank, NOAA NCEI, ClinicalTrials.gov, Zenodo, Harvard Dataverse, and NCBI SRA).
 """
 from __future__ import annotations
 
@@ -263,7 +263,7 @@ class ResourceManager:
         unsupported: list[str] = []
         for key in dict.fromkeys(resources):
             item = self.get_resource(key)
-            if item["connector"] in {"europepmc", "crossref", "geo", "arxiv", "pubchem", "openalex", "gbif", "world_bank"}:
+            if item["connector"] in {"europepmc", "crossref", "geo", "arxiv", "pubchem", "openalex", "gbif", "world_bank", "noaa_ncei", "clinical_trials", "zenodo", "harvard_dataverse", "sra"}:
                 providers.append(item["connector"])
             else:
                 unsupported.append(key)
