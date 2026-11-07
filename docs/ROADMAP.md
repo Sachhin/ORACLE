@@ -1,6 +1,6 @@
 # Implementation Roadmap
 
-Status reflects code currently present on the main branch. Checked items are implemented and covered by tests; they do not imply scientific validity or live-provider verification. Gemini auditor and novelty behavior has unit-level contract tests, but live model quality remains unvalidated.
+Status reflects code and verified evidence currently present on this branch. Checked items are implemented and covered by tests; they do not imply scientific validity or live-provider verification. Gemini auditor and novelty behavior has unit-level contract tests, but live model quality remains unvalidated.
 
 ## Milestone 1 — Offline foundation
 - [x] Domain models and integrity-oriented statuses
@@ -15,7 +15,7 @@ Status reflects code currently present on the main branch. Checked items are imp
 - [x] Hypothesis ledger, source-backed support/opposition links, and human-gated status transitions
 - [x] Explicit uncertainty assessments and contradiction review candidates
 - [x] Provenance, claim revisions, dependence-aware evidence accounting, and human source-quality review
-- [x] Literature retrieval from Europe PMC, Crossref, and NCBI GEO metadata
+- [x] Literature and dataset metadata retrieval from Europe PMC, Crossref, and NCBI GEO; executable arXiv preprint and PubChem compound-property adapters
 - [x] Optional source ingestion into the full autonomous research cycle
 - [x] Quote-validated Gemini claim extraction and cross-paper comparison candidates
 - [x] Quote-grounded support/refute/contextual evidence-review suggestions with a human acceptance gate
@@ -45,11 +45,11 @@ Status reflects code currently present on the main branch. Checked items are imp
 - [x] Optional limma-voom adapter with explicit two-group raw-count design, R/edgeR/limma version provenance, checksum, and mocked-subprocess tests
 - [x] Live adapter parity test against a separately executed limma/edgeR reference script on a fixed 300-feature count matrix (same Bioconductor implementation; checks serialization/reproducibility, not independent algorithm accuracy)
 - [x] Provenance-checked external reference comparison tooling for expression matrices and differential-expression tables (MAE/RMSE/correlation and DE call concordance; external reference datasets/results still pending)
-- [x] Independent real-dataset limma-voom validation executed and frozen in Actions run 42233635227: GSE176260 submitter E/weights comparison PASS; GSE64099 independent GEO experiment published DE-table comparison PASS; GSE176261 comparison executed but expression RMSE 0.0580 exceeds the pre-set 0.0500 tolerance (weights RMSE 0.0471), preserved as FAIL_NUMERICAL_TOLERANCE
-- [x] Optional Affymetrix CEL RMA adapter for explicit affy/oligo package families, with input checksums, software/platform provenance, exact sample-identity validation, expected-platform guard, bounded execution, and mocked contract tests; live GEO GPL96 CEL run passed for GSM1003058/GSM1003059 (hgu133a, 22,283 features; trusted platform-matched reference comparison and probe annotation remain pending)
+- [x] Independent real-dataset limma-voom validation: GSE176260 submitter E/weights comparison PASS; GSE64099 independent GEO experiment published DE-table comparison PASS; GSE176261 same-study validation cohort now PASS after TMM factors were estimated on all 93 batch-2 samples then subset to 53 validation samples (expression RMSE 0.0397; weights RMSE 0.0412; fixed thresholds retained; corrected artifact run 42253421443)
+- [x] Optional Affymetrix CEL RMA adapter for explicit affy/oligo package families, with input checksums, software/platform provenance, exact sample-identity validation, expected-platform guard, bounded execution, and mocked contract tests; live GEO GPL96 CEL run PASS for GSM1003058/GSM1003059 (hgu133a, 22,283 features; RMA preprocessing verified; trusted platform-matched reference comparison and probe annotation remain pending)
 - [x] Explicit row-median imputation for continuous matrices with a separate SHA-256 missingness mask and recorded imputation values; reproducible MCAR/MAR/MNAR masking, synthetic downstream Welch/BH sensitivity diagnostics, and observed-cell holdout comparison of row/column/global median reconstruction added
 - [x] Paired orthogonal-assay missingness evaluator: PXD047528 processed DDA/DIA tables verified paired at 15 shared sample aliases and frozen; reconstruction-only baseline scored on 8,859 genuine DDA-missing cells with DIA observations; clinical labels/outcome concordance remain pending because the 15 processed aliases do not map to the 13 clinical participants in the original paper
-- [ ] Validation against genuinely missing values with known ground truth and independent biological outcome labels (empirical results remain pending)
+- [x] PXD000279 HeLa/E. coli controlled-mixture benchmark scored against known species-level ratios under real deposited missingness (5,019 proteins, 612/30,114 missing cells; row-median and MinProb compared; this is downstream ratio recovery, not exact cell-level ground truth)\n- [ ] PXD047528 biological-outcome concordance against independent clinical labels (reconstruction-only score exists; sample-to-patient crosswalk for 15 processed aliases versus 13 clinical participants remains unresolved)
 - [x] Count-aware DESeq2 raw-count analysis with explicit categorical batch/covariate designs, rank-deficiency checks, and default median-of-ratios size-factor normalization
 - [x] Optional DESeq2 adapter for explicitly mapped raw integer-count two-group designs (external R runtime; CI subprocess mocked)
 - [x] Explicit-design Welch contrasts with BH-FDR for user-declared continuous log2 GEO matrices; raw counts rejected
@@ -64,17 +64,17 @@ Status reflects code currently present on the main branch. Checked items are imp
 - [x] Cross-Python-version golden-byte normalization check exercised by the Python 3.10–3.14 CI matrix (does not replace an independent implementation comparison)
 - [x] Independent edgeR TMM factor comparison against `edgeR::calcNormFactors` on the same raw-count matrix (live numerical tolerance assertion in CI)
 - [x] External-reference comparison CLI with provenance enforcement, file hashes, feature overlap checks, expression-matrix metrics, and DE call concordance
-- [x] External trusted limma-voom comparisons against published GSE176260 expression/weight matrices, same-study GSE176261 expression/weight matrices (tolerance failure retained), and independent GSE64099 published DE results; [ ] investigate GSE176261 expression discrepancy and complete real Affymetrix CEL/RMA comparison
+- [x] External trusted limma-voom comparisons against published GSE176260 and corrected GSE176261 expression/weight matrices, plus independent GSE64099 published DE results; [x] real Affymetrix GPL96 CEL-to-RMA preprocessing; [ ] trusted platform-matched RMA output comparison/probe annotation
 
 ## Milestone 5 — Evaluation and scientific validation
 - [x] Cross-domain golden-question integrity benchmark for the deterministic baseline
 - [x] Human answer-quality rubric, score validation, source-ID checks, persistence, and per-run aggregation workflow
 - [x] Evidence benchmark reviewer-agreement (Cohen's kappa), source/quote coverage, and conditional validity reporting
 - [x] Machine-validated benchmark ingestion requirements for frozen source packets, two independent reviewers, adjudication, and paired baseline/candidate scores
-- [ ] Curated expert-scored scientific answer benchmark set with multiple reviewers and adjudicated labels (rubric, starter questions, and adjudication protocol exist; real labels remain pending)
+- [ ] Curated expert-scored scientific answer benchmark set with multiple reviewers and adjudicated labels (rubric, starter questions, and adjudication protocol exist; real reviewer annotations remain pending)
 - [x] Evidence benchmark requires two named human annotations per case, records reviewer agreement, and validates adjudication on disagreement
 - [x] External SciFact labelled train/dev evaluator plus BM25 retrieval-grounded Gemini prediction generator, strict evidence/sentence validation, frozen provenance, and push/manual-dispatch workflow; [ ] live predictions/report remain blocked because the 2026-11-06 Actions pilot confirmed GEMINI_API_KEY is not configured (no live predictions or metrics are claimed)
-- [ ] Empirical evidence attribution, entailment, contradiction, and hallucination benchmark results (frozen ORACLE predictions and expert adjudication remain pending)
+- [ ] Empirical evidence attribution, entailment, contradiction, and hallucination benchmark results (SciFact live predictions blocked until GEMINI_API_KEY is configured in GitHub Actions; expert adjudication remains pending)
 - [x] Reproducibility and regression suite across Python 3.10–3.14 CI matrix
 - [x] High-impact claim review requires independent source groups, reviewer identity, and rationale
 - [x] Performed-experiment execution provenance requires independent human acceptance before evaluation
