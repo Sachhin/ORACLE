@@ -616,3 +616,7 @@ oracle "Your scientific question" --research-literature --cycles 3
 ```
 
 **Safety and limitations:** the dashboard binds to loopback only and intentionally refuses non-local bind addresses because it has no login/authentication. It is a local operator interface, not a multi-user hosted product. Long-running jobs are tracked in dashboard memory; completed research records remain in SQLite. Specialized GEO and statistical workflows remain available through the terminal CLI. The dashboard does not claim that model output is experimentally validated or that proposed experiments were performed.
+
+### Scientific resource integrations
+
+ORACLE's cross-domain resource registry, executable public API adapters, domain routing and connector limitations are documented in [Scientific Resource Connectors](docs/RESOURCE_CONNECTORS.md). The registry distinguishes live adapters from catalog-only sources; see the status table before assuming a source is queried.
