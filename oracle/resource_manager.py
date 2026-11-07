@@ -192,13 +192,13 @@ def resolve_literature_providers(question: str, requested_domain: str = "auto") 
 
     profile, _ = resolve_domain(question, requested_domain)
     by_domain = {
-        "biology_medicine": ("openalex", "europepmc", "crossref", "geo", "pubchem"),
+        "biology_medicine": ("openalex", "europepmc", "crossref", "geo", "pubchem", "clinical_trials", "sra", "zenodo", "harvard_dataverse"),
         "physics_astronomy": ("openalex", "arxiv", "crossref"),
         "computer_science_ai": ("openalex", "arxiv", "crossref"),
         "mathematics_statistics": ("openalex", "arxiv", "crossref"),
         "chemistry_materials": ("openalex", "pubchem", "crossref"),
-        "general_science": ("openalex", "europepmc", "crossref", "arxiv", "pubchem"),
-        "earth_environment": ("openalex", "crossref", "gbif"),
+        "general_science": ("openalex", "europepmc", "crossref", "arxiv", "pubchem", "zenodo", "harvard_dataverse"),
+        "earth_environment": ("openalex", "crossref", "gbif", "noaa_ncei", "zenodo"),
         "social_behavioral": ("openalex", "crossref", "world_bank"),
         "history_archaeology": ("openalex", "crossref"),
         "philosophy_ethics": ("openalex", "crossref"),
