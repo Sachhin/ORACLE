@@ -33,7 +33,7 @@ class LiteratureSearchReport:
     abstract_enrichment_skipped_no_identifier: int = 0
 
 class LiteratureClient:
-    PROVIDERS = ("europepmc", "crossref", "geo", "arxiv", "pubchem")
+    PROVIDERS = ("europepmc", "crossref", "geo", "arxiv", "pubchem", "openalex", "gbif", "world_bank", "noaa_ncei")
     def __init__(self, timeout: float = 20.0, mailto: str = "",
                  max_abstract_enrichments: int = 10):
         if timeout <= 0:
@@ -261,6 +261,116 @@ class LiteratureClient:
             })
         return records
 
+
+    def _search_openalex(self, query: str, limit: int):
+        params = {"search": query, "per-page": limit,
+                  "select": "id,doi,title,authorships,publication_year,primary_location,open_access,cited_by_count,type,abstract_inverted_index"}
+        if self.mailto:
+            params["mailto"] = self.mailto
+        data = self._get_json("https://api.openalex.org/works?" + urlencode(params))
+        records = []
+        for item in data.get("results", []):
+            inverted = item.get("abstract_inverted_index") or {}
+            words = sorted(((position, word) for word, positions in inverted.items()
+                            for position in positions), key=lambda pair: pair[0])
+            abstract = " ".join(word for _, word in words)
+            authors = "; ".join(
+                (entry.get("author") or {}).get("display_name", "")
+                for entry in item.get("authorships", [])[:30]
+                if (entry.get("author") or {}).get("display_name"))
+            location = item.get("primary_location") or {}
+            source = location.get("source") or {}
+            doi = str(item.get("doi") or "").replace("https://doi.org/", "").lower()
+            records.append({
+                "provider": "OpenAlex", "provider_id": item.get("id", ""),
+                "doi": doi, "pmid": "", "pmcid": "",
+                "title": self._clean(item.get("title") or "Untitled work"),
+                "authors": authors, "journal": source.get("display_name", ""),
+                "year": str(item.get("publication_year") or ""),
+                "url": item.get("doi") or item.get("id") or "",
+                "abstract": self._clean(abstract),
+                "publication_type": item.get("type") or "scholarly_work",
+                "open_access": bool((item.get("open_access") or {}).get("is_oa")),
+                "license": str((item.get("open_access") or {}).get("oa_status") or ""),
+                "citation_count": item.get("cited_by_count"),
+            })
+        return records
+
+    def _search_gbif(self, query: str, limit: int):
+        data = self._get_json("https://api.gbif.org/v1/occurrence/search?" +
+                              urlencode({"q": query, "limit": limit}))
+        records = []
+        for item in data.get("results", []):
+            key = item.get("key")
+            title = " ".join(filter(None, (
+                item.get("scientificName"), item.get("vernacularName"),
+                item.get("country"), str(item.get("year") or ""))))
+            records.append({
+                "provider": "GBIF", "provider_id": str(key or ""),
+                "doi": "", "pmid": "", "pmcid": "",
+                "title": title or f"GBIF occurrence {key}",
+                "authors": item.get("recordedBy", ""), "journal": "GBIF occurrence data",
+                "year": str(item.get("year") or ""),
+                "url": f"https://www.gbif.org/occurrence/{key}" if key else "https://www.gbif.org/",
+                "abstract": self._clean("; ".join(
+                    f"{k}: {item.get(k)}" for k in ("scientificName", "country",
+                    "stateProvince", "eventDate", "basisOfRecord", "datasetKey")
+                    if item.get(k) is not None)),
+                "publication_type": "biodiversity occurrence record",
+                "open_access": True, "license": item.get("license") or "",
+                "citation_count": None, "dataset": True,
+            })
+        return records
+
+    def _search_world_bank(self, query: str, limit: int):
+        data = self._get_json("https://api.worldbank.org/v2/indicator?" +
+                              urlencode({"format": "json", "per_page": 100, "source": 2}))
+        rows = data[1] if isinstance(data, list) and len(data) > 1 and isinstance(data[1], list) else []
+        terms = {term for term in re.findall(r"[a-z0-9]+", query.casefold()) if len(term) > 2}
+        ranked = []
+        for item in rows:
+            haystack = (str(item.get("name") or "") + " " + str(item.get("sourceNote") or "")).casefold()
+            score = sum(1 for term in terms if term in haystack)
+            if score:
+                ranked.append((score, item))
+        ranked.sort(key=lambda pair: (-pair[0], str(pair[1].get("id", ""))))
+        records = []
+        for _, item in ranked[:limit]:
+            code = str(item.get("id") or "")
+            records.append({
+                "provider": "World Bank", "provider_id": code,
+                "doi": "", "pmid": "", "pmcid": "",
+                "title": self._clean(str(item.get("name") or code)),
+                "authors": "World Bank", "journal": "World Development Indicators",
+                "year": "", "url": f"https://api.worldbank.org/v2/indicator/{quote(code)}?format=json",
+                "abstract": self._clean(str(item.get("sourceNote") or item.get("sourceOrganization") or "")),
+                "publication_type": "development indicator metadata",
+                "open_access": True, "license": "See World Bank data terms",
+                "citation_count": None, "dataset": True, "dataset_accession": code,
+            })
+        return records
+
+    def _search_noaa_ncei(self, query: str, limit: int):
+        url = "https://www.ncei.noaa.gov/access/services/search/v1/datasets?" + urlencode({"text": query, "limit": limit})
+        data = self._get_json(url)
+        rows = data if isinstance(data, list) else data.get("results", data.get("datasets", []))
+        records = []
+        for item in rows[:limit] if isinstance(rows, list) else []:
+            dataset_id = str(item.get("id") or item.get("dataset") or "")
+            title = str(item.get("name") or item.get("title") or dataset_id or "NOAA dataset")
+            records.append({
+                "provider": "NOAA NCEI", "provider_id": dataset_id,
+                "doi": "", "pmid": "", "pmcid": "", "title": self._clean(title),
+                "authors": "NOAA National Centers for Environmental Information",
+                "journal": "NOAA NCEI", "year": str(item.get("date_start") or "")[:4],
+                "url": item.get("url") or "https://www.ncei.noaa.gov/",
+                "abstract": self._clean(str(item.get("description") or item.get("summary") or "")),
+                "publication_type": "climate and environmental dataset",
+                "open_access": True, "license": "Check dataset-specific terms",
+                "citation_count": None, "dataset": True, "dataset_accession": dataset_id,
+            })
+        return records
+
     def _enrich_missing_abstracts(self, records: list[dict[str, Any]]) -> dict[str, int]:
         """Recover missing abstracts by exact identifiers and report every outcome."""
         stats = {"attempted": 0, "recovered": 0, "no_match": 0, "failed": 0, "skipped_no_identifier": 0}
@@ -438,12 +548,16 @@ class LiteratureClient:
         if not 1 <= limit <= 50: raise ValueError("limit must be between 1 and 50.")
         selected=tuple(dict.fromkeys(providers))
         if not selected or any(p not in self.PROVIDERS for p in selected):
-            raise ValueError("providers must be europepmc, crossref, geo, arxiv, and/or pubchem.")
+            raise ValueError("Unsupported literature/data provider selected.")
         report=LiteratureSearchReport(query, list(selected))
         jobs={}
         with ThreadPoolExecutor(max_workers=len(selected)) as pool:
             for provider in selected:
-                fn={"europepmc":self._search_europepmc,"crossref":self._search_crossref,"geo":self._search_geo,"arxiv":self._search_arxiv,"pubchem":self._search_pubchem}[provider]
+                fn={"europepmc":self._search_europepmc,"crossref":self._search_crossref,
+                    "geo":self._search_geo,"arxiv":self._search_arxiv,
+                    "pubchem":self._search_pubchem,"openalex":self._search_openalex,
+                    "gbif":self._search_gbif,"world_bank":self._search_world_bank,
+                    "noaa_ncei":self._search_noaa_ncei}[provider]
                 jobs[pool.submit(fn,query,limit)]=provider
             for future in as_completed(jobs):
                 try: report.records.extend(future.result())
