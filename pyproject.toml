@@ -11,6 +11,7 @@ dependencies = []
 
 [project.scripts]
 oracle = "oracle.cli:main"
+oracle-dashboard = "oracle.web:main"
 
 [tool.setuptools.packages.find]
 include = ["oracle*"]
