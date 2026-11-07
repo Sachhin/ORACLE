@@ -6,6 +6,15 @@ from unittest.mock import patch
 from oracle.model_agents import GeminiAgentError, GeminiJSONProvider
 
 
+class BodyHTTPError(HTTPError):
+    def __init__(self, payload):
+        super().__init__("https://example.invalid", 429, "Too Many Requests", {}, None)
+        self.payload = payload
+
+    def read(self, *_):
+        return self.payload
+
+
 class GeminiPerMinuteRetryTests(unittest.TestCase):
     def test_per_minute_429_waits_for_provider_retry_guidance(self):
         detail = json.dumps({
@@ -14,7 +23,7 @@ class GeminiPerMinuteRetryTests(unittest.TestCase):
                 "message": "Quota exceeded for generate_content_free_tier_requests_per_minute. Please retry in 0.25s."
             }
         }).encode()
-        error = _BodyHTTPError(detail)
+        error = BodyHTTPError(detail)
 
         class Response:
             def __enter__(self):
@@ -23,7 +32,7 @@ class GeminiPerMinuteRetryTests(unittest.TestCase):
                 return False
             def read(self, *_):
                 return json.dumps({
-                                        "candidates": [{"content": {"parts": [{"text": json.dumps({"ok": True})}]}}]
+                    "candidates": [{"content": {"parts": [{"text": json.dumps({"ok": True})}]}}]
                 }).encode()
 
         provider = GeminiJSONProvider(api_key="test-key", model="gemini-3.5-flash-lite", max_retries=1)
@@ -41,7 +50,7 @@ class GeminiPerMinuteRetryTests(unittest.TestCase):
                 "message": "Generate content requests per day limit exceeded on Free Tier."
             }
         }).encode()
-        error = _BodyHTTPError(detail)
+        error = BodyHTTPError(detail)
         provider = GeminiJSONProvider(api_key="test-key", model="gemini-3.8-flash", max_retries=2)
         with patch("oracle.model_agents.urlopen", side_effect=error) as request:
             with self.assertRaisesRegex(GeminiAgentError, "daily quota appears exhausted"):
@@ -50,11 +59,4 @@ class GeminiPerMinuteRetryTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()class _BodyHTTPError(HTTPError):
-    def __init__(self, payload):
-        super().__init__("https://example.invalid", 429, "Too Many Requests", {}, None)
-        self.payload = payload
-
-    def read(self, *_):
-        return self.payload
-
+    unittest.main()
