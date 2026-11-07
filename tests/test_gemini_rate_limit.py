@@ -15,7 +15,7 @@ class GeminiPerMinuteRetryTests(unittest.TestCase):
                 "message": "Quota exceeded for generate_content_free_tier_requests_per_minute. Please retry in 0.25s."
             }
         }).encode()
-        error = HTTPError("https://example.invalid", 429, "Too Many Requests", {}, io.BytesIO(detail))
+        error = _BodyHTTPError(detail)
 
         class Response:
             def __enter__(self):
@@ -52,3 +52,12 @@ class GeminiPerMinuteRetryTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+class _BodyHTTPError(HTTPError):
+    def __init__(self, payload):
+        super().__init__("https://example.invalid", 429, "Too Many Requests", {}, None)
+        self.payload = payload
+
+    def read(self, *_):
+        return self.payload
+
