@@ -328,7 +328,7 @@ class LiteratureClient:
                           "molecular", "cellular", "pathway", "pathways", "mitochondrial",
                           "telomere", "telomeres", "proteostasis", "epigenetic", "epigenetics",
                           "autophagy", "inflammation", "metabolism", "immune", "immunity",
-                          "repair", "stem", " senescent"}
+                          "repair", "stem", "senescent"}
             score += 12 * len(anchors & title) + 4 * len(anchors & abstract)
             score += 2 * len(mechanisms & title) + len(mechanisms & abstract)
         return score
