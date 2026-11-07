@@ -21,6 +21,7 @@ class ResourceManagerTests(unittest.TestCase):
         self.assertEqual(items["ncbi_geo"]["status"], "implemented")
         self.assertEqual(items["arxiv"]["status"], "implemented")
         self.assertEqual(items["pubchem"]["status"], "implemented")
+        self.assertEqual(items["materials_project"]["status"], "catalog_only")
         self.assertEqual(items["materials_project"]["authentication"], "api_key")
 
     def test_domain_filter_includes_universal_resources(self):
@@ -30,6 +31,7 @@ class ResourceManagerTests(unittest.TestCase):
         self.assertIn("crossref", keys)
         self.assertIn("ncbi_geo", keys)
         self.assertIn("arxiv", keys)
+        self.assertNotIn("pubchem", keys)
         self.assertNotIn("noaa_ncei", keys)
 
     def test_arxiv_entry_normalizes_to_common_literature_schema(self):
@@ -82,7 +84,7 @@ class ResourceManagerTests(unittest.TestCase):
     def test_catalog_only_resource_does_not_fake_a_connector(self):
         manager = ResourceManager()
         with self.assertRaisesRegex(NotImplementedError, "catalog metadata only"):
-            manager.search("battery cathode", resources=("pubchem",))
+            manager.search("battery cathode", resources=("materials_project",))
 
 
 if __name__ == "__main__":
