@@ -42,7 +42,7 @@ class ResourceManagerTests(unittest.TestCase):
         for key in ("materials_project", "nomad", "nasa_ads",
                     "pangaea",
                     "eric", "philpapers", "icpsr",
-                    "internet_archive", "europeana", "smithsonian_open_access"):
+                    "europeana", "smithsonian_open_access"):
             self.assertEqual(items[key]["status"], "catalog_only")
 
     def test_domain_alias_resource_filtering(self):
@@ -137,7 +137,7 @@ class ResourceManagerTests(unittest.TestCase):
     def test_auto_source_selection_uses_domain_adapters(self):
         self.assertEqual(
             resolve_literature_providers("Can we identify aging mechanisms?", "auto"),
-            ("openalex", "europepmc", "crossref", "geo", "pubchem", "clinical_trials", "sra", "zenodo", "harvard_dataverse", "pdb", "pride"),
+            ("openalex", "europepmc", "crossref", "geo", "pubchem", "clinical_trials", "sra", "zenodo", "harvard_dataverse", "pdb", "pride", "figshare"),
         )
         self.assertEqual(
             resolve_literature_providers("Can quantum gravity be tested?", "auto"),
@@ -151,7 +151,7 @@ class ResourceManagerTests(unittest.TestCase):
     def test_auto_source_selection_uses_openalex_for_humanities_and_social_sciences(self):
         self.assertEqual(
             resolve_literature_providers("How did the Roman Empire collapse?", "auto"),
-            ("openalex", "crossref"),
+            ("openalex", "crossref", "internet_archive", "loc", "figshare"),
         )
         self.assertEqual(
             resolve_literature_providers("How does GDP growth influence unemployment rates?", "auto"),
