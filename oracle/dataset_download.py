@@ -14,7 +14,7 @@ from urllib.request import Request, urlopen
 
 _ALLOWED_HOSTS = {
     "zenodo.org", "dataverse.harvard.edu", "files.rcsb.org",
-    "ftp.sra.ebi.ac.uk", "sra-download.ncbi.nlm.nih.gov",
+    "ftp.sra.ebi.ac.uk", "sra-download.ncbi.nlm.nih.gov", "api.openml.org",\n    "sra-pub-run-odp.s3.amazonaws.com",
     "huggingface.co", "cdn-lfs.huggingface.co", "openml.org",
     "www.openml.org", "www.ebi.ac.uk",
 }
@@ -24,7 +24,7 @@ _DEFAULT_MAX_BYTES = 2 * 1024 * 1024 * 1024
 def _host_allowed(host: str) -> bool:
     host = (host or "").casefold().rstrip(".")
     return host in _ALLOWED_HOSTS or any(
-        host.endswith("." + suffix) for suffix in ("zenodo.org", "harvard.edu", "hf.co")
+        host.endswith("." + suffix) for suffix in ("zenodo.org", "harvard.edu", "hf.co", "ebi.ac.uk", "noaa.gov", "rcsb.org")
     )
 
 
