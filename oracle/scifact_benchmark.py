@@ -130,8 +130,12 @@ def evaluate_scifact(claims_path: str | Path, corpus_path: str | Path,
             label = next(iter(doc_labels))
             gold_labels.add(label)
             gold_docs[doc] = {"label": label, "rationales": sets}
+        # Score only claims with frozen predictions. Missing claims remain visible
+        # in split-level coverage, but must not be silently treated as CONTEXTUAL.
+        if cid not in pred_by_id:
+            continue
         gold_stance = _stance(gold_labels)
-        predicted = pred_by_id.get(cid, {})
+        predicted = pred_by_id[cid]
         predicted_labels = {item["label"] for item in predicted.values()}
         predicted_stance = _stance(predicted_labels)
         confusion[gold_stance][predicted_stance] += 1
@@ -176,8 +180,10 @@ def evaluate_scifact(claims_path: str | Path, corpus_path: str | Path,
         "dataset": "SciFact",
         "split": split,
         "claim_count": len(claim_by_id),
+        "scored_claim_count": len(pred_by_id),
         "prediction_coverage": len(pred_by_id) / len(claim_by_id) if claim_by_id else 0.0,
-        "stance_accuracy": stance_correct / len(claim_by_id) if claim_by_id else None,
+        "scoring_scope": "claims with frozen predictions only; unpredicted claims are excluded from accuracy/PRF and represented by prediction_coverage",
+        "stance_accuracy": stance_correct / len(pred_by_id) if pred_by_id else None,
         "stance_confusion_gold_rows_predicted_columns": confusion,
         "abstract_level_evidence": prf(correct_doc_count, pred_doc_count, gold_doc_count),
         "sentence_level_evidence": prf(correct_sentence_count, pred_sentence_count, gold_sentence_count),
