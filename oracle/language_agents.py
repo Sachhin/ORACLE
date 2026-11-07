@@ -86,7 +86,7 @@ class LanguageReasoningAgent:
                         or lines[0].strip() not in ("```", "```json")
                         or lines[-1].strip() != "```"):
                     raise ValueError("response contains an unsupported Markdown code fence")
-                response_text = "\\n".join(lines[1:-1]).strip()
+                response_text = "\n".join(lines[1:-1]).strip()
             payload = json.loads(response_text)
             if not isinstance(payload, dict):
                 raise ValueError("response must be a JSON object")
