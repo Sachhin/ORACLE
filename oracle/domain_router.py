@@ -6,6 +6,7 @@ recommendations; it does not claim that a specialist model or domain dataset ran
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
+import re
 
 
 @dataclass(frozen=True)
@@ -24,8 +25,9 @@ _PROFILES = {
     "biology_medicine": DomainProfile(
         "biology_medicine", "Biology & Medicine",
         "Molecular, cellular, organismal, clinical and population biology.",
-        ("gene", "protein", "cell", "organism", "biology", "medicine", "disease",
-         "cancer", "longevity", "aging", "genetic", "clinical", "drug", "brain",
+        ("gene", "protein", "cell", "organism", "biology", "biological", "mechanism",
+         "mechanisms", "medicine", "medical", "disease", "cancer", "longevity",
+         "aging", "ageing", "genetic", "clinical", "drug", "brain",
          "neuroscience", "microbiome", "immune", "patient"),
         ("PubMed/Europe PMC", "NCBI GEO/SRA", "PRIDE/ProteomeXchange",
          "ClinicalTrials.gov", "UniProt", "Ensembl"),
@@ -197,7 +199,8 @@ def resolve_domain(question: str, requested: str = "auto") -> tuple[DomainProfil
         profile = _PROFILES[requested]
         return profile, {"method": "user_selected", "matched_terms": [], "confidence": 1.0}
 
-    text = " ".join(question.casefold().replace("-", " ").split())
+    text = re.sub(r"[^\\w\\s]", " ", question.casefold().replace("-", " "))
+    text = " ".join(text.split())
     words = set(text.split())
     def matches(term: str) -> bool:
         return term in words if " " not in term else term in text
