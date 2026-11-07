@@ -73,7 +73,7 @@ class GeminiJSONProvider:
                 retryable = exc.code in {429, 500, 502, 503, 504}
                 if retryable and attempt < self.max_retries and (not quota_exhausted):
                     retry_after = exc.headers.get("Retry-After") if exc.headers else None
-                    retry_match = re.search(r"retry in ([0-9]+(?:\\.[0-9]+)?)s", detail_lower)
+                    retry_match = re.search(r"retry in ([0-9]+(?:\.[0-9]+)?)s", detail_lower)
                     try:
                         if retry_after:
                             delay = max(0.0, float(retry_after))
