@@ -35,7 +35,7 @@ architecture, supported domains, command examples, and scientific-integrity limi
 
 ## Current build status
 
-The offline research foundation remains usable without credentials. Optional network literature retrieval uses public scholarly APIs; optional Gemini extraction and cross-paper comparison use a real model only when explicitly enabled. The baseline agents remain deterministic scaffolding. The orchestrator measures unique research progress, suppresses repeated scaffold records, checks core graph invariants, and stops after repeated no-progress cycles. Review agents receive the current cycle's newly generated evidence and hypotheses; novelty and cross-domain agents are restricted to source-backed records; adaptive replanning receives the latest task/evidence state. This is safer, more coherent lifecycle control, not proof of autonomous scientific reasoning.
+The offline research foundation and dashboard agent workflow run without AI-provider credentials. Literature retrieval can optionally connect to public scholarly data services (such as Europe PMC and Crossref) without API keys. The default dashboard does not call Gemini or any paid AI-model API; its research agents use the built-in deterministic workflow. The orchestrator measures unique research progress, suppresses repeated scaffold records, checks core graph invariants, and stops after repeated no-progress cycles. Review agents receive the current cycle's newly generated evidence and hypotheses; novelty and cross-domain agents are restricted to source-backed records; adaptive replanning receives the latest task/evidence state. This is safer, more coherent lifecycle control, not proof of autonomous scientific reasoning.
 
 ## Quick start
 
