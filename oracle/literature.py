@@ -61,18 +61,43 @@ class LiteratureClient:
             return "-".join(str(v).zfill(2) if i else str(v) for i,v in enumerate(value))
         return str(value or "")
 
+    @staticmethod
+    def _epmc_values(container: Any, key: str) -> list[Any]:
+        """Normalize Europe PMC's occasionally scalar or object-wrapped list fields."""
+        if isinstance(container, dict):
+            values = container.get(key, [])
+        else:
+            values = container
+        if values is None:
+            return []
+        return values if isinstance(values, list) else [values]
+
     @classmethod
     def _epmc_record(cls, x: dict[str, Any]) -> dict[str, Any]:
-        doi=(x.get("doi") or "").lower().strip(); pmid=str(x.get("pmid") or "")
+        if not isinstance(x, dict):
+            raise ValueError(f"Europe PMC result must be an object, got {type(x).__name__}")
+        doi=str(x.get("doi") or "").lower().strip(); pmid=str(x.get("pmid") or "")
         url="https://doi.org/"+doi if doi else ("https://europepmc.org/article/MED/"+pmid if pmid else "")
+        pub_types = cls._epmc_values(x.get("pubTypeList", {}), "pubType")
+        licenses = cls._epmc_values(x.get("licenseList", {}), "license")
+        publication_types = []
+        for value in pub_types:
+            label = value.get("type", "") if isinstance(value, dict) else str(value or "")
+            if label:
+                publication_types.append(label)
+        license_values = []
+        for value in licenses:
+            label = value.get("license", "") if isinstance(value, dict) else str(value or "")
+            if label:
+                license_values.append(label)
         return {"provider":"Europe PMC","provider_id":str(x.get("id") or ""),
             "doi":doi,"pmid":pmid,"pmcid":str(x.get("pmcid") or ""),"title":cls._clean(x.get("title") or "Untitled record"),
             "authors":x.get("authorString") or "","journal":x.get("journalTitle") or "",
             "year":str(x.get("firstPublicationDate") or x.get("pubYear") or "")[:10],
             "url":url,"abstract":cls._clean(x.get("abstractText") or ""),
-            "publication_type":", ".join(p.get("type","") for p in x.get("pubTypeList",{}).get("pubType",[]) if p.get("type")),
+            "publication_type":", ".join(publication_types),
             "open_access":str(x.get("isOpenAccess") or "N").upper()=="Y",
-            "license":", ".join(p.get("license","") for p in x.get("licenseList",{}).get("license",[]) if p.get("license")),
+            "license":", ".join(license_values),
             "citation_count":x.get("citedByCount")}
 
     @classmethod
@@ -92,7 +117,22 @@ class LiteratureClient:
         url="https://www.ebi.ac.uk/europepmc/webservices/rest/search?"+urlencode({
             "query":query,"format":"json","resultType":"core","pageSize":limit})
         data=self._get_json(url)
-        return [self._epmc_record(x) for x in data.get("resultList",{}).get("result",[])]
+        if not isinstance(data, dict):
+            raise LiteratureSearchError("Europe PMC returned a non-object JSON response")
+        result_list = data.get("resultList", {})
+        if not isinstance(result_list, dict):
+            raise LiteratureSearchError("Europe PMC response has an invalid resultList")
+        rows = result_list.get("result", [])
+        if isinstance(rows, dict):
+            rows = [rows]
+        if not isinstance(rows, list):
+            raise LiteratureSearchError("Europe PMC response has an invalid result collection")
+        records = []
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            records.append(self._epmc_record(row))
+        return records
 
     def _search_crossref(self, query: str, limit: int):
         params={"query.bibliographic":query,"rows":limit,
@@ -232,10 +272,20 @@ class LiteratureClient:
             remaining -= 1
             try:
                 data = self._get_json(url)
-                hits = data.get("resultList", {}).get("result", [])
-                if not hits:
+                if not isinstance(data, dict):
                     continue
-                match = self._epmc_record(hits[0])
+                result_list = data.get("resultList", {})
+                if not isinstance(result_list, dict):
+                    continue
+                hits = result_list.get("result", [])
+                if isinstance(hits, dict):
+                    hits = [hits]
+                if not isinstance(hits, list):
+                    continue
+                hit = next((item for item in hits if isinstance(item, dict)), None)
+                if hit is None:
+                    continue
+                match = self._epmc_record(hit)
                 same_pmid = bool(record.get("pmid") and match.get("pmid") == str(record["pmid"]))
                 same_doi = bool(record.get("doi") and match.get("doi", "").casefold()
                                 == str(record["doi"]).casefold())
