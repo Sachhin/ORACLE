@@ -1,8 +1,9 @@
 """Universal scientific resource registry and safe connector dispatch.
 
 The catalog is metadata, not a claim that every listed API has an implemented
-client. Search dispatch is enabled only for providers backed by a tested
-ORACLE adapter (currently Europe PMC, Crossref, NCBI GEO, arXiv, and PubChem).
+client. Search dispatch is enabled only for providers backed by an executable
+ORACLE adapter (Europe PMC, Crossref, NCBI GEO, arXiv, PubChem, OpenAlex,
+GBIF, and World Bank).
 """
 from __future__ import annotations
 
