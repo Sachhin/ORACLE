@@ -4,10 +4,15 @@ import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from oracle.dataset_download import download_dataset_file, pdb_structure_download_url
+from oracle.dataset_download import _host_allowed, download_dataset_file, pdb_structure_download_url
 
 
 class DatasetDownloadTests(unittest.TestCase):
+    def test_allows_documented_openml_and_sra_data_hosts(self):
+        self.assertTrue(_host_allowed("api.openml.org"))
+        self.assertTrue(_host_allowed("sra-pub-run-odp.s3.amazonaws.com"))
+        self.assertFalse(_host_allowed("evil-example.com"))
+
     def test_download_returns_sha256_and_byte_count(self):
         payload = b"research-data"
         response = MagicMock()
