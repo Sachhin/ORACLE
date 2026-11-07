@@ -1,0 +1,59 @@
+name: GSE12837 reference header diagnostic
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/gse12837-header-diagnostic.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect-reference:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+      - name: Download the published GSE12837 RMA matrix
+        run: |
+          set -euo pipefail
+          mkdir -p data/gse12837
+          curl --fail --location --retry 4 --retry-all-errors --connect-timeout 20 --max-time 600 \
+            "https://www.ncbi.nlm.nih.gov/geo/download/?acc=GSE12837&file=GSE12837_RMA.txt&format=file" \
+            -o data/gse12837/GSE12837_RMA.download
+          if gzip -t data/gse12837/GSE12837_RMA.download 2>/dev/null; then
+            gzip -dc data/gse12837/GSE12837_RMA.download > data/gse12837/GSE12837_RMA.txt
+          else
+            cp data/gse12837/GSE12837_RMA.download data/gse12837/GSE12837_RMA.txt
+          fi
+          test -s data/gse12837/GSE12837_RMA.txt
+      - name: Print exact sample headers and matrix dimensions
+        run: |
+          Rscript - <<'RS'
+          ref <- read.delim("data/gse12837/GSE12837_RMA.txt", check.names=FALSE,
+                            stringsAsFactors=FALSE, quote="", comment.char="")
+          cat("DIMENSIONS:", nrow(ref), "x", ncol(ref), "\n")
+          cat("FIRST_COLUMNS:", paste(head(names(ref), 8), collapse=" | "), "\n")
+          cat("SAMPLE_COLUMNS_BEGIN\n")
+          cat(paste(sprintf("%02d: %s", seq_along(names(ref)[-1]), names(ref)[-1]), collapse="\n"), "\n")
+          cat("SAMPLE_COLUMNS_END\n")
+          if (ncol(ref) != 25L || nrow(ref) < 22000L) {
+            stop("Unexpected GSE12837 RMA dimensions; inspect the printed header.")
+          }
+          writeLines(names(ref), "data/gse12837/reference_headers.txt")
+          RS
+      - name: Upload exact source and header diagnostic
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gse12837-reference-header-diagnostic
+          path: |
+            data/gse12837/GSE12837_RMA.txt
+            data/gse12837/reference_headers.txt
+          if-no-files-found: ignore
+          retention-days: 14
