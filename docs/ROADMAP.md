@@ -37,7 +37,7 @@ Status reflects code currently present on the main branch. Checked items are imp
 - [x] Bounded transient retries, timeouts, and quota-exhaustion detection for Gemini
 - [x] Ordered Gemini/Groq/OpenRouter routing with explicit transient-failure fallback policy and environment-only credentials
 - [x] Bounded Europe PMC open-access full-text retrieval with strict Creative Commons licence checks
-- [x] Scientific resource registry distinguishes implemented providers from catalog-only resources; implemented literature adapters include Europe PMC, Crossref, GEO, arXiv and PubChem
+- [x] Scientific resource registry distinguishes executable adapters from catalog-only resources; implemented adapters cover Europe PMC, PubMed, Crossref, OpenAlex, NCBI GEO, GenBank, Ensembl, SRA, arXiv, INSPIRE-HEP, PubChem, RCSB PDB, PRIDE, ClinicalTrials.gov, GBIF, World Bank, NOAA NCEI, NASA Earthdata, USGS, Zenodo, Harvard Dataverse, Figshare, Hugging Face Datasets, OpenML, Internet Archive and Library of Congress, plus NASA ADS when its API token is configured. Many connectors return metadata/records rather than full raw datasets; provider-specific limits are documented in docs/RESOURCE_CONNECTORS.md.
 - [x] GEO Series supplementary file discovery and size-capped download with SHA-256 checksums
 - [x] Bounded descriptive parsing of downloaded GEO TSV/CSV expression matrices with checksums, per-sample summaries, and source-linked dataset records
 - [x] Per-sample missingness/variance quality-control flags that preserve all original samples and never silently filter

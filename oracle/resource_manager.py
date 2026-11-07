@@ -7,6 +7,7 @@ GBIF, World Bank, NOAA NCEI, ClinicalTrials.gov, Zenodo, Harvard Dataverse, and 
 """
 from __future__ import annotations
 
+import os
 from dataclasses import asdict, dataclass
 from typing import Any
 
@@ -204,7 +205,11 @@ def resolve_literature_providers(question: str, requested_domain: str = "auto") 
         "arts_culture": ("openalex", "crossref"),
         "religion_theology": ("openalex", "crossref"),
     }
-    return by_domain.get(profile.key, ("crossref",))
+    providers = by_domain.get(profile.key, ("crossref",))
+    # NASA ADS is executable only when its bearer token is configured.
+    if "nasa_ads" in providers and not os.environ.get("NASA_ADS_API_TOKEN", "").strip():
+        providers = tuple(provider for provider in providers if provider != "nasa_ads")
+    return providers
 
 
 class ResourceManager:
