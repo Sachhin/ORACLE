@@ -4,7 +4,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from html import unescape
-import json, re
+import json, re, os
 import xml.etree.ElementTree as ET
 from typing import Any
 from urllib.error import HTTPError, URLError
@@ -33,7 +33,7 @@ class LiteratureSearchReport:
     abstract_enrichment_skipped_no_identifier: int = 0
 
 class LiteratureClient:
-    PROVIDERS = ("europepmc", "crossref", "geo", "arxiv", "pubchem", "openalex", "gbif", "world_bank", "noaa_ncei", "clinical_trials", "zenodo", "harvard_dataverse", "sra", "pdb", "pride", "huggingface_datasets", "openml", "nasa_earthdata", "usgs", "figshare", "internet_archive", "loc")
+    PROVIDERS = ("europepmc", "crossref", "geo", "arxiv", "pubchem", "openalex", "gbif", "world_bank", "noaa_ncei", "clinical_trials", "zenodo", "harvard_dataverse", "sra", "pdb", "pride", "huggingface_datasets", "openml", "nasa_earthdata", "usgs", "figshare", "internet_archive", "loc", "nasa_ads")
     def __init__(self, timeout: float = 20.0, mailto: str = "",
                  max_abstract_enrichments: int = 10):
         if timeout <= 0:
@@ -43,9 +43,11 @@ class LiteratureClient:
         self.timeout, self.mailto = timeout, mailto.strip()
         self.max_abstract_enrichments = max_abstract_enrichments
 
-    def _get_json(self, url: str) -> dict[str, Any]:
-        req = Request(url, headers={"Accept":"application/json",
-            "User-Agent":"ORACLE-Scientific-Literature/2.0 (mailto: "+(self.mailto or "not-provided")+")"})
+    def _get_json(self, url: str, headers: dict[str, str] | None = None) -> dict[str, Any]:
+        request_headers = {"Accept":"application/json",
+            "User-Agent":"ORACLE-Scientific-Literature/2.0 (mailto: "+(self.mailto or "not-provided")+")"}
+        request_headers.update(headers or {})
+        req = Request(url, headers=request_headers)
         try:
             with urlopen(req, timeout=self.timeout) as response:
                 return json.loads(response.read(8_000_000).decode("utf-8"))
@@ -581,6 +583,37 @@ class LiteratureClient:
             })
         return records
 
+
+    def _search_nasa_ads(self, query: str, limit: int):
+        token = os.environ.get("NASA_ADS_API_TOKEN", "").strip()
+        if not token:
+            raise LiteratureSearchError("NASA ADS requires NASA_ADS_API_TOKEN; configure it in the ORACLE runtime environment.")
+        data = self._get_json("https://api.adsabs.harvard.edu/v1/search/query?" + urlencode({
+            "q": query, "fl": "bibcode,title,author,year,abstract,doi,pub",
+            "rows": limit, "sort": "score desc"
+        }), headers={"Authorization": "Bearer " + token})
+        docs = (data.get("response") or {}).get("docs") or []
+        records = []
+        for item in docs[:limit]:
+            bibcode = str(item.get("bibcode") or "")
+            title_value = item.get("title") or ["NASA ADS record"]
+            title = title_value[0] if isinstance(title_value, list) and title_value else str(title_value)
+            doi_value = item.get("doi") or []
+            doi = doi_value[0] if isinstance(doi_value, list) and doi_value else str(doi_value or "")
+            authors = item.get("author") or []
+            records.append({
+                "provider": "NASA ADS", "provider_id": bibcode, "doi": doi.lower(),
+                "pmid": "", "pmcid": "", "title": self._clean(str(title)),
+                "authors": "; ".join(str(x) for x in authors[:30]),
+                "journal": str(item.get("pub") or ""), "year": str(item.get("year") or ""),
+                "url": "https://ui.adsabs.harvard.edu/abs/" + bibcode if bibcode else "https://ui.adsabs.harvard.edu/",
+                "abstract": self._clean(str(item.get("abstract") or "")),
+                "publication_type": "astronomy and physics scholarly record",
+                "open_access": False, "license": "Publication and provider-specific access terms apply",
+                "citation_count": None, "dataset": False, "dataset_accession": "",
+            })
+        return records
+
     def _search_clinical_trials(self, query: str, limit: int):
         data = self._get_json("https://clinicaltrials.gov/api/v2/studies?" + urlencode({
             "query.term": query, "pageSize": limit, "format": "json",
@@ -881,7 +914,7 @@ class LiteratureClient:
                     "pdb":self._search_pdb,"pride":self._search_pride,
                     "huggingface_datasets":self._search_huggingface_datasets,"openml":self._search_openml,
                     "nasa_earthdata":self._search_nasa_earthdata,"usgs":self._search_usgs,
-                    "figshare":self._search_figshare,"internet_archive":self._search_internet_archive,"loc":self._search_loc}[provider]
+                    "figshare":self._search_figshare,"internet_archive":self._search_internet_archive,"loc":self._search_loc,"nasa_ads":self._search_nasa_ads}[provider]
                 jobs[pool.submit(fn,query,limit)]=provider
             for future in as_completed(jobs):
                 try: report.records.extend(future.result())
