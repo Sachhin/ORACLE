@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 
 from .models import ExperimentStatus, ResearchMode, ResearchRun
 from .literature import LiteratureClient
@@ -1291,7 +1292,16 @@ def main() -> None:
         raise SystemExit("--compare-papers and --review-evidence require --extract-claims.")
     if args.literature is not None:
         run = ResearchRun(question=args.literature)
-        providers = (resolve_literature_providers(args.literature, args.domain) if args.provider == "auto" else {"both": ("europepmc", "crossref"), "biology": ("europepmc", "crossref", "geo"), "all": ("europepmc", "crossref", "geo", "arxiv", "pubchem"), "arxiv": ("arxiv",), "pubchem": ("pubchem",), "europepmc": ("europepmc",), "crossref": ("crossref",), "geo": ("geo",)}[args.provider])
+        if args.provider == "auto":
+            providers = resolve_literature_providers(args.literature, args.domain)
+        elif args.provider == "all":
+            providers = tuple(p for p in LiteratureClient.PROVIDERS if p != "nasa_ads" or os.getenv("NASA_ADS_API_TOKEN"))
+        elif args.provider == "both":
+            providers = ("europepmc", "crossref")
+        elif args.provider == "biology":
+            providers = resolve_literature_providers(args.literature, "biology_medicine")
+        else:
+            providers = (args.provider,)
         client = LiteratureClient(mailto=args.mailto)
         report = client.search(args.literature, limit=args.limit, providers=providers)
         client.ingest(run, report)
