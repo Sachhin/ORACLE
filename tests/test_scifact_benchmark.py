@@ -7,6 +7,25 @@ from oracle.scifact_benchmark import evaluate_scifact
 
 
 class SciFactBenchmarkTests(unittest.TestCase):
+    def test_subset_scoring_excludes_unpredicted_claims_from_accuracy_and_f1(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            claims, corpus, predictions = [root / n for n in ("claims.jsonl", "corpus.jsonl", "pred.jsonl")]
+            claims.write_text("\n".join([
+                json.dumps({"id": 1, "claim": "A", "evidence": {}}),
+                json.dumps({"id": 2, "claim": "B", "evidence": {
+                    "10": [{"label": "SUPPORT", "sentences": [0]}]}}),
+            ]) + "\n", encoding="utf-8")
+            corpus.write_text(json.dumps({"doc_id": 10, "abstract": ["evidence"]}) + "\n", encoding="utf-8")
+            predictions.write_text(json.dumps({"id": 1, "evidence": {}}) + "\n", encoding="utf-8")
+            report = evaluate_scifact(claims, corpus, predictions)
+            self.assertEqual(report["claim_count"], 2)
+            self.assertEqual(report["scored_claim_count"], 1)
+            self.assertEqual(report["prediction_coverage"], 0.5)
+            self.assertEqual(report["stance_accuracy"], 1.0)
+            self.assertEqual(report["abstract_level_evidence"]["gold"], 0)
+            self.assertEqual(len(report["claims"]), 1)
+
     def test_scores_stance_and_rationale_retrieval(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
