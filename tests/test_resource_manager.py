@@ -1,5 +1,6 @@
 """Tests for the universal scientific resource registry."""
 import unittest
+from unittest.mock import patch
 
 from oracle.resource_manager import ResourceManager
 from oracle.literature import LiteratureClient
@@ -68,6 +69,20 @@ class ResourceManagerTests(unittest.TestCase):
         self.assertIn("Molecular formula: C2H4O2.", record["abstract"])
         self.assertEqual(record["molecular_weight"], "60.05")
         self.assertIn("/compound/2244", record["url"])
+
+    def test_pubchem_search_uses_pug_rest_and_normalizes_results(self):
+        client = LiteratureClient()
+        payload = {"PropertyTable": {"Properties": [{
+            "CID": 2244, "IUPACName": "acetic acid", "MolecularFormula": "C2H4O2",
+            "MolecularWeight": "60.05", "CanonicalSMILES": "CC(=O)O",
+        }]}}
+        with patch.object(client, "_get_json", return_value=payload) as get_json:
+            records = client._search_pubchem("acetic acid", 5)
+        requested_url = get_json.call_args.args[0]
+        self.assertIn("/compound/name/acetic%20acid/property/", requested_url)
+        self.assertIn("MaxRecords=5", requested_url)
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records[0]["compound_cid"], "2244")
 
     def test_pubchem_resource_dispatches_to_literature_provider(self):
         class StubClient:
