@@ -35,6 +35,21 @@ class ResourceManagerTests(unittest.TestCase):
         self.assertIn("pubchem", keys)
         self.assertNotIn("noaa_ncei", keys)
 
+    def test_cross_domain_resources_are_catalogued_with_truthful_status(self):
+        items = {item["key"]: item for item in ResourceManager.list_resources()}
+        for key in ("openalex", "gbif", "world_bank"):
+            self.assertEqual(items[key]["status"], "implemented")
+        for key in ("materials_project", "nomad", "nasa_ads", "pdb",
+                    "pride", "sra", "nasa_earthdata", "usgs", "pangaea",
+                    "eric", "philpapers", "icpsr", "harvard_dataverse",
+                    "internet_archive", "europeana", "smithsonian_open_access"):
+            self.assertEqual(items[key]["status"], "catalog_only")
+
+    def test_domain_alias_resource_filtering(self):
+        keys = {item["key"] for item in ResourceManager.list_resources("history")}
+        self.assertIn("openalex", keys)
+        self.assertIn("internet_archive", keys)
+
     def test_arxiv_entry_normalizes_to_common_literature_schema(self):
         record = LiteratureClient._arxiv_record({
             "id": "https://arxiv.org/abs/2601.12345",
