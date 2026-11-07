@@ -248,7 +248,7 @@ class ResourceManager:
         unsupported: list[str] = []
         for key in dict.fromkeys(resources):
             item = self.get_resource(key)
-            if item["connector"] in {"europepmc", "crossref", "geo", "arxiv", "pubchem", "openalex", "gbif", "world_bank", "noaa_ncei", "clinical_trials", "zenodo", "harvard_dataverse", "sra", "pdb", "pride", "huggingface_datasets", "openml", "nasa_earthdata", "usgs", "figshare", "internet_archive", "loc"}:
+            if item["connector"] in {"europepmc", "crossref", "geo", "arxiv", "pubchem", "openalex", "gbif", "world_bank", "noaa_ncei", "clinical_trials", "zenodo", "harvard_dataverse", "sra", "pdb", "pride", "huggingface_datasets", "openml", "pubmed", "genbank", "nasa_earthdata", "usgs", "figshare", "internet_archive", "loc"}:
                 providers.append(item["connector"])
             else:
                 unsupported.append(key)
