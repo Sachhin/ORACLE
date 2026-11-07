@@ -97,8 +97,11 @@ class OracleOrchestrator:
 
     @staticmethod
     def _task_search_query(task) -> str:
-        """Build a focused scholarly query from the task, not repeated planner boilerplate."""
-        words = " ".join((task.name, task.description)).split()
+        """Build a focused scholarly query without planner/profile boilerplate."""
+        description = task.description.split(" Domain-specialist lens:", 1)[0]
+        if " in: " in description:
+            description = description.split(" in: ", 1)[1]
+        words = " ".join((task.name, description)).split()
         return " ".join(words[:32])[:350]
 
     def _add_unique_evidence(self, run: ResearchRun, evidence_items: list) -> int:
