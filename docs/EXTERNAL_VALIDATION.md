@@ -110,13 +110,18 @@ The run uploaded three frozen evidence artifacts with input hashes.
   expression matrix versus submitter-published GEO matrix: RMSE 4.31e-15,
   MAE 2.68e-15, Pearson r 1.0000. Voom weights: RMSE 0.0478,
   Pearson r 0.9998.
-- **GSE176261 validation cohort — FAIL_NUMERICAL_TOLERANCE** (53 samples,
-  11,111 features): expression RMSE 0.0580 versus pre-set maximum 0.0500,
-  MAE 0.0512, Pearson r 0.9999. Voom weights RMSE 0.0471,
-  Pearson r 0.9997. The CI job succeeds because it correctly preserves and
-  uploads the diagnostic report; the dataset comparison itself remains a
-  tolerance failure. It belongs to the same publication as GSE176260 and is
-  not an independent study.
+- **GSE176261 validation cohort — PASS after full-cohort TMM correction**
+  (53 validation samples, 11,111 features; normalization factors estimated
+  from all 93 batch-2 QC-passing samples): expression RMSE 0.0397, MAE 0.0315,
+  Pearson r 0.9999; voom weights RMSE 0.0412, MAE 0.0338, Pearson r 0.9998.
+  The earlier validation-only TMM implementation produced RMSE 0.0580 and
+  failed the pre-registered 0.0500 threshold. The corrected workflow first
+  computes TMM factors on the full batch-2 all-samples matrix, then subsets
+  validation samples while retaining their full-cohort library sizes and
+  factors. The corrected report was inspected from Actions run
+  [42253421443](https://github.com/Sachhin/ORACLE/actions/runs/42253421443).
+  GSE176261 is from the same publication as GSE176260, so this is same-study
+  cohort validation, not an independent study.
 - **GSE64099 — PASS, independent experiment** (7 samples, 12,303 features
   after the published CPM filter): top-10 stable GeneID recall 1.00,
   logFC RMSE 0.0021, direction agreement 1.00, and FDR<0.05 / FDR<0.01
@@ -124,10 +129,11 @@ The run uploaded three frozen evidence artifacts with input hashes.
   differential-expression table comparison, not a submitter-published
   full E/weights matrix comparison.
 
-The numerical checks are complete and frozen. The unresolved GSE176261
-expression discrepancy must be investigated without relaxing thresholds.
-These reproducibility checks do not establish biological correctness,
-generalization to all RNA-seq workflows, or model superiority.
+The GSE176261 discrepancy is resolved by correcting the normalization
+reference population, not by relaxing thresholds. The corrected script and
+both validation workflows now use the all-samples TMM factors. These
+reproducibility checks do not establish biological correctness, generalization
+to all RNA-seq workflows, or model superiority.
 
 ## What this tooling does not claim
 
