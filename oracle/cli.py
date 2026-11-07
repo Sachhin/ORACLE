@@ -10,6 +10,7 @@ from .llm import GeminiClaimExtractor
 from .comparison import CrossPaperComparator
 from .orchestrator import OracleOrchestrator
 from .storage import ResearchStore
+from .resource_manager import resolve_literature_providers
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -1273,7 +1274,7 @@ def main() -> None:
         raise SystemExit("--compare-papers and --review-evidence require --extract-claims.")
     if args.literature is not None:
         run = ResearchRun(question=args.literature)
-        providers = (__import__("oracle.resource_manager", fromlist=["resolve_literature_providers"]).resolve_literature_providers(args.literature, args.domain) if args.provider == "auto" else {"both": ("europepmc", "crossref"), "biology": ("europepmc", "crossref", "geo"), "all": ("europepmc", "crossref", "geo", "arxiv", "pubchem"), "arxiv": ("arxiv",), "pubchem": ("pubchem",), "europepmc": ("europepmc",), "crossref": ("crossref",), "geo": ("geo",)}[args.provider])
+        providers = (resolve_literature_providers(args.literature, args.domain) if args.provider == "auto" else {"both": ("europepmc", "crossref"), "biology": ("europepmc", "crossref", "geo"), "all": ("europepmc", "crossref", "geo", "arxiv", "pubchem"), "arxiv": ("arxiv",), "pubchem": ("pubchem",), "europepmc": ("europepmc",), "crossref": ("crossref",), "geo": ("geo",)}[args.provider])
         client = LiteratureClient(mailto=args.mailto)
         report = client.search(args.literature, limit=args.limit, providers=providers)
         client.ingest(run, report)
