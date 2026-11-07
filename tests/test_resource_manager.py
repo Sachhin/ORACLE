@@ -115,6 +115,15 @@ class ResourceManagerTests(unittest.TestCase):
             "human longevity", limit=5, resources=("geo",))
         self.assertEqual(result, ("human longevity", 5, ("geo",)))
 
+    def test_openalex_gbif_and_world_bank_dispatch_through_resource_manager(self):
+        class StubClient:
+            def search(self, query, limit, providers):
+                return (query, limit, providers)
+        manager = ResourceManager(StubClient())
+        for key in ("openalex", "gbif", "world_bank"):
+            result = manager.search("test query", limit=2, resources=(key,))
+            self.assertEqual(result, ("test query", 2, (key,)))
+
     def test_unknown_resource_is_rejected(self):
         with self.assertRaises(KeyError):
             ResourceManager.get_resource("made_up")
