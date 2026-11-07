@@ -98,7 +98,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--dataset-max-mb", type=int, default=50,
                         help="Maximum size of each GEO supplementary download in MB (1-1000)")
     parser.add_argument("--limit", type=int, default=10, help="Maximum literature records (1-50)")
-    parser.add_argument("--provider", choices=["both", "all", "europepmc", "crossref", "geo"], default="both")
+    parser.add_argument("--provider", choices=["both", "all", "europepmc", "crossref", "geo", "arxiv"], default="both")
     parser.add_argument("--mailto", default="", help="Optional contact email for Crossref polite pool")
     parser.add_argument("--extract-claims", action="store_true", help="Extract quote-grounded candidates with Gemini")
     parser.add_argument("--gemini-model", default="gemini-2.5-flash", help="Gemini model for optional claim extraction, comparison, or research agents")
@@ -1276,7 +1276,7 @@ def main() -> None:
         raise SystemExit("--compare-papers and --review-evidence require --extract-claims.")
     if args.literature is not None:
         run = ResearchRun(question=args.literature)
-        providers = {"both": ("europepmc", "crossref"), "all": ("europepmc", "crossref", "geo"), "europepmc": ("europepmc",), "crossref": ("crossref",), "geo": ("geo",)}[args.provider]
+        providers = {"both": ("europepmc", "crossref"), "all": ("europepmc", "crossref", "geo", "arxiv"), "arxiv": ("arxiv",), "europepmc": ("europepmc",), "crossref": ("crossref",), "geo": ("geo",)}[args.provider]
         client = LiteratureClient(mailto=args.mailto)
         report = client.search(args.literature, limit=args.limit, providers=providers)
         client.ingest(run, report)
