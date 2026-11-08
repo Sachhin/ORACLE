@@ -96,3 +96,25 @@ python -m oracle.scifact_benchmark \
 
 SciFact does not expose per-reviewer annotations, so ORACLE does not invent
 reviewer IDs or report inter-reviewer agreement for this dataset.
+
+
+## Run sentence-level retrieval-only evaluation (no model required)
+
+This second model-free diagnostic ranks individual abstract sentences over the
+entire corpus using BM25. It measures whether the top-ranked sentences recover
+the expert rationale sentence IDs, including exact rationale-group recovery.
+Gold rationale IDs are consulted only after rankings are frozen:
+
+```bash
+python scripts/evaluate_scifact_sentence_retrieval.py \
+  --claims data/scifact/data/claims_dev.jsonl \
+  --corpus data/scifact/data/corpus.jsonl \
+  --top-k 10 \
+  --output data/scifact/bm25_sentence_retrieval_dev.report.json
+```
+
+The report includes sentence precision/recall/F1, claim-level hit rate, and
+fully retrieved rationale-group rate. This is still lexical retrieval only:
+it does not classify SUPPORT/CONTRADICT, evaluate entailment, or generate
+hypotheses. Run it on the labelled dev split for model-free validation; do not
+use the unlabelled test split to claim benchmark scores.
