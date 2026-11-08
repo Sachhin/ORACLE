@@ -21,7 +21,11 @@ Verified:
   dataset found only the DDA/DIA peptide and protein tables plus a lock file;
   no README, clinical metadata, patient manifest, or sample crosswalk was
   present. The archive scan is frozen as an Actions artifact.
-- KNN reconstruction report: MAE 1.0981, RMSE 1.4259, Pearson r 0.2625.
+- Row-median baseline on the same held-out missing cells: MAE 1.1382,
+  RMSE 1.4675, Pearson r 0.2503. The sample-neighbour KNN candidate modestly
+  improves these to MAE 1.0981, RMSE 1.4259, Pearson r 0.2625; absolute
+  reconstruction correlation remains weak, so this is not a validated
+  clinical imputer.
 - The original Ahmed et al. clinical paper reports 13 plasma participants
   (8 HIV and 5 herpes); its HAND subgroup is 5 HAND versus 3 cognitively
   normal participants among people with HIV.
