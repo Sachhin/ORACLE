@@ -10,7 +10,8 @@ from .agents import (
 )
 from .decision import choose_next_action
 from .knowledge import KnowledgeBase
-from .models import EvidenceStance, ResearchMode, ResearchRun, RunStatus
+from .language_agents import LanguageReasoningAgent
+from .models import EvidenceStance, Hypothesis, ResearchMode, ResearchRun, RunStatus
 from .storage import ResearchStore
 from .task_manager import TaskManager
 
@@ -32,7 +33,8 @@ class OracleOrchestrator:
                  max_tasks: int = 50,
                  max_task_attempts: int = 3,
                  literature_client=None,
-                 research_domain: str = "auto") -> None:
+                 research_domain: str = "auto",
+                 language_model=None) -> None:
         if not 1 <= max_no_progress_cycles <= 10:
             raise ValueError("max_no_progress_cycles must be between 1 and 10.")
         if not 1 <= literature_limit <= 50:
@@ -56,7 +58,10 @@ class OracleOrchestrator:
         self.domain_diagnostics: dict = {}
         # Injectable for deterministic tests; production creates the public-API client lazily.
         self._literature_client = literature_client
-        # The core research loop uses deterministic, auditable agents only.
+        # The native core remains deterministic; language reasoning is opt-in.
+        self.language_reasoner = (
+            LanguageReasoningAgent(language_model) if language_model is not None else None
+        )
         self.planner = PlannerAgent()
         self.researcher = ResearcherAgent()
         self.explorer = ExplorerAgent()
@@ -451,6 +456,7 @@ class OracleOrchestrator:
     def _execute(self, run: ResearchRun) -> ResearchRun:
         checkpoint = deepcopy(run)
         final_action = "conclude"
+        language_reasoning_succeeded = False
         try:
             self._prepare_literature(run)
             if not run.tasks:
@@ -501,6 +507,42 @@ class OracleOrchestrator:
                         self.knowledge.add_hypothesis(run, hypothesis)
                     self._event(run, "hypotheses_created", {"count": len(hypotheses.items)}, False,
                                 f"cycle:{cycle}:hypotheses")
+
+                if self.language_reasoner is not None:
+                    language_result = self.language_reasoner.run(context)
+                    language_reasoning_succeeded = language_result.summary.startswith(
+                        "Generated provisional language-assisted research proposals"
+                    )
+                    language_directions = [
+                        item for item in language_result.items if isinstance(item, str)
+                    ]
+                    self._add_unique_strings(run.findings, [
+                        "Language-assisted direction (provisional): " + item
+                        for item in language_directions
+                    ])
+                    known_hypotheses = {
+                        self._normalise(item.statement) for item in run.hypotheses
+                    }
+                    accepted_hypotheses = []
+                    for item in language_result.items:
+                        if not isinstance(item, Hypothesis):
+                            continue
+                        key = self._normalise(item.statement)
+                        if key in known_hypotheses:
+                            continue
+                        self.knowledge.add_hypothesis(run, item)
+                        known_hypotheses.add(key)
+                        accepted_hypotheses.append(item.hypothesis_id)
+                    self._add_unique_strings(run.findings, [
+                        "Language reasoning warning: " + warning
+                        for warning in language_result.warnings
+                    ])
+                    self._event(run, "language_reasoning_completed", {
+                        "summary": language_result.summary,
+                        "direction_count": len(language_directions),
+                        "hypothesis_ids": accepted_hypotheses,
+                        "warnings": language_result.warnings,
+                    }, False, f"cycle:{cycle}:language_reasoning")
 
                 # Rebuild the review context after research and hypothesis generation.
                 # Previously these agents received the pre-cycle snapshot, so the skeptic,
@@ -591,9 +633,16 @@ class OracleOrchestrator:
             else:
                 run.status = RunStatus.COMPLETED
                 external_sources = "yes" if run.sources else "no"
+                if self.language_reasoner is None:
+                    language_status = "not configured"
+                elif language_reasoning_succeeded:
+                    language_status = "completed (provisional proposals only)"
+                else:
+                    language_status = "configured but did not produce valid proposals"
                 run.findings.append(
-                    "Deterministic baseline limitation: no live AI-model reasoning or physical experiment "
-                    f"was used. External sources retrieved during this run: {external_sources}."
+                    "Scientific core: deterministic; optional language-model reasoning: "
+                    f"{language_status}. Physical experiments performed: no. "
+                    f"External sources retrieved during this run: {external_sources}."
                 )
                 self._event(run, "run_completed", {"cycles": run.current_cycle}, event_key="run_completed")
         except Exception as exc:
