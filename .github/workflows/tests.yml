@@ -2,7 +2,7 @@ name: ORACLE offline tests
 
 concurrency:
   group: oracle-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 on:
   push:
