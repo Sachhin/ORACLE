@@ -7,6 +7,7 @@ The scientific core remains usable when this bridge is disabled or offline.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 import json
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -45,7 +46,8 @@ class SelfHostedLanguageModel:
     def __init__(self, config: SelfHostedModelConfig) -> None:
         self.config = config
 
-    def generate(self, messages: list[dict[str, str]], temperature: float = 0.2) -> str:
+    def generate(self, messages: list[dict[str, str]], temperature: float = 0.2,
+                 response_format: dict[str, Any] | None = None) -> str:
         if not messages:
             raise ValueError("messages must contain at least one message.")
         if not 0.0 <= temperature <= 2.0:
@@ -66,6 +68,10 @@ class SelfHostedLanguageModel:
             "temperature": temperature,
             "max_tokens": self.config.max_tokens,
         }
+        if response_format is not None:
+            if not isinstance(response_format, dict) or response_format.get("type") != "json_object":
+                raise ValueError("response_format must be a supported JSON-object format.")
+            payload["response_format"] = response_format
         request = Request(
             url,
             data=json.dumps(payload).encode("utf-8"),
