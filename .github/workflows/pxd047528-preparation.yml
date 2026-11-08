@@ -50,6 +50,27 @@ jobs:
           with RemoteZip(url, timeout=120, initial_buffer_size=1024 * 1024,
                          support_suffix_range=False) as zf:
               names = set(zf.namelist())
+              prefix = "datasets/blood_hiv_dda_dia/"
+              members = sorted(name for name in names if name.startswith(prefix))
+              Path("data/pxd047528/archive_members.txt").write_text("\\n".join(members) + "\\n")
+              # Retrieve only small, explicitly named metadata/readme files that
+              # could resolve the 15-run to 13-patient crosswalk. Never infer labels
+              # from file names or sample order.
+              metadata_candidates = [
+                  name for name in members
+                  if any(token in Path(name).name.lower()
+                         for token in ("readme", "metadata", "clinical", "sample", "patient", "design"))
+                  and zf.getinfo(name).file_size <= 10 * 1024 * 1024
+              ]
+              metadata_dir = out / "metadata"
+              metadata_dir.mkdir(parents=True, exist_ok=True)
+              for name in metadata_candidates:
+                  target = metadata_dir / Path(name).name
+                  with zf.open(name) as source, target.open("wb") as dest:
+                      while block := source.read(1024 * 1024):
+                          dest.write(block)
+                  print(f"Fetched metadata candidate {name}: {target.stat().st_size} bytes")
+              Path("data/pxd047528/metadata_candidates.txt").write_text("\\n".join(metadata_candidates) + "\\n")
               missing = [name for name in wanted if name not in names]
               if missing:
                   raise SystemExit(f"Zenodo archive missing expected PXD047528 files: {missing}")
@@ -110,6 +131,9 @@ jobs:
           name: oracle-pxd047528-real-missingness-preparation
           path: |
             data/pxd047528/prepared/
+            data/pxd047528/archive_members.txt
+            data/pxd047528/metadata_candidates.txt
+            data/pxd047528/source/metadata/
             data/pxd047528/source/datasets/blood_hiv_dda_dia/dda/proteins.tsv
             data/pxd047528/source/datasets/blood_hiv_dda_dia/dia/proteins.tsv
           if-no-files-found: error
