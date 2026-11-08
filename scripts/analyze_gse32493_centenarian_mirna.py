@@ -121,17 +121,31 @@ def analyze(cent_path: Path, control_path: Path) -> dict:
     if len(shared) < 10:
         raise ValueError(f"Only {len(shared)} shared features; expected a miRNA table")
     per_sample = all(len(cent[x]) == 3 and len(control[x]) == 3 for x in shared)
+    cent_library_size = sum(sum(values) for values in cent.values())
+    control_library_size = sum(sum(values) for values in control.values())
+    if cent_library_size <= 0 or control_library_size <= 0:
+        raise ValueError("Group-level library sizes must be positive.")
     rows = []
     p_values: dict[str, float] = {}
     for feature in shared:
         a, b = cent[feature], control[feature]
-        mean_a, mean_b = statistics.mean(a), statistics.mean(b)
-        log2fc = math.log2((mean_a + 0.5) / (mean_b + 0.5))
+        if per_sample:
+            cent_count, control_count = statistics.mean(a), statistics.mean(b)
+            cent_total = sum(statistics.mean(v) for v in cent.values())
+            control_total = sum(statistics.mean(v) for v in control.values())
+        else:
+            cent_count, control_count = sum(a), sum(b)
+            cent_total, control_total = cent_library_size, control_library_size
+        cent_cpm = cent_count / cent_total * 1_000_000
+        control_cpm = control_count / control_total * 1_000_000
+        log2fc = math.log2((cent_cpm + 0.5) / (control_cpm + 0.5))
         row = {
             "feature": feature,
-            "centenarian_mean": mean_a,
-            "control_mean": mean_b,
-            "log2_fold_change": log2fc,
+            "centenarian_group_count": cent_count,
+            "control_group_count": control_count,
+            "centenarian_cpm": cent_cpm,
+            "control_cpm": control_cpm,
+            "log2_cpm_fold_change": log2fc,
             "direction": "higher_in_centenarians" if log2fc > 0 else "lower_in_centenarians",
         }
         if per_sample:
@@ -142,13 +156,15 @@ def analyze(cent_path: Path, control_path: Path) -> dict:
         q_values = benjamini_hochberg(p_values)
         for row in rows:
             row["fdr_bh"] = q_values[row["feature"]]
-    rows.sort(key=lambda row: abs(row["log2_fold_change"]), reverse=True)
+    rows.sort(key=lambda row: abs(row["log2_cpm_fold_change"]), reverse=True)
     return {
         "status": "EXPLORATORY_REPLICATE_LEVEL_COMPARISON" if per_sample else "EXPLORATORY_GROUP_LEVEL_COMPARISON",
         "accession": "GSE32493",
         "title": "Comprehensive microRNA profiling in B-cells of human centenarians",
         "cohort": {"centenarians": 3, "controls": 3, "tissue": "B-cells", "population": "Ashkenazi Jewish"},
         "features_shared": len(shared),
+        "library_sizes": {"centenarian_group_total": cent_library_size, "control_group_total": control_library_size},
+        "normalization": "Counts per million (CPM) using each deposited group table total; descriptive group-level comparison only.",
         "per_sample_values_retained": per_sample,
         "centenarian_numeric_columns": len(cent_headers) if cent_headers else (len(cent[shared[0]]) if per_sample else 1),
         "control_numeric_columns": len(control_headers) if control_headers else (len(control[shared[0]]) if per_sample else 1),
