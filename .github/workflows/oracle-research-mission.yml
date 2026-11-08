@@ -110,6 +110,12 @@ jobs:
             --provider "$PROVIDER" \
             --db data/oracle.sqlite3 \
             --json > artifacts/oracle_research_run.json
+      - name: Analyze public centenarian miRNA cohort
+        run: |
+          python scripts/analyze_gse32493_centenarian_mirna.py \
+            --download \
+            --data-dir data/gse32493 \
+            --output artifacts/gse32493-centenarian-mirna-report.json
       - name: Summarize research run
         if: always()
         run: |
