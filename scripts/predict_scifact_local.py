@@ -28,11 +28,17 @@ def sha256(path: str | Path) -> str:
 
 def parse_model_json(raw: str) -> dict[str, Any]:
     text = raw.strip()
+    if "<think>" in text and "</think>" in text:
+        text = text.split("</think>", 1)[1].strip()
     if text.startswith("```"):
         lines = text.splitlines()
         if len(lines) < 3 or lines[0].strip() not in ("```", "```json") or lines[-1].strip() != "```":
             raise ValueError("Unsupported Markdown fence in model response")
         text = "\n".join(lines[1:-1]).strip()
+    if not text.startswith("{"):
+        start, end = text.find("{"), text.rfind("}")
+        if start >= 0 and end > start:
+            text = text[start:end + 1]
     payload = json.loads(text)
     if not isinstance(payload, dict) or not isinstance(payload.get("evidence"), list):
         raise ValueError("Model response must be a JSON object with an evidence array")
@@ -133,7 +139,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             if not allowed:
                 prediction = {"id": claim["id"], "evidence": {}}
             else:
-                raw = model.generate(messages, temperature=0.0)
+                raw = model.generate(messages, temperature=0.0, response_format={"type": "json_object"})
                 payload = parse_model_json(raw)
                 evidence = validate_prediction(payload, allowed)
                 prediction = {"id": claim["id"], "evidence": evidence}
