@@ -1,52 +1,80 @@
 # External evidence benchmark: SciFact
 
-ORACLE includes a loader/evaluator for the public SciFact scientific claim
-verification dataset. SciFact supplies expert-written scientific claims,
-evidence-containing abstracts, SUPPORT/CONTRADICT labels, and rationale
-sentence IDs. The labelled train/dev claims include cited abstracts without
-annotated evidence; these are treated as contextual/insufficient evidence for
-stance classification. The evaluator reports stance accuracy, abstract-level
-evidence precision/recall/F1, and sentence-level evidence precision/recall/F1.
+ORACLE includes an evaluator for the public SciFact scientific claim verification
+dataset. SciFact supplies expert-written claims, evidence-containing abstracts,
+SUPPORT/CONTRADICT labels, and rationale sentence IDs. Labelled train/dev claims
+can be scored. The released test split withholds gold evidence labels and must
+not be used to report accuracy, precision, recall, or F1.
+
+## Two distinct prediction settings
+
+- `scripts/predict_scifact_local.py` is an **oracle-cited-document diagnostic**:
+  it receives each claim's published `cited_doc_ids`. It is not open-corpus
+  retrieval and must not be described as such.
+- `scripts/predict_scifact_open_corpus.py` performs **open-corpus BM25 retrieval**
+  over the supplied corpus titles and abstracts, then asks an explicitly
+  configured local model to classify retrieved evidence and cite sentence IDs.
+
+The BM25 retriever is deterministic and dependency-free, but lexical rather than
+semantic. The report includes post-inference gold-document recall as well as
+downstream stance and evidence scores. The model prompt receives only the claim
+and retrieved abstracts; gold labels, evidence document IDs, and rationale
+indices are not exposed. Gold evidence is consulted after predictions are frozen
+only to calculate retrieval diagnostics and benchmark scores.
 
 ## Download
 
 Download the official archive from
 https://scifact.s3-us-west-2.amazonaws.com/release/latest/data.tar.gz
-and extract it locally. Use the labelled `claims_dev.jsonl` split for final
-development evaluation; do not use `claims_test.jsonl` because its gold labels
-are withheld. The official corpus is `corpus.jsonl`.
+and extract it locally. With the archive layout used by the Termux workflow, the
+files are under `data/scifact/data/`:
 
-## Prediction format
+- `claims_dev.jsonl` (300 labelled development claims)
+- `claims_train.jsonl` (809 labelled training claims)
+- `claims_test.jsonl` (300 claims with withheld gold labels)
+- `corpus.jsonl` (5,183 abstracts)
 
-Predictions are one JSON object per claim, matching the SciFact submission
-format:
+## Run tests
 
-```json
-{"id": 52, "evidence": {"11": {"sentences": [11], "label": "SUPPORT"}}}
+```bash
+python -m unittest tests.test_scifact_benchmark tests.test_scifact_local_predictor tests.test_scifact_open_corpus -v
 ```
 
-An empty `evidence` object means the system found no evidence for that claim.
-Freeze model/provider/prompt versions and the source corpus before generating
-predictions. Do not generate predictions using gold rationale sentences or
-gold evidence-document IDs.
+## Run an open-corpus pilot
 
-## Score
+Inference requires an explicitly configured operator-owned OpenAI-compatible
+local model server, such as llama.cpp or Ollama. No Gemini API, hosted provider,
+or vendor fallback is used. Without a running local model endpoint, only the
+dataset checks and retriever tests can run; a complete model benchmark cannot
+be claimed.
+
+```bash
+python scripts/predict_scifact_open_corpus.py \
+  --claims data/scifact/data/claims_dev.jsonl \
+  --corpus data/scifact/data/corpus.jsonl \
+  --output data/scifact/open_corpus_dev_predictions.jsonl \
+  --base-url http://127.0.0.1:8000/v1 \
+  --model LOCAL_MODEL_NAME --top-k 20 --max-claims 10
+```
+
+Review the pilot report, then run all 300 dev claims by omitting
+`--max-claims`. Use `--resume` to continue an interrupted run with the same
+output file. Do not mix predictions from different models or retrieval settings.
+
+The report records dataset/prediction hashes, prediction coverage, stance
+accuracy, abstract- and sentence-level evidence precision/recall/F1, and
+post-inference BM25 retrieval recall. These measurements do not prove general
+scientific reasoning, causal inference, or biological discovery.
+
+## Direct scoring of an existing prediction file
 
 ```bash
 python -m oracle.scifact_benchmark \
-  --claims data/scifact/claims_dev.jsonl \
-  --corpus data/scifact/corpus.jsonl \
-  --predictions data/scifact/oracle_predictions.jsonl \
+  --claims data/scifact/data/claims_dev.jsonl \
+  --corpus data/scifact/data/corpus.jsonl \
+  --predictions data/scifact/open_corpus_dev_predictions.jsonl \
   --split dev
 ```
 
-The report hashes all inputs. Abstract-level scoring requires a predicted
-document's stance to match and at least one complete gold rationale set to be
-contained in the predicted sentence IDs. Sentence-level scoring credits only
-complete rationale sets, following the official benchmark's rationale logic.
-
-SciFact's released data does not expose individual reviewer annotations, so
-ORACLE does not invent reviewer IDs or report Cohen's kappa for this corpus.
-The existing human-adjudicated benchmark remains the route for reviewer-level
-agreement and adjudication. SciFact is a curated evidence benchmark, not a
-complete evaluation of scientific reasoning or causal discovery.
+SciFact does not expose per-reviewer annotations, so ORACLE does not invent
+reviewer IDs or report inter-reviewer agreement for this dataset.
