@@ -112,11 +112,18 @@ A larger directly relevant published human centenarian transcriptome study is
 Xiao et al. (2018): 76 centenarians, 54 centenarian offspring, and 41 offspring
 spouses (171 people); its RNA-seq data are deposited under GSA accession
 CRA000515. The paper reports autophagy/lysosomal pathway enrichment and
-experimental follow-up for selected genes. The GSA raw-read archive is not
-the same as a ready-to-use GEO count matrix. A reproducible raw-read or
-submitter-provided processed-matrix acquisition, sample metadata, library
-type/covariate handling, and independent replication are still required
-before ORACLE can claim a fresh numerical reanalysis. Sources:
+experimental follow-up for selected genes.
+
+A newer 2026 public resource, "Transcriptomic Analysis of Chinese Longevity
+Cohorts" (Mendeley DOI 10.17632/fpf4y72kfz.1), reports 1,751 individuals
+(811 long-lived individuals and 940 younger controls) and a gene-level
+expression matrix. ORACLE now has a version-pinned acquisition and RData/
+tabular-inventory workflow at
+`.github/workflows/longevity-cohort-2026.yml`. The workflow is queued;
+until the archive has been downloaded and its phenotype/matrix schema
+verified, no differential-expression or pathway result is claimed. A valid
+analysis must account for region, sex, age, library preparation, and cohort
+structure and must preserve a truly independent validation cohort. Sources:
 https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE32493
 https://pubmed.ncbi.nlm.nih.gov/22846614/
 https://genome.cshlp.org/content/28/11/1601
