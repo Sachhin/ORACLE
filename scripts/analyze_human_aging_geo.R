@@ -111,8 +111,10 @@ analyse_eset <- function(eset, accession, index) {
     mapping <- as.data.frame(mapping)
     id_col <- grep("^nuID$|nu.?id", colnames(mapping), ignore.case = TRUE, value = TRUE)
     map_symbol_col <- grep("symbol", colnames(mapping), ignore.case = TRUE, value = TRUE)
-    if (!length(id_col) || !length(map_symbol_col)) stop("lumi nuID mapping lacks ID or symbol columns")
-    mapped <- mapping[[map_symbol_col[[1]]]][match(rownames(expr), mapping[[id_col[[1]]]])]
+    if (!length(map_symbol_col)) stop("lumi nuID mapping lacks a symbol column")
+    mapping_ids <- if (length(id_col)) as.character(mapping[[id_col[[1]]]]) else rownames(mapping)
+    if (is.null(mapping_ids)) stop("lumi nuID mapping lacks probe identifiers")
+    mapped <- mapping[[map_symbol_col[[1]]]][match(rownames(expr), mapping_ids)]
     symbols <- as.character(mapped)
   } else {
     stop("platform annotation has no gene-symbol field and lumiHumanIDMapping is unavailable")
