@@ -105,7 +105,7 @@ jobs:
           cat qwen3-models.json
           grep -q "$MODEL_ALIAS" qwen3-models.json
 
-      - name: Run full open-corpus inference and score all 450 dev claims
+      - name: Run full open-corpus inference and score all 300 dev claims
         run: |
           python scripts/predict_scifact_open_corpus.py \
             --claims data/scifact/benchmark-input/claims_dev.jsonl \
