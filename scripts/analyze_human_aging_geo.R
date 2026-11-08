@@ -103,9 +103,21 @@ analyse_eset <- function(eset, accession, index) {
 
   fd <- fData(eset)
   symbol_col <- grep("gene.?symbol|symbol", colnames(fd), ignore.case = TRUE, value = TRUE)
-  if (!length(symbol_col)) stop("platform annotation has no gene-symbol field")
-  symbols <- trimws(as.character(fd[[symbol_col[[1]]]]))
-  symbols <- sub("\\s*///.*$", "", symbols)
+  if (length(symbol_col)) {
+    symbols <- trimws(as.character(fd[[symbol_col[[1]]]]))
+  } else if (requireNamespace("lumiHumanIDMapping", quietly = TRUE)) {
+    data("nuID_MappingInfo", package = "lumiHumanIDMapping", envir = environment())
+    mapping <- get("nuID_MappingInfo", envir = environment())
+    mapping <- as.data.frame(mapping)
+    id_col <- grep("^nuID$|nu.?id", colnames(mapping), ignore.case = TRUE, value = TRUE)
+    map_symbol_col <- grep("symbol", colnames(mapping), ignore.case = TRUE, value = TRUE)
+    if (!length(id_col) || !length(map_symbol_col)) stop("lumi nuID mapping lacks ID or symbol columns")
+    mapped <- mapping[[map_symbol_col[[1]]]][match(rownames(expr), mapping[[id_col[[1]]]])]
+    symbols <- as.character(mapped)
+  } else {
+    stop("platform annotation has no gene-symbol field and lumiHumanIDMapping is unavailable")
+  }
+  symbols <- sub("\\s*///.*$", "", trimws(symbols))
   valid <- !is.na(symbols) & nzchar(symbols) & !symbols %in% c("---", "NA", "N/A")
   expr <- expr[valid, , drop = FALSE]
   symbols <- symbols[valid]
