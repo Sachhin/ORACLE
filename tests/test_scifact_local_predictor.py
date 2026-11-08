@@ -12,6 +12,12 @@ class LocalSciFactPredictionTests(unittest.TestCase):
             {"evidence": []},
         )
 
+    def test_parses_qwen_think_wrapper_and_leading_text(self):
+        self.assertEqual(
+            parse_model_json('<think>reasoning</think> Result: {"evidence": []}'),
+            {"evidence": []},
+        )
+
     def test_rejects_non_json_and_wrong_shape(self):
         with self.assertRaises(ValueError):
             parse_model_json("answer: support")
