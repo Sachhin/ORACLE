@@ -1,6 +1,12 @@
 name: ORACLE longevity research mission
 
 on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/oracle-research-mission.yml"
+      - "oracle/**"
+      - "scripts/analyze_human_aging_geo.R"
   workflow_dispatch:
     inputs:
       question:
