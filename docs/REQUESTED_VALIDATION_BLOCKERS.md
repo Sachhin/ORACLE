@@ -17,6 +17,10 @@ Verified:
   authenticate phenotype or participant identity.
 - The frozen reconstruction benchmark scores 8,859 genuinely DDA-missing
   peptide cells with paired DIA observations (67.9% of 13,043 missing cells).
+- A range-based audit of the complete PEPerMINT ZIP directory for this
+  dataset found only the DDA/DIA peptide and protein tables plus a lock file;
+  no README, clinical metadata, patient manifest, or sample crosswalk was
+  present. The archive scan is frozen as an Actions artifact.
 - KNN reconstruction report: MAE 1.0981, RMSE 1.4259, Pearson r 0.2625.
 - The original Ahmed et al. clinical paper reports 13 plasma participants
   (8 HIV and 5 herpes); its HAND subgroup is 5 HAND versus 3 cognitively
