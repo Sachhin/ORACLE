@@ -4,9 +4,26 @@ args <- commandArgs(trailingOnly = TRUE)
 if (length(args) != 2) stop("Usage: inspect_mendeley_longevity_dataset.R <extracted-dir> <output.json>")
 root <- normalizePath(args[[1]], mustWork = TRUE)
 out <- args[[2]]
-files <- list.files(root, pattern = "\\.(rda|RData)$", recursive = TRUE,
-                    full.names = TRUE, ignore.case = TRUE)
-if (!length(files)) stop("No .rda/.RData files found in public Mendeley archive")
+all_files <- list.files(root, recursive = TRUE, full.names = TRUE)
+if (!length(all_files)) stop("The downloaded public Mendeley archive is empty")
+files <- all_files[grepl("\\.(rda|RData)$", all_files, ignore.case = TRUE)]
+text_files <- all_files[grepl("\\.(csv|tsv|txt)(\\.gz)?$", all_files, ignore.case = TRUE)]
+file_inventory <- lapply(all_files, function(file) {
+  rel <- substring(file, nchar(root) + 2)
+  ext <- tolower(tools::file_ext(file))
+  info <- list(path=rel, bytes=as.numeric(file.info(file)$size), extension=ext)
+  if (file %in% text_files) {
+    con <- if(grepl("\\.gz$", file, ignore.case=TRUE)) gzfile(file, "rt") else file(file, "rt")
+    on.exit(close(con), add=TRUE)
+    first <- tryCatch(readLines(con, n=2, warn=FALSE), error=function(e) character())
+    if(length(first)) {
+      delimiter <- if(grepl("\\t", first[[1]])) "\\t" else if(grepl(",", first[[1]])) "," else ""
+      info$header_field_count <- if(nzchar(delimiter)) length(strsplit(first[[1]], delimiter, fixed=TRUE)[[1]]) else NA_integer_
+      info$first_line_preview <- substr(first[[1]], 1, 240)
+    }
+  }
+  info
+})
 inspect_one <- function(file) {
   env <- new.env(parent = baseenv())
   loaded <- tryCatch(load(file, envir = env), error = function(e) structure(list(message=conditionMessage(e)), class="load_error"))
@@ -66,10 +83,12 @@ inspect_one <- function(file) {
 inventory <- list(
   dataset="Mendeley Data fpf4y72kfz version 1",
   doi="10.17632/fpf4y72kfz.1",
-  files= lapply(files, inspect_one),
+  archive_files=file_inventory,
+  rdata_objects= lapply(files, inspect_one),
   notes=c("This is an archive/object inventory, not a biological result.",
           "Sample identifiers are not emitted in this report.",
-          "Expression matrices require design, library-preparation and cohort checks before inference.")
+          "Expression matrices require design, library-preparation and cohort checks before inference.",
+          "RData object inspection is skipped when the archive uses other file formats.")
 )
 write_json(inventory, out, auto_unbox=TRUE, pretty=TRUE, null="null")
-cat(toJSON(list(rda_files=length(files), inventory=out), auto_unbox=TRUE), "\\n")
+cat(toJSON(list(archive_files=length(all_files), rda_files=length(files), tabular_files=length(text_files), inventory=out), auto_unbox=TRUE), "\\n")
