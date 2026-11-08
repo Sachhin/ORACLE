@@ -11,6 +11,15 @@ inspect_one <- function(file) {
   env <- new.env(parent = baseenv())
   loaded <- tryCatch(load(file, envir = env), error = function(e) structure(list(message=conditionMessage(e)), class="load_error"))
   if (inherits(loaded, "load_error")) return(list(file=substring(file,nchar(root)+2), error=loaded$message))
+  phen_name <- loaded[vapply(loaded, function(nm) {
+    x <- get(nm, envir=env)
+    is.data.frame(x) && any(tolower(names(x)) %in% c("age","ages","age_years","age_at_sampling")) &&
+      any(tolower(names(x)) %in% c("id","sample_id","sample","individual_id"))
+  }, logical(1))][1]
+  phen <- if(length(phen_name) && !is.na(phen_name)) get(phen_name, envir=env) else NULL
+  phen_cols <- if(!is.null(phen)) names(phen) else character()
+  phen_id_col <- phen_cols[tolower(phen_cols) %in% c("id","sample_id","sample","individual_id")]
+  phen_ids <- if(length(phen_id_col)) as.character(phen[[phen_id_col[[1]]]]) else character()
   objects <- lapply(loaded, function(nm) {
     x <- get(nm, envir=env)
     d <- tryCatch(dim(x), error=function(e) NULL)
@@ -21,10 +30,12 @@ inspect_one <- function(file) {
       sex_col <- cols[tolower(cols) %in% c("sex","gender")]
       region_col <- cols[tolower(cols) %in% c("region","location","province","cohort")]
       id_col <- cols[tolower(cols) %in% c("id","sample_id","sample","individual_id")]
+      library_col <- cols[grepl("library|prep|sequenc|capture|protocol|method", tolower(cols))]
       item$metadata <- list(rows=nrow(x), columns=cols,
         age_column=if(length(age_col)) age_col[[1]] else NULL,
         sex_column=if(length(sex_col)) sex_col[[1]] else NULL,
         region_column=if(length(region_col)) region_col[[1]] else NULL,
+        library_preparation_columns=library_col,
         id_column=if(length(id_col)) id_col[[1]] else NULL)
       if(length(age_col)) {
         age <- suppressWarnings(as.numeric(x[[age_col[[1]]]]))
@@ -34,11 +45,19 @@ inspect_one <- function(file) {
           max=if(any(is.finite(age))) max(age,na.rm=TRUE) else NULL,
           n_ge_90=sum(age>=90,na.rm=TRUE), n_lt_90=sum(age<90,na.rm=TRUE))
       }
+      if(length(sex_col)) item$metadata$sex_counts <- as.list(table(as.character(x[[sex_col[[1]]]])))
+      if(length(region_col)) item$metadata$region_counts <- as.list(table(as.character(x[[region_col[[1]]]])))
+      if(length(library_col)) item$metadata$library_preparation_counts <- lapply(library_col, function(nm2) as.list(table(as.character(x[[nm2]]))))
     }
     if (!is.null(d) && length(d)==2 && d[[1]]>=1000 && d[[2]]>=50) {
       item$matrix_candidate <- TRUE
       item$rownames_present <- !is.null(rownames(x))
       item$colnames_present <- !is.null(colnames(x))
+      if(length(phen_ids) && !is.null(colnames(x))) {
+        overlap <- intersect(phen_ids, colnames(x))
+        item$phenotype_matrix_id_overlap <- length(overlap)
+        item$phenotype_id_coverage <- length(overlap) / length(unique(phen_ids))
+      }
     }
     item
   })
