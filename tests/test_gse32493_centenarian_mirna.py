@@ -47,6 +47,10 @@ class GSE32493CentenarianMiRNATests(unittest.TestCase):
             self.assertFalse(report["per_sample_values_retained"])
             self.assertNotIn("exact_permutation_p", report["top_effects"][0])
             self.assertIn("Not computed", report["inferential_statistics"])
+            self.assertIn("CPM", report["normalization"])
+            self.assertIn("centenarian_cpm", report["top_effects"][0])
+            self.assertIn("control_cpm", report["top_effects"][0])
+            self.assertIn("centenarian_group_total", report["library_sizes"])
 
 
 if __name__ == "__main__":
