@@ -39,7 +39,7 @@ Sources:
 
 **Engineering action added:** `.github/workflows/scifact-qwen3-local-benchmark.yml`
 runs a pinned Qwen3-0.6B GGUF through a local llama.cpp server and attempts
-the complete 450-claim labelled dev evaluation over the full SciFact corpus.
+the complete 300-claim labelled dev evaluation over the full SciFact corpus.
 The resulting report and predictions must be inspected after the workflow
 finishes; workflow creation alone is not a benchmark result.
 
