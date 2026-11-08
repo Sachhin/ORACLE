@@ -26,13 +26,31 @@ metadata_text <- function(pd) {
 
 extract_age <- function(txt) {
   vapply(txt, function(value) {
+    # Require a whole-word age field: without the boundary, "percentage"
+    # contains the substring "age" and can make unrelated values look like ages.
+    # Reject impossible values rather than silently treating them as human ages.
     match <- regexec(
-      "(?i)(?:age|years?[ _-]*old|age[ _-]*years?)[^0-9]{0,16}([0-9]{1,3}(?:\\.[0-9]+)?)(?!\\s*[-–]\\s*[0-9])",
+      "(?i)\\b(?:age|years?[ _-]*old|age[ _-]*years?)\\b[^0-9]{0,16}([0-9]{1,3}(?:\\.[0-9]+)?)(?!\\s*[-–]\\s*[0-9])",
       value, perl = TRUE
     )
     parts <- regmatches(value, match)[[1]]
-    if (length(parts) >= 2) as.numeric(parts[[2]]) else NA_real_
+    if (length(parts) >= 2) {
+      age_value <- as.numeric(parts[[2]])
+      if (is.finite(age_value) && age_value >= 0 && age_value <= 120) age_value else NA_real_
+    } else NA_real_
   }, numeric(1))
+}
+
+# Guard against false matches inside unrelated words such as "percentage".
+.age_parser_test <- extract_age(c(
+  "age: 90 ; cf-dna (ug/ml): 1.015",
+  "percentage: 811",
+  "years old: 23"
+))
+if (!identical(.age_parser_test[[1]], 90) ||
+    !is.na(.age_parser_test[[2]]) ||
+    !identical(.age_parser_test[[3]], 23)) {
+  stop("Age metadata parser regression check failed.")
 }
 
 extract_age_group <- function(txt) {
