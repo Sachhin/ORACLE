@@ -2,7 +2,7 @@ name: ORACLE SciFact Qwen3 local-model full dev benchmark
 
 concurrency:
   group: oracle-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 on:
   push:
