@@ -12,7 +12,7 @@ Gemini, a hosted inference API, or an API key.
 - Model SHA-256: `b0638f08417a2d3c8652760462eb5407c6e30173cf9608ad0820757a281eea0e`
 - Inference: llama.cpp CPU server, loopback only
 - Retrieval: deterministic BM25 over the full 5,183-abstract SciFact corpus
-- Evaluation: all 450 labelled dev claims, no gold evidence supplied to retrieval or model prompts
+- Evaluation: all 300 labelled dev claims, no gold evidence supplied to retrieval or model prompts
 - Candidate abstracts per claim: top 10 by default
 
 ## What is measured
@@ -23,7 +23,7 @@ evidence precision/recall/F1, and post-inference retrieval recall. The workflow
 stores the frozen predictions, input datasets, report, model file, and server
 log as a 90-day artifact.
 
-A run is scientifically complete only if all 450 dev claims receive validated
+A run is scientifically complete only if all 300 dev claims receive validated
 predictions and the report is uploaded. A failed or incomplete run is not
 re-labelled as PASS.
 
