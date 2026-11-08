@@ -19,7 +19,6 @@ file_inventory <- lapply(all_files, function(file) {
     if(length(first)) {
       delimiter <- if(grepl("\\t", first[[1]])) "\\t" else if(grepl(",", first[[1]])) "," else ""
       info$header_field_count <- if(nzchar(delimiter)) length(strsplit(first[[1]], delimiter, fixed=TRUE)[[1]]) else NA_integer_
-      info$first_line_preview <- substr(first[[1]], 1, 240)
     }
   }
   info
