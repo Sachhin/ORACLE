@@ -170,7 +170,7 @@ def analyze(cent_path: Path, control_path: Path) -> dict:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--data-dir", default="data/gse32493")
-    parser.add_argument("--output", default="artifacts/gse32493-c​​entenarian-mirna-report.json")
+    parser.add_argument("--output", default="artifacts/gse32493-centenarian-mirna-report.json")
     parser.add_argument("--download", action="store_true")
     args = parser.parse_args()
     data_dir = Path(args.data_dir)
