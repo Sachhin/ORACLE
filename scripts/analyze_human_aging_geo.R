@@ -24,7 +24,7 @@ extract_age <- function(pd) {
   txt <- apply(pd, 1, function(row) paste(as.character(row), collapse = " ; "))
   vapply(txt, function(value) {
     match <- regexec(
-      "(?i)(?:age|years?[ _-]*old|age[ _-]*years?)[^0-9]{0,16}([0-9]{1,3}(?:\\.[0-9]+)?)",
+      "(?i)(?:age|years?[ _-]*old|age[ _-]*years?)[^0-9]{0,16}([0-9]{1,3}(?:\\.[0-9]+)?)(?!\\s*[-–]\\s*[0-9])",
       value, perl = TRUE
     )
     parts <- regmatches(value, match)[[1]]
