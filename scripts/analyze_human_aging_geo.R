@@ -56,14 +56,26 @@ if (!identical(.age_parser_test[[1]], 90) ||
 extract_age_group <- function(txt) {
   vapply(txt, function(value) {
     lower <- tolower(value)
-    if (grepl("nonagenarian|centenarian|older adult|elderly|old control", lower)) {
-      "older"
-    } else if (grepl("young control|young adult|younger", lower)) {
+    # A sample can inherit cohort-level text such as "nonagenarian cohort"
+    # while its own title/characteristics say "young control". Specific young
+    # labels must take precedence over broad cohort descriptors.
+    if (grepl("young control|young adult|younger", lower)) {
       "younger"
+    } else if (grepl("nonagenarian|centenarian|older adult|elderly|old control", lower)) {
+      "older"
     } else {
       NA_character_
     }
   }, character(1))
+}
+
+.age_group_parser_test <- extract_age_group(c(
+  "young control; nonagenarian cohort",
+  "nonagenarian age: 92",
+  "young adult age: 25"
+))
+if (!identical(.age_group_parser_test, c("younger", "older", "younger"))) {
+  stop("Age-group metadata parser regression check failed.")
 }
 
 extract_sex <- function(txt) {
