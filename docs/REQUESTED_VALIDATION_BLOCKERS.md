@@ -10,7 +10,11 @@ evidence.
 
 Verified:
 - PEPerMINT's paired DDA/DIA processed tables contain aliases
-  `1_Slot1` through `15_Slot1`.
+  `1_Slot1` through `15_Slot1`; its published Zenodo archive preview lists
+  these 15 per-sample HDF5 files but no alias-to-patient crosswalk.
+- PRIDE lists 32 raw files (DDA/DIA acquisitions), with opaque file suffixes
+  such as `03M`, `23Y`, `32S`, `41S`, and `44S`; the filenames alone do not
+  authenticate phenotype or participant identity.
 - The frozen reconstruction benchmark scores 8,859 genuinely DDA-missing
   peptide cells with paired DIA observations (67.9% of 13,043 missing cells).
 - KNN reconstruction report: MAE 1.0981, RMSE 1.4259, Pearson r 0.2625.
@@ -31,7 +35,9 @@ ID, phenotype, HAND status where applicable, and technical-replicate/exclusion
 status. Freeze and hash that manifest before outcome concordance analysis.
 
 Sources:
-- PXD047528: https://proteomecentral.proteomexchange.org/cgi/GetDataset?ID=PXD047528
+- PXD047528 and its 32 raw-file listing: https://proteomecentral.proteomexchange.org/cgi/GetDataset?ID=PXD047528
+- Zenodo PEPerMINT archive and sample-file inventory: https://zenodo.org/records/11216899/preview/data.zip?include_deleted=0
+- Public dataset submitter contact: saima.ahmed@childrens.harvard.edu
 - Ahmed et al. 2022: https://pmc.ncbi.nlm.nih.gov/articles/PMC9945916/
 - PEPerMINT data: https://zenodo.org/records/11216899
 
