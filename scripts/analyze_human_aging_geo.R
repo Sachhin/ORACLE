@@ -49,6 +49,7 @@ analyse_eset <- function(eset, accession, index) {
   symbol_col <- grep("gene.?symbol|symbol", colnames(fd), ignore.case = TRUE, value = TRUE)
   if (!length(symbol_col)) stop("platform annotation has no gene-symbol field")
   symbols <- trimws(as.character(fd[[symbol_col[[1]]]]))
+  symbols <- sub("\\s*///.*$", "", symbols)
   valid <- !is.na(symbols) & nzchar(symbols) & !symbols %in% c("---", "NA", "N/A")
   expr <- expr[valid, , drop = FALSE]
   symbols <- symbols[valid]
@@ -103,7 +104,7 @@ for (accession in accessions) {
   accession <- trimws(accession)
   message("Retrieving ", accession)
   result <- tryCatch({
-    sets <- getGEO(GEO = accession, GSEMatrix = TRUE, getGPL = FALSE)
+    sets <- getGEO(GEO = accession, GSEMatrix = TRUE, getGPL = TRUE)
     if (inherits(sets, "ExpressionSet")) sets <- list(sets)
     if (!length(sets)) stop("GEO returned no processed expression sets")
     cohort_results <- list()
