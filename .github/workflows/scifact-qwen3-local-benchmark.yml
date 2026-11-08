@@ -1,0 +1,166 @@
+name: ORACLE SciFact Qwen3 local-model full dev benchmark
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/scifact-qwen3-local-benchmark.yml"
+      - "scripts/predict_scifact_open_corpus.py"
+      - "oracle/language_model.py"
+      - "oracle/scifact_benchmark.py"
+      - "docs/SCIFACT_QWEN3_BENCHMARK.md"
+  workflow_dispatch:
+    inputs:
+      top_k:
+        description: BM25 candidate abstracts per claim
+        required: true
+        default: "10"
+        type: string
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/scifact-qwen3-local-benchmark.yml"
+      - "scripts/predict_scifact_open_corpus.py"
+      - "oracle/language_model.py"
+      - "oracle/scifact_benchmark.py"
+      - "docs/SCIFACT_QWEN3_BENCHMARK.md"
+
+permissions:
+  contents: read
+
+jobs:
+  qwen3-full-dev:
+    name: Qwen3-0.6B local inference on all labelled SciFact dev claims
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    env:
+      MODEL_ALIAS: Qwen3-0.6B
+      TOP_K: ${{ github.event_name == 'workflow_dispatch' && inputs.top_k || '10' }}
+      HF_REPO: Qwen/Qwen3-0.6B-GGUF
+      HF_REVISION: 8e42d41f70cb6c571f58c3f31bd9287b372d97cc
+      HF_FILE: Qwen3-0.6B-Q4_K_M.gguf
+      MODEL_SHA256: b0638f08417a2d3c8652760462eb5407c6e30173cf9608ad0820757a281eea0e
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install ORACLE and CPU llama.cpp Python server
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install --only-binary=:all: --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu llama-cpp-python==0.3.36
+          pip install --upgrade huggingface_hub
+
+      - name: Download pinned Qwen3 GGUF model
+        run: |
+          mkdir -p models/qwen3
+          hf download "$HF_REPO" "$HF_FILE" --revision "$HF_REVISION" --local-dir models/qwen3
+          echo "$MODEL_SHA256  models/qwen3/$HF_FILE" | sha256sum --check -
+
+      - name: Download official SciFact dataset
+        run: |
+          mkdir -p data/scifact
+          curl --fail --location --retry 4 --retry-all-errors --connect-timeout 30 --max-time 600 \
+            https://scifact.s3-us-west-2.amazonaws.com/release/latest/data.tar.gz \
+            -o data/scifact/data.tar.gz
+          tar -xzf data/scifact/data.tar.gz -C data/scifact
+          CLAIMS="$(find data/scifact -name claims_dev.jsonl -print -quit)"
+          CORPUS="$(find data/scifact -name corpus.jsonl -print -quit)"
+          test -n "$CLAIMS" && test -n "$CORPUS"
+          mkdir -p data/scifact/benchmark-input
+          cp "$CLAIMS" data/scifact/benchmark-input/claims_dev.jsonl
+          cp "$CORPUS" data/scifact/benchmark-input/corpus.jsonl
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          claims = [json.loads(x) for x in Path("data/scifact/benchmark-input/claims_dev.jsonl").read_text().splitlines() if x.strip()]
+          corpus = [json.loads(x) for x in Path("data/scifact/benchmark-input/corpus.jsonl").read_text().splitlines() if x.strip()]
+          if len(claims) != 300:
+              raise SystemExit(f"Expected all 300 labelled SciFact dev claims, found {len(claims)}")
+          if len(corpus) != 5183:
+              raise SystemExit(f"Expected the 5,183-document SciFact corpus, found {len(corpus)}")
+          print(json.dumps({"dev_claims": len(claims), "corpus_documents": len(corpus)}, indent=2))
+          PY
+
+      - name: Start local Qwen3 llama.cpp server
+        run: |
+          nohup python -m llama_cpp.server \
+            --model "models/qwen3/$HF_FILE" \
+            --model_alias "$MODEL_ALIAS" \
+            --host 127.0.0.1 --port 8000 \
+            --n_ctx 8192 --n_threads 2 --n_batch 256 \
+            > qwen3-server.log 2>&1 &
+          echo $! > qwen3-server.pid
+          for attempt in $(seq 1 120); do
+            if curl --silent --fail http://127.0.0.1:8000/v1/models > qwen3-models.json; then
+              break
+            fi
+            sleep 5
+          done
+          test -s qwen3-models.json
+          cat qwen3-models.json
+          grep -q "$MODEL_ALIAS" qwen3-models.json
+
+      - name: Run full open-corpus inference and score all 450 dev claims
+        run: |
+          python scripts/predict_scifact_open_corpus.py \
+            --claims data/scifact/benchmark-input/claims_dev.jsonl \
+            --corpus data/scifact/benchmark-input/corpus.jsonl \
+            --output data/scifact/qwen3_0.6b_open_corpus_dev_predictions.jsonl \
+            --report data/scifact/qwen3_0.6b_open_corpus_dev_report.json \
+            --base-url http://127.0.0.1:8000/v1 \
+            --model "$MODEL_ALIAS" \
+            --top-k "$TOP_K" \
+            --max-tokens 384 \
+            --timeout 180
+
+      - name: Enforce complete prediction coverage and publish score summary
+        if: always()
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          report_path = Path("data/scifact/qwen3_0.6b_open_corpus_dev_report.json")
+          summary = ["## Qwen3-0.6B SciFact open-corpus dev benchmark"]
+          if report_path.exists():
+              report = json.loads(report_path.read_text())
+              run = report.get("prediction_run", {})
+              summary += [
+                  f"- Model: {run.get('model')}",
+                  f"- Requested claims: {run.get('requested_claims')}",
+                  f"- Scored claims: {report.get('scored_claim_count')}",
+                  f"- Coverage: {report.get('prediction_coverage')}",
+                  f"- Stance accuracy: {report.get('stance_accuracy')}",
+                  f"- Abstract evidence F1: {report.get('abstract_level_evidence', {}).get('f1')}",
+                  f"- Sentence evidence F1: {report.get('sentence_level_evidence', {}).get('f1')}",
+                  f"- Open retrieval document recall: {run.get('retrieval_metrics', {}).get('document_recall')}",
+                  f"- Gold evidence exposed to model: {run.get('gold_evidence_exposed_to_model')}",
+                  f"- Prediction SHA-256: {run.get('predictions_sha256')}",
+              ]
+              if report.get("scored_claim_count") != 300 or report.get("prediction_coverage") != 1.0:
+                  raise SystemExit("Full 300-claim prediction coverage was not achieved.")
+          else:
+              summary.append("- Benchmark report missing; inspect inference and server logs.")
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as handle:
+              handle.write("\n".join(summary) + "\n")
+          PY
+
+      - name: Upload reproducible model benchmark artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oracle-scifact-qwen3-0.6b-open-corpus-dev
+          path: |
+            data/scifact/qwen3_0.6b_open_corpus_dev_predictions.jsonl
+            data/scifact/qwen3_0.6b_open_corpus_dev_report.json
+            data/scifact/benchmark-input/claims_dev.jsonl
+            data/scifact/benchmark-input/corpus.jsonl
+            models/qwen3/*.gguf
+            qwen3-server.log
+            qwen3-models.json
+          if-no-files-found: warn
+          retention-days: 90
