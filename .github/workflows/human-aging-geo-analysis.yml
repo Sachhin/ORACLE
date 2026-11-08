@@ -24,8 +24,8 @@ jobs:
           use-public-rspm: true
       - name: Install GEOquery and limma
         run: |
-          Rscript -e 'if (!requireNamespace("BiocManager", quietly=TRUE)) install.packages("BiocManager"); BiocManager::install(c("GEOquery","limma"), ask=FALSE, update=FALSE)'
-          Rscript -e 'stopifnot(requireNamespace("GEOquery"), requireNamespace("limma"), requireNamespace("Biobase"), requireNamespace("jsonlite"))'
+          Rscript -e 'if (!requireNamespace("BiocManager", quietly=TRUE)) install.packages("BiocManager"); BiocManager::install(c("GEOquery","limma","lumiHumanIDMapping"), ask=FALSE, update=FALSE)'
+          Rscript -e 'stopifnot(requireNamespace("GEOquery"), requireNamespace("limma"), requireNamespace("lumiHumanIDMapping"), requireNamespace("Biobase"), requireNamespace("jsonlite"))'
       - name: Run public human aging cohort candidate-gene analysis
         run: |
           Rscript scripts/analyze_human_aging_geo.R GSE58137,GSE65219 artifacts/human-aging-geo > artifacts/human-aging-geo/run.log
