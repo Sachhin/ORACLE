@@ -1,5 +1,9 @@
 name: ORACLE PXD047528 real missingness preparation
 
+concurrency:
+  group: oracle-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
 on:
   pull_request:
     branches: [main]

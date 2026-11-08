@@ -1,5 +1,9 @@
 name: ORACLE direct centenarian miRNA cohort analysis
 
+concurrency:
+  group: oracle-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
 on:
   pull_request:
     branches: [main]
