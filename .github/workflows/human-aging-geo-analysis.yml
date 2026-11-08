@@ -28,7 +28,7 @@ jobs:
           Rscript -e 'stopifnot(requireNamespace("GEOquery"), requireNamespace("limma"), requireNamespace("Biobase"), requireNamespace("jsonlite"))'
       - name: Run public human aging cohort candidate-gene analysis
         run: |
-          Rscript scripts/analyze_human_aging_geo.R GSE58137,GSE262619 artifacts/human-aging-geo > artifacts/human-aging-geo/run.log
+          Rscript scripts/analyze_human_aging_geo.R GSE58137,GSE65219 artifacts/human-aging-geo > artifacts/human-aging-geo/run.log
       - name: Publish analysis summary
         if: always()
         run: |
