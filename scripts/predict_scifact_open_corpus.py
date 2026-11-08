@@ -219,7 +219,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     errors_path = Path(str(output) + ".errors.jsonl")
     with errors_path.open("w", encoding="utf-8") as error_handle:
         for error in invalid_responses:
-            error_handle.write(json.dumps(error, ensure_ascii=False) + "\\n")
+            error_handle.write(json.dumps(error, ensure_ascii=False) + "\n")
     report = evaluate_scifact(args.claims, args.corpus, str(output), split="dev")
     report["prediction_run"] = {
         "inference": "explicit user-controlled self-hosted model",
