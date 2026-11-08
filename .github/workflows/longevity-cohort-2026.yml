@@ -39,6 +39,7 @@ jobs:
           unzip -q data/longevity-2026/source.zip -d data/longevity-2026/extracted
       - name: Inventory R objects and cohort metadata without exposing sample IDs
         run: |
+          mkdir -p artifacts
           Rscript scripts/inspect_mendeley_longevity_dataset.R \
             data/longevity-2026/extracted \
             artifacts/longevity-2026-dataset-inventory.json
