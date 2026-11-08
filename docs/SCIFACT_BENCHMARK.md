@@ -40,6 +40,24 @@ files are under `data/scifact/data/`:
 python -m unittest tests.test_scifact_benchmark tests.test_scifact_local_predictor tests.test_scifact_open_corpus -v
 ```
 
+## Run retrieval-only evaluation (no model required)
+
+This measures how often lexical BM25 retrieves the expert-labelled evidence
+documents from the full corpus. It runs locally without an LLM, API key, or
+network request after the dataset is downloaded:
+
+```bash
+python scripts/evaluate_scifact_retrieval.py \
+  --claims data/scifact/data/claims_dev.jsonl \
+  --corpus data/scifact/data/corpus.jsonl \
+  --top-k 20 \
+  --output data/scifact/bm25_retrieval_dev.report.json
+```
+
+This produces real retrieval recall diagnostics, not claim-verification
+accuracy. It is the first runnable open-corpus benchmark step on a device
+without a local model server.
+
 ## Run an open-corpus pilot
 
 Inference requires an explicitly configured operator-owned OpenAI-compatible
