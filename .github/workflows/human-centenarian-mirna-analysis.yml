@@ -1,0 +1,62 @@
+name: ORACLE direct centenarian miRNA cohort analysis
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/human-centenarian-mirna-analysis.yml"
+      - "scripts/analyze_gse32493_centenarian_mirna.py"
+      - "tests/test_gse32493_centenarian_mirna.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  centenarian-mirna:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run offline analysis tests
+        run: python -m unittest discover -s tests -p 'test_gse32493_centenarian_mirna.py' -v
+      - name: Download the deposited centenarian and control miRNA tables
+        run: |
+          set -euo pipefail
+          mkdir -p data/gse32493
+          base="https://ftp.ncbi.nlm.nih.gov/geo/series/GSE32nnn/GSE32493/suppl"
+          for file in GSE32493_centenarian.txt.gz GSE32493_control.txt.gz; do
+            curl --fail --location --retry 4 --connect-timeout 20 --max-time 180 \
+              "$base/$file" -o "data/gse32493/$file"
+            gzip -t "data/gse32493/$file"
+          done
+      - name: Analyze group effects without inventing replicate-level significance
+        run: |
+          python scripts/analyze_gse32493_centenarian_mirna.py \
+            --data-dir data/gse32493 \
+            --output artifacts/gse32493-centenarian-mirna-report.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report=json.loads(Path("artifacts/gse32493-centenarian-mirna-report.json").read_text())
+          assert report["accession"] == "GSE32493"
+          assert report["cohort"]["centenarians"] == 3
+          assert report["cohort"]["controls"] == 3
+          assert report["features_shared"] >= 10
+          print("Analysis status:", report["status"])
+          print("Shared miRNAs:", report["features_shared"])
+          print("Per-sample values retained:", report["per_sample_values_retained"])
+          print("Inferential statistics:", report["inferential_statistics"])
+          PY
+      - name: Upload source data and reproducible report
+        uses: actions/upload-artifact@v4
+        with:
+          name: oracle-gse32493-centenarian-mirna
+          path: |
+            data/gse32493/*.txt.gz
+            artifacts/gse32493-centenarian-mirna-report.json
+          if-no-files-found: error
+          retention-days: 90
