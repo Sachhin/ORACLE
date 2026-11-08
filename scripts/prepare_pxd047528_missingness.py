@@ -145,9 +145,14 @@ def prepare_pxd047528(
     _write_matrix(imputed_path, samples, imputed)
     with labels_template.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.writer(handle, delimiter="\t", lineterminator="\n")
-        writer.writerow(["sample_id", "patient_id", "phenotype", "include_in_hiv_vs_herpes", "include_in_hand_vs_cognitively_normal"])
+        writer.writerow([
+            "sample_id", "patient_id", "phenotype", "hand_status",
+            "raw_acquisition_files", "source_reference", "source_manifest_sha256",
+        ])
         for sample in samples:
-            writer.writerow([sample, "", "", "", ""])
+            # Leave all clinical fields blank until the submitter-authenticated
+            # run-to-patient manifest is obtained; never infer them from aliases.
+            writer.writerow([sample, "", "", "", "", "", ""])
 
     missing_dda = sum(observed[f][s] is None for f in observed for s in samples)
     scored_missing = sum(observed[f][s] is None and orthogonal[f][s] is not None
