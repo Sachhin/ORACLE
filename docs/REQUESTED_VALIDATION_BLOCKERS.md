@@ -76,7 +76,7 @@ experimental follow-up for selected genes. The GSA raw-read archive is not
 the same as a ready-to-use GEO count matrix. A reproducible raw-read or
 submitter-provided processed-matrix acquisition, sample metadata, library
 type/covariate handling, and independent replication are still required
-before ORACLE can claim a fresh numerical reanalysis.
+before ORACLE can claim a fresh numerical reanalysis. A separate exploratory workflow now tests a pre-specified centenarian-candidate gene set against ordinary age trends in GEO cohorts GSE58137 and GSE262619. This is a useful cross-sectional age-association check, not a direct analysis of centenarians, and must not be described as exceptional-longevity validation.
 
 Sources:
 - Xiao et al. 2018: https://genome.cshlp.org/content/28/11/1601
