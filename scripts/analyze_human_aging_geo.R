@@ -10,7 +10,7 @@ suppressPackageStartupMessages({
 })
 
 args <- commandArgs(trailingOnly = TRUE)
-accessions <- if (length(args) >= 1) strsplit(args[[1]], ",", fixed = TRUE)[[1]] else c("GSE58137", "GSE262619")
+accessions <- if (length(args) >= 1) strsplit(args[[1]], ",", fixed = TRUE)[[1]] else c("GSE58137", "GSE65219")
 outdir <- if (length(args) >= 2) args[[2]] else "artifacts/human-aging-geo"
 dir.create(outdir, recursive = TRUE, showWarnings = FALSE)
 
