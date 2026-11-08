@@ -1,7 +1,8 @@
 name: ORACLE offline tests
 
 concurrency:
-  group: oracle-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  # Isolate each run so a stale queued run cannot hold the PR concurrency group.
+  group: oracle-${{ github.workflow }}-${{ github.run_id }}
   cancel-in-progress: false
 
 on:
