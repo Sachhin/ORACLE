@@ -65,31 +65,54 @@ corpus; the starter question set alone contains questions, not gold answers.
 
 ## Human longevity research mission
 
-**Status: INCOMPLETE — previous run was literature discovery, not a validated
-mechanism-discovery analysis.**
+**Status: INCOMPLETE — direct centenarian data have now been analyzed
+descriptively, but the mission has not established a new biological mechanism.**
 
-The previous run downloaded GSE351605. That accession is a human ketogenic
-diet pre/post intervention dataset, not a centenarian/exceptional-longevity
-cohort. Its 48 expression columns were not parsed into a verified sample
-design, and no differential-expression or pathway analysis was performed.
-It must not be presented as direct evidence about exceptional human longevity.
+The first full ORACLE literature mission completed three cycles and retrieved
+257 source records, 53 evidence records, and 451 claims. Its two generated
+hypotheses were marked very-low confidence and had no linked supporting or
+opposing evidence IDs. The run downloaded GSE351605, which is a human
+ketogenic-diet pre/post intervention dataset rather than a
+centenarian/exceptional-longevity cohort. It produced no differential
+expression or pathway analyses. The mission's "completed" workflow status
+must therefore not be mistaken for a completed mechanism-discovery result.
 
-A directly relevant published human centenarian transcriptome study is Xiao
-et al. (2018): 76 centenarians, 54 centenarian offspring, and 41 offspring
+A new direct GEO workflow now downloads and analyzes the public GSE32493
+centenarian miRNA supplementary tables. It compared 231 shared miRNAs between
+three centenarians and three controls after library-size CPM normalization.
+The deposited tables contain one group-level count per miRNA, not the
+individual sample-level replicates; accordingly the workflow reports
+descriptive log2-CPM fold changes only and computes no p-values or FDR. The
+largest descriptive effects include hsa-miR-122 (+2.33 log2 CPM),
+hsa-miR-363* (+2.28), hsa-miR-345 (+1.96), hsa-miR-20b (+1.96), and
+hsa-miR-151-3p (-1.62). These are exploratory leads, not statistically
+validated findings, mechanisms, or evidence of causality. The cohort is very
+small and uses EBV-transformed B-cells. Workflow artifact:
+oracle-gse32493-centenarian-mirna.
+
+A separate exploratory workflow tests a pre-specified centenarian-candidate
+gene set against ordinary age trends in two independent GEO cohorts:
+GSE58137 (359 whole-blood samples, ages 16–78) and GSE65219 (176 PBMC
+samples: 146 nonagenarians aged 90–99 and 30 young controls aged 19–30).
+A false-positive age parser was identified in the first GSE65219 report
+("percentage" was being matched as an age field); the parser now requires
+whole-word age labels, rejects impossible ages, and has a regression check.
+The corrected numerical report is pending. These cohorts provide
+cross-sectional aging comparisons, not direct centenarian validation.
+
+A larger directly relevant published human centenarian transcriptome study is
+Xiao et al. (2018): 76 centenarians, 54 centenarian offspring, and 41 offspring
 spouses (171 people); its RNA-seq data are deposited under GSA accession
 CRA000515. The paper reports autophagy/lysosomal pathway enrichment and
 experimental follow-up for selected genes. The GSA raw-read archive is not
 the same as a ready-to-use GEO count matrix. A reproducible raw-read or
 submitter-provided processed-matrix acquisition, sample metadata, library
 type/covariate handling, and independent replication are still required
-before ORACLE can claim a fresh numerical reanalysis. A separate exploratory workflow now tests a pre-specified centenarian-candidate gene set against ordinary age trends in two independent GEO cohorts: GSE58137 (359 whole-blood samples, ages 16–78) and GSE65219 (176 PBMC samples: 146 nonagenarians aged 90–99 and 30 young controls aged 19–30). This is a useful cross-sectional age-association check, not a direct analysis of centenarians, and must not be described as exceptional-longevity validation. Source summaries: https://genepi.qimr.edu.au/contents/p/staff/PETERS_NatComms_allOSI.pdf and https://d-nb.info/1205655395/34.
-
-Sources:
-- Xiao et al. 2018: https://genome.cshlp.org/content/28/11/1601
-- PubMed record: https://pubmed.ncbi.nlm.nih.gov/30352807/
-- GSA accession cited by the paper: CRA000515
-- GSE351605 is a human ketogenic-diet pre/post dataset:
-  https://www.omicsdi.org/dataset/geo/GSE351605
+before ORACLE can claim a fresh numerical reanalysis. Sources:
+https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE32493
+https://pubmed.ncbi.nlm.nih.gov/22846614/
+https://genome.cshlp.org/content/28/11/1601
+https://pubmed.ncbi.nlm.nih.gov/30352807/
 
 ## Final release criterion
 
