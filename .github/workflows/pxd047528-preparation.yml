@@ -52,7 +52,7 @@ jobs:
               names = set(zf.namelist())
               prefix = "datasets/blood_hiv_dda_dia/"
               members = sorted(name for name in names if name.startswith(prefix))
-              Path("data/pxd047528/archive_members.txt").write_text("\\n".join(members) + "\\n")
+              Path("data/pxd047528/archive_members.txt").write_text("\n".join(members) + "\n")
               # Retrieve only small, explicitly named metadata/readme files that
               # could resolve the 15-run to 13-patient crosswalk. Never infer labels
               # from file names or sample order.
@@ -70,7 +70,7 @@ jobs:
                       while block := source.read(1024 * 1024):
                           dest.write(block)
                   print(f"Fetched metadata candidate {name}: {target.stat().st_size} bytes")
-              Path("data/pxd047528/metadata_candidates.txt").write_text("\\n".join(metadata_candidates) + "\\n")
+              Path("data/pxd047528/metadata_candidates.txt").write_text("\n".join(metadata_candidates) + "\n")
               missing = [name for name in wanted if name not in names]
               if missing:
                   raise SystemExit(f"Zenodo archive missing expected PXD047528 files: {missing}")
