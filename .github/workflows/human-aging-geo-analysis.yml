@@ -1,0 +1,58 @@
+name: ORACLE human aging GEO candidate-gene analysis
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/human-aging-geo-analysis.yml"
+      - "scripts/analyze_human_aging_geo.R"
+      - "docs/REQUESTED_VALIDATION_BLOCKERS.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  human-aging-expression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: "release"
+          use-public-rspm: true
+      - name: Install GEOquery and limma
+        run: |
+          Rscript -e 'if (!requireNamespace("BiocManager", quietly=TRUE)) install.packages("BiocManager"); BiocManager::install(c("GEOquery","limma"), ask=FALSE, update=FALSE)'
+          Rscript -e 'stopifnot(requireNamespace("GEOquery"), requireNamespace("limma"), requireNamespace("Biobase"), requireNamespace("jsonlite"))'
+      - name: Run public human aging cohort candidate-gene analysis
+        run: |
+          Rscript scripts/analyze_human_aging_geo.R GSE58137,GSE262619 artifacts/human-aging-geo > artifacts/human-aging-geo/run.log
+      - name: Publish analysis summary
+        if: always()
+        run: |
+          if [ -f artifacts/human-aging-geo/human_aging_geo_candidate_gene_report.json ]; then
+            python - <<'PY'
+          import json, os
+          from pathlib import Path
+          report = json.loads(Path("artifacts/human-aging-geo/human_aging_geo_candidate_gene_report.json").read_text())
+          lines = ["## Human aging GEO candidate-gene analysis", f"- Status: {report.get('status')}"]
+          for cohort in report.get("successful_platforms", []):
+              lines.append(f"- {cohort['accession']} platform {cohort['platform_index']}: n={cohort['samples_with_age']}, age {cohort['age_min_years']}-{cohort['age_max_years']}, candidates detected={cohort['candidate_genes_detected']}, FDR<0.05={cohort['candidate_genes_fdr_lt_0_05']}")
+          for failure in report.get("failures", []):
+              lines.append(f"- Skipped: {failure.get('accession')} — {failure.get('error')}")
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as handle:
+              handle.write("\n".join(lines) + "\n")
+          PY
+          else
+            echo "No report produced; inspect GEO download and metadata logs." >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Upload reproducible age-trend results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oracle-human-aging-geo-candidate-gene-analysis
+          path: artifacts/human-aging-geo/
+          if-no-files-found: warn
+          retention-days: 90
