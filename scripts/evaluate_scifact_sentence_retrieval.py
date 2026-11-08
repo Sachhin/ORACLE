@@ -66,6 +66,7 @@ def evaluate_sentence_retrieval(claims_path: str, corpus_path: str, *, top_k: in
     corpus_rows = _jsonl(corpus_path)
     sentence_rows, locations = flatten_sentences(corpus_rows)
     index = BM25Index(sentence_rows)
+    valid_locations = set(locations.values())
 
     predicted_total = gold_total = correct_total = 0
     rationale_total = rationale_hits = 0
@@ -82,6 +83,8 @@ def evaluate_sentence_retrieval(claims_path: str, corpus_path: str, *, top_k: in
         }
         if not gold_sentences:
             continue
+        if not gold_sentences.issubset(valid_locations):
+            raise ValueError(f"Claim {cid}: gold rationale references a sentence outside the corpus abstract")
         ranked = index.search(str(claim.get("claim", "")), top_k=top_k)
         predicted = {locations[sentence_id] for sentence_id, _ in ranked}
         correct = predicted.intersection(gold_sentences)
