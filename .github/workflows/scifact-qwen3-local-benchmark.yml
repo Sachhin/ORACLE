@@ -79,8 +79,8 @@ jobs:
           from pathlib import Path
           claims = [json.loads(x) for x in Path("data/scifact/benchmark-input/claims_dev.jsonl").read_text().splitlines() if x.strip()]
           corpus = [json.loads(x) for x in Path("data/scifact/benchmark-input/corpus.jsonl").read_text().splitlines() if x.strip()]
-          if len(claims) != 450:
-              raise SystemExit(f"Expected all 450 labelled SciFact dev claims, found {len(claims)}")
+          if len(claims) != 300:
+              raise SystemExit(f"Expected all 300 labelled SciFact dev claims, found {len(claims)}")
           if len(corpus) != 5183:
               raise SystemExit(f"Expected the 5,183-document SciFact corpus, found {len(corpus)}")
           print(json.dumps({"dev_claims": len(claims), "corpus_documents": len(corpus)}, indent=2))
@@ -105,7 +105,7 @@ jobs:
           cat qwen3-models.json
           grep -q "$MODEL_ALIAS" qwen3-models.json
 
-      - name: Run full open-corpus inference and score all 450 dev claims
+      - name: Run full open-corpus inference and score all 300 dev claims
         run: |
           python scripts/predict_scifact_open_corpus.py \
             --claims data/scifact/benchmark-input/claims_dev.jsonl \
@@ -141,8 +141,8 @@ jobs:
                   f"- Gold evidence exposed to model: {run.get('gold_evidence_exposed_to_model')}",
                   f"- Prediction SHA-256: {run.get('predictions_sha256')}",
               ]
-              if report.get("scored_claim_count") != 450 or report.get("prediction_coverage") != 1.0:
-                  raise SystemExit("Full 450-claim prediction coverage was not achieved.")
+              if report.get("scored_claim_count") != 300 or report.get("prediction_coverage") != 1.0:
+                  raise SystemExit("Full 300-claim prediction coverage was not achieved.")
           else:
               summary.append("- Benchmark report missing; inspect inference and server logs.")
           with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as handle:
