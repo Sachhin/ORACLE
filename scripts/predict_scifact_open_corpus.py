@@ -19,7 +19,12 @@ from typing import Any
 
 from oracle.language_model import SelfHostedLanguageModel, SelfHostedModelConfig
 from oracle.scifact_benchmark import _jsonl, evaluate_scifact
-from scripts.predict_scifact_local import parse_model_json, validate_prediction, sha256
+try:
+    from scripts.predict_scifact_local import parse_model_json, validate_prediction, sha256
+except ModuleNotFoundError:
+    # Direct `python scripts/...py` execution puts scripts/ rather than the
+    # repository root at sys.path[0]. Keep both CLI and package imports valid.
+    from predict_scifact_local import parse_model_json, validate_prediction, sha256
 
 TOKEN_RE = re.compile(r"[a-z0-9][a-z0-9-]*")
 STOPWORDS = {
