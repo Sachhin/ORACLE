@@ -60,6 +60,19 @@ jobs:
           mkdir -p models/qwen3
           hf download "$HF_REPO" "$HF_FILE" --revision "$HF_REVISION" --local-dir models/qwen3
           echo "$MODEL_SHA256  models/qwen3/$HF_FILE" | sha256sum --check -
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          Path("data/scifact").mkdir(parents=True, exist_ok=True)
+          Path("data/scifact/model_provenance.json").write_text(json.dumps({
+              "model_repository": os.environ["HF_REPO"],
+              "model_revision": os.environ["HF_REVISION"],
+              "model_file": os.environ["HF_FILE"],
+              "model_sha256": os.environ["MODEL_SHA256"],
+              "inference_runtime": "llama-cpp-python CPU server",
+              "runtime_version": "0.3.36"
+          }, indent=2) + "\\n")
+          PY
 
       - name: Download official SciFact dataset
         run: |
@@ -159,7 +172,7 @@ jobs:
             data/scifact/qwen3_0.6b_open_corpus_dev_report.json
             data/scifact/benchmark-input/claims_dev.jsonl
             data/scifact/benchmark-input/corpus.jsonl
-            models/qwen3/*.gguf
+            data/scifact/model_provenance.json
             qwen3-server.log
             qwen3-models.json
           if-no-files-found: warn
