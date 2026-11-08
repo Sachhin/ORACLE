@@ -48,7 +48,7 @@ def validate_prediction(payload: dict[str, Any], allowed_docs: dict[str, int]) -
         label = item.get("label")
         sentences = item.get("sentences")
         if doc_id not in allowed_docs:
-            raise ValueError(f"Model cited a document outside this claim's cited-doc set: {doc_id}")
+            raise ValueError(f"Model cited a document outside this claim's supplied candidate set: {doc_id}")
         if label not in {"SUPPORT", "CONTRADICT"}:
             raise ValueError(f"Invalid evidence label for document {doc_id}")
         if (not isinstance(sentences, list) or not sentences
