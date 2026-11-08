@@ -20,8 +20,11 @@ candidate_genes <- c(
   "MAP1LC3B", "IFNG", "TNF", "TGFB1", "IL32"
 )
 
-extract_age <- function(pd) {
-  txt <- apply(pd, 1, function(row) paste(as.character(row), collapse = " ; "))
+metadata_text <- function(pd) {
+  apply(pd, 1, function(row) paste(as.character(row), collapse = " ; "))
+}
+
+extract_age <- function(txt) {
   vapply(txt, function(value) {
     match <- regexec(
       "(?i)(?:age|years?[ _-]*old|age[ _-]*years?)[^0-9]{0,16}([0-9]{1,3}(?:\\.[0-9]+)?)(?!\\s*[-–]\\s*[0-9])",
@@ -32,19 +35,72 @@ extract_age <- function(pd) {
   }, numeric(1))
 }
 
+extract_age_group <- function(txt) {
+  vapply(txt, function(value) {
+    lower <- tolower(value)
+    if (grepl("nonagenarian|centenarian|older adult|elderly|old control", lower)) {
+      "older"
+    } else if (grepl("young control|young adult|younger", lower)) {
+      "younger"
+    } else {
+      NA_character_
+    }
+  }, character(1))
+}
+
+extract_sex <- function(txt) {
+  vapply(txt, function(value) {
+    lower <- tolower(value)
+    if (grepl("\\bfemale\\b|\\bwomen\\b|\\bwoman\\b", lower)) {
+      "female"
+    } else if (grepl("\\bmale\\b|\\bmen\\b|\\bman\\b", lower)) {
+      "male"
+    } else {
+      NA_character_
+    }
+  }, character(1))
+}
+
 analyse_eset <- function(eset, accession, index) {
   pd <- pData(eset)
-  if (nrow(pd) < 20) stop("fewer than 20 samples; exploratory age trend not run")
-  age <- extract_age(pd)
-  if (sum(is.finite(age)) < 20) {
-    stop(sprintf("only %d samples have explicit parseable age metadata", sum(is.finite(age))))
+  if (nrow(pd) < 20) stop("fewer than 20 samples; exploratory age analysis not run")
+  txt <- metadata_text(pd)
+  age <- extract_age(txt)
+  age_group <- extract_age_group(txt)
+  sex <- extract_sex(txt)
+
+  use_continuous_age <- sum(is.finite(age)) >= 20 && length(unique(age[is.finite(age)])) >= 3
+  if (use_continuous_age) {
+    keep <- is.finite(age)
+    design_data <- data.frame(age = age[keep])
+    effect_name <- "age"
+    design_label <- "continuous_age_years"
+  } else {
+    keep <- !is.na(age_group)
+    if (sum(keep) < 20 || length(unique(age_group[keep])) != 2) {
+      stop(sprintf(
+        "only %d samples have exact ages and %d have usable older/younger group labels",
+        sum(is.finite(age)), sum(keep)
+      ))
+    }
+    design_data <- data.frame(age_group = factor(age_group[keep], levels = c("younger", "older")))
+    effect_name <- "age_groupolder"
+    design_label <- "older_vs_younger"
   }
-  keep_samples <- is.finite(age)
-  expr <- exprs(eset)[, keep_samples, drop = FALSE]
-  age <- age[keep_samples]
-  if (ncol(expr) != length(age) || length(unique(age)) < 3) {
-    stop("age metadata does not support a continuous age association")
+
+  if (sum(keep) < 20) stop("fewer than 20 samples remain after metadata validation")
+  sex_used <- all(!is.na(sex[keep])) && length(unique(sex[keep])) >= 2
+  if (sex_used) design_data$sex <- factor(sex[keep])
+  expr <- exprs(eset)[, keep, drop = FALSE]
+  design <- if (sex_used) {
+    if (use_continuous_age) model.matrix(~ age + sex, data = design_data)
+    else model.matrix(~ age_group + sex, data = design_data)
+  } else {
+    if (use_continuous_age) model.matrix(~ age, data = design_data)
+    else model.matrix(~ age_group, data = design_data)
   }
+  if (!effect_name %in% colnames(design)) stop("requested age coefficient is absent from design matrix")
+
   fd <- fData(eset)
   symbol_col <- grep("gene.?symbol|symbol", colnames(fd), ignore.case = TRUE, value = TRUE)
   if (!length(symbol_col)) stop("platform annotation has no gene-symbol field")
@@ -58,26 +114,33 @@ analyse_eset <- function(eset, accession, index) {
     apply(expr[ix, , drop = FALSE], 2, median, na.rm = TRUE)
   }, numeric(ncol(expr)))
   gene_expr <- t(gene_expr)
-  design <- model.matrix(~ age)
+
   fit <- eBayes(lmFit(gene_expr, design), trend = TRUE, robust = TRUE)
-  all_results <- topTable(fit, coef = "age", number = Inf, sort.by = "P")
+  all_results <- topTable(fit, coef = effect_name, number = Inf, sort.by = "P")
   all_results$gene_symbol <- rownames(all_results)
-  all_results$direction <- ifelse(all_results$logFC > 0, "increases_with_age", "decreases_with_age")
+  all_results$direction <- ifelse(all_results$logFC > 0, "higher_in_older", "lower_in_older")
   selected <- all_results[toupper(all_results$gene_symbol) %in% candidate_genes, , drop = FALSE]
   selected$centenarian_candidate_gene <- toupper(selected$gene_symbol)
   selected <- selected[match(candidate_genes, toupper(selected$gene_symbol), nomatch = 0), , drop = FALSE]
+
   platform <- annotation(eset)
   tag <- paste0(accession, "_platform", index)
-  write.csv(all_results, file.path(outdir, paste0(tag, "_all_genes_age_trend.csv")), row.names = FALSE)
+  write.csv(all_results, file.path(outdir, paste0(tag, "_all_genes_age_association.csv")), row.names = FALSE)
   write.csv(selected, file.path(outdir, paste0(tag, "_longevity_candidate_genes.csv")), row.names = FALSE)
+
   list(
     accession = accession,
     platform_index = index,
     platform = platform,
+    design = design_label,
+    sex_adjusted = sex_used,
     samples_total = nrow(pd),
-    samples_with_age = length(age),
-    age_min_years = min(age),
-    age_max_years = max(age),
+    samples_analyzed = sum(keep),
+    exact_age_samples = sum(is.finite(age)),
+    older_group_samples = sum(age_group[keep] == "older", na.rm = TRUE),
+    younger_group_samples = sum(age_group[keep] == "younger", na.rm = TRUE),
+    age_min_years = if (any(is.finite(age[keep]))) min(age[keep], na.rm = TRUE) else NA_real_,
+    age_max_years = if (any(is.finite(age[keep]))) max(age[keep], na.rm = TRUE) else NA_real_,
     gene_symbols_tested = nrow(all_results),
     candidate_genes_detected = nrow(selected),
     candidate_genes_fdr_lt_0_05 = sum(selected$adj.P.Val < 0.05, na.rm = TRUE),
@@ -85,15 +148,16 @@ analyse_eset <- function(eset, accession, index) {
       row <- selected[i, ]
       list(
         gene = as.character(row$gene_symbol),
-        logFC_per_year = unname(row$logFC),
+        effect = unname(row$logFC),
+        effect_scale = if (use_continuous_age) "logFC_per_year" else "older_minus_younger_logFC",
         p_value = unname(row$P.Value),
         fdr = unname(row$adj.P.Val),
         direction = as.character(row$direction)
       )
     }),
     limitation = paste(
-      "Ordinary age-spectrum association in a public GEO cohort; not a centenarian",
-      "or survival cohort. Does not establish a longevity mechanism or causality."
+      "Cross-sectional age association in public blood-derived cohorts; not a",
+      "centenarian survival cohort. Does not establish exceptional longevity or causality."
     )
   )
 }
@@ -132,7 +196,7 @@ if (!length(successes)) {
 }
 report <- list(
   status = if (length(failures)) "PARTIAL_EXPLORATORY_ANALYSIS" else "EXPLORATORY_ANALYSIS_COMPLETE",
-  analysis = "limma empirical-Bayes continuous age association",
+  analysis = "limma empirical-Bayes age association, exact age where available; otherwise explicit older/younger metadata contrast",
   accessions_requested = accessions,
   successful_platforms = successes,
   failures = failures,
@@ -140,13 +204,13 @@ report <- list(
   provenance = list(
     software = list(R = as.character(getRversion()), GEOquery = as.character(packageVersion("GEOquery")),
                     limma = as.character(packageVersion("limma"))),
-    source = "NCBI GEO processed series matrices and sample metadata"
+    source = "NCBI GEO processed series matrices, GPL annotations, and sample metadata"
   ),
   interpretation = paste(
-    "This exploratory cross-sectional age-trend analysis tests whether selected",
-    "genes previously reported in centenarian studies associate with ordinary",
-    "ageing. It is not direct replication in exceptional-longevity participants,",
-    "does not test lifespan or survival, and cannot establish causal mechanisms."
+    "This exploratory analysis tests whether selected genes previously reported",
+    "in a centenarian study associate with ordinary human age or a nonagenarian",
+    "versus young-control contrast. It is not direct replication in exceptional-",
+    "longevity participants, does not test survival, and cannot establish causality."
   )
 )
 write_json(report, file.path(outdir, "human_aging_geo_candidate_gene_report.json"),
