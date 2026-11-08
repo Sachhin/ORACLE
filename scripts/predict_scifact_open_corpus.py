@@ -42,14 +42,16 @@ class BM25Index:
         self.k1 = k1
         self.b = b
         self.documents: dict[str, dict[str, Any]] = {}
+        seen_ids: set[str] = set()
         self.term_frequencies: dict[str, Counter[str]] = {}
         self.document_lengths: dict[str, int] = {}
         self.document_frequency: Counter[str] = Counter()
 
         for row in corpus_rows:
             doc_id = str(row.get("doc_id", ""))
-            if not doc_id or doc_id in self.documents:
+            if not doc_id or doc_id in seen_ids:
                 raise ValueError("SciFact corpus requires unique, non-empty doc_id values")
+            seen_ids.add(doc_id)
             abstract = row.get("abstract")
             if not isinstance(abstract, list) or any(not isinstance(s, str) for s in abstract):
                 raise ValueError(f"SciFact document {doc_id} has an invalid abstract")
