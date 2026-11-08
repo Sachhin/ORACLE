@@ -181,8 +181,11 @@ analyse_eset <- function(eset, accession, index) {
     samples_total = nrow(pd),
     samples_analyzed = sum(keep),
     exact_age_samples = sum(is.finite(age)),
-    older_group_samples = sum(age_group[keep] == "older", na.rm = TRUE),
-    younger_group_samples = sum(age_group[keep] == "younger", na.rm = TRUE),
+    # Group counts are not meaningful for continuous-age regression.
+    # Report NA rather than counting cohort descriptors that happen to occur
+    # in sample metadata for those same exact-age samples.
+    older_group_samples = if (use_continuous_age) NA_integer_ else sum(age_group[keep] == "older", na.rm = TRUE),
+    younger_group_samples = if (use_continuous_age) NA_integer_ else sum(age_group[keep] == "younger", na.rm = TRUE),
     age_min_years = if (any(is.finite(age[keep]))) min(age[keep], na.rm = TRUE) else NA_real_,
     age_max_years = if (any(is.finite(age[keep]))) max(age[keep], na.rm = TRUE) else NA_real_,
     gene_symbols_tested = nrow(all_results),
