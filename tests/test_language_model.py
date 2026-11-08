@@ -48,6 +48,22 @@ class SelfHostedModelTests(unittest.TestCase):
         self.assertIsNone(request.get_header("Authorization"))
 
     @patch("oracle.language_model.urlopen")
+    def test_passes_optional_json_response_format(self, mock_urlopen):
+        mock_urlopen.return_value = FakeResponse({
+            "choices": [{"message": {"content": '{"evidence": []}'}}]
+        })
+        client = SelfHostedLanguageModel(
+            SelfHostedModelConfig("http://127.0.0.1:8080/v1", "open-model")
+        )
+        client.generate(
+            [{"role": "user", "content": "Return JSON."}],
+            response_format={"type": "json_object"},
+        )
+        request = mock_urlopen.call_args.args[0]
+        payload = json.loads(request.data.decode("utf-8"))
+        self.assertEqual(payload["response_format"], {"type": "json_object"})
+
+    @patch("oracle.language_model.urlopen")
     def test_server_failure_is_explicit(self, mock_urlopen):
         mock_urlopen.side_effect = OSError("offline")
         client = SelfHostedLanguageModel(
