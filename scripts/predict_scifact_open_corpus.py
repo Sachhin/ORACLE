@@ -180,6 +180,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         timeout_seconds=args.timeout, max_tokens=args.max_tokens,
     ))
     retrieved: dict[str, list[str]] = {}
+    invalid_responses: list[dict[str, Any]] = []
     with output.open("a" if args.resume else "w", encoding="utf-8") as handle:
         for position, claim in enumerate(selected, 1):
             cid = str(claim.get("id"))
@@ -193,9 +194,19 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 evidence = {}
             else:
                 messages, allowed = build_prompt(claim, candidates)
-                raw = model.generate(messages, temperature=0.0)
-                evidence = validate_prediction(parse_model_json(raw), allowed)
+                raw = model.generate(messages, temperature=0.0, response_format={"type": "json_object"})
+                try:
+                    evidence = validate_prediction(parse_model_json(raw), allowed)
+                except ValueError as exc:
+                    evidence = {}
+                    invalid_responses.append({
+                        "claim_id": cid,
+                        "error": str(exc),
+                        "raw_response_preview": raw[:1200],
+                    })
             prediction = {"id": claim["id"], "evidence": evidence}
+            if invalid_responses and invalid_responses[-1]["claim_id"] == cid:
+                prediction["inference_error"] = invalid_responses[-1]["error"]
             handle.write(json.dumps(prediction, ensure_ascii=False) + "\n")
             handle.flush()
             completed[cid] = prediction
@@ -205,6 +216,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 file=sys.stderr,
             )
 
+    errors_path = Path(str(output) + ".errors.jsonl")
+    with errors_path.open("w", encoding="utf-8") as error_handle:
+        for error in invalid_responses:
+            error_handle.write(json.dumps(error, ensure_ascii=False) + "\\n")
     report = evaluate_scifact(args.claims, args.corpus, str(output), split="dev")
     report["prediction_run"] = {
         "inference": "explicit user-controlled self-hosted model",
@@ -223,6 +238,9 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "corpus_sha256": sha256(args.corpus),
         "predictions_sha256": sha256(output),
         "gold_evidence_exposed_to_model": False,
+        "invalid_model_response_count": len(invalid_responses),
+        "invalid_model_responses_path": str(errors_path),
+        "invalid_model_responses_sha256": sha256(errors_path),
     }
     report_path = Path(args.report or (str(output) + ".report.json"))
     report_path.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
