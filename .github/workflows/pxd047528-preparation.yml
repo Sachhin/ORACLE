@@ -108,6 +108,18 @@ jobs:
           }
           manifest.write_text(json.dumps(data, indent=2) + "\n")
           PY
+      - name: Validate clinical crosswalk template and preserve explicit blocker report
+        run: |
+          mkdir -p data/pxd047528/prepared
+          if python -m oracle.clinical_mapping \
+            --mapping data/pxd047528/prepared/sample_map_template.tsv \
+            --output data/pxd047528/prepared/clinical_mapping_validation.json; then
+            echo "Authenticated clinical crosswalk passed structural validation."
+          else
+            status=$?
+            if [ "$status" -ne 2 ]; then exit "$status"; fi
+            echo "Clinical outcome validation remains blocked: no authenticated crosswalk was supplied."
+          fi
       - name: Score real missing DDA cells against paired DIA (outcome labels pending)
         run: |
           python -m oracle.missingness_validation \
