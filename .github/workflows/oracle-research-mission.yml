@@ -1,6 +1,10 @@
 name: ORACLE longevity research mission
 
 on:
+  push:
+    branches: [run/longevity-research-mission]
+    paths:
+      - ".github/workflows/oracle-research-mission.yml"
   workflow_dispatch:
     inputs:
       question:
