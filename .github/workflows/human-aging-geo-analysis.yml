@@ -7,6 +7,11 @@ on:
       - ".github/workflows/human-aging-geo-analysis.yml"
       - "scripts/analyze_human_aging_geo.R"
       - "docs/REQUESTED_VALIDATION_BLOCKERS.md"
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/human-aging-geo-analysis.yml"
+      - "scripts/analyze_human_aging_geo.R"
   workflow_dispatch:
 
 permissions:
