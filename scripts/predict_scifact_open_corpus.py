@@ -194,7 +194,9 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 evidence = {}
             else:
                 messages, allowed = build_prompt(claim, candidates)
-                raw = model.generate(messages, temperature=0.0, response_format={"type": "json_object"})
+                # llama.cpp CPU server versions do not consistently implement OpenAI response_format.
+                # Request strict JSON in the system prompt and validate it locally instead.
+                raw = model.generate(messages, temperature=0.0)
                 try:
                     evidence = validate_prediction(parse_model_json(raw), allowed)
                 except ValueError as exc:
