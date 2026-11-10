@@ -74,7 +74,7 @@ extract_age_group <- function(txt) {
   "nonagenarian age: 92",
   "young adult age: 25"
 ))
-if (!identical(.age_group_parser_test, c("younger", "older", "younger"))) {
+if (!identical(unname(.age_group_parser_test), c("younger", "older", "younger"))) {
   stop("Age-group metadata parser regression check failed.")
 }
 
