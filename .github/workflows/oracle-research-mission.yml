@@ -132,6 +132,13 @@ jobs:
           with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as handle:
               handle.write("\n".join(lines) + "\n")
           PY
+      - name: Audit evidence quality, replication, and novelty limits
+        if: always() && hashFiles('artifacts/oracle_research_run.json') != ''
+        run: |
+          python -m oracle.quality_audit artifacts/oracle_research_run.json \
+            --json-output artifacts/oracle_quality_audit.json \
+            --markdown-output artifacts/oracle_quality_audit.md
+          cat artifacts/oracle_quality_audit.md >> "$GITHUB_STEP_SUMMARY"
       - name: Upload ORACLE run database and research outputs
         if: always()
         uses: actions/upload-artifact@v4
