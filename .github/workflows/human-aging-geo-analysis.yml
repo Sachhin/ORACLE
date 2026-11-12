@@ -56,7 +56,7 @@ jobs:
           report = json.loads(Path("artifacts/human-aging-geo/human_aging_geo_candidate_gene_report.json").read_text())
           lines = ["## Human aging GEO candidate-gene analysis", f"- Status: {report.get('status')}"]
           for cohort in report.get("successful_platforms", []):
-              lines.append(f"- {cohort['accession']} platform {cohort['platform_index']}: n={cohort['samples_analyzed']}, age {cohort['age_min_years']}-{cohort['age_max_years']}, candidates detected={cohort['candidate_genes_detected']}, FDR<0.05={cohort['candidate_genes_fdr_lt_0_05']}")
+              lines.append(`- ${cohort.get('accession', 'unknown')} platform ${cohort.get('platform_index', 'NA')}: n=${cohort.get('samples_analyzed', cohort.get('samples_total', 'NA'))}, age ${cohort.get('age_min_years', 'NA')}-${cohort.get('age_max_years', 'NA')}, candidates detected=${cohort.get('candidate_genes_detected', 'NA')}, FDR<0.05=${cohort.get('candidate_genes_fdr_lt_0_05', 'NA')}`)
           for failure in report.get("failures", []):
               lines.append(f"- Skipped: {failure.get('accession')} — {failure.get('error')}")
           with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as handle:
