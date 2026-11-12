@@ -211,8 +211,9 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                     })
             prediction = {"id": claim["id"], "evidence": evidence}
             if len(invalid_responses) > args.max_invalid_responses:
+                prediction["inference_error"] = invalid_responses[-1]["error"]
                 print(f"Stopping early: invalid model responses exceeded limit ({args.max_invalid_responses}).", file=sys.stderr)
-                handle.write(json.dumps(prediction, ensure_ascii=False) + "\\n")
+                handle.write(json.dumps(prediction, ensure_ascii=False) + "\n")
                 handle.flush()
                 completed[cid] = prediction
                 break
