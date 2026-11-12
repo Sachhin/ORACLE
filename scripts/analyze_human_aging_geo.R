@@ -67,39 +67,105 @@ analyse_eset <- function(eset, accession, index) {
   txt <- metadata_text(pd)
   age <- extract_age(txt)
   age_group <- extract_age_group(txt)
+
+  # GSE65219: use explicit sample titles for cohort assignment.
+  if (identical(accession, "GSE65219") && "title" %in% colnames(pd)) {
+    sample_title <- tolower(as.character(pd$title))
+    title_group <- ifelse(
+      grepl("nonagenarian", sample_title, fixed = TRUE), "older",
+      ifelse(grepl("young control", sample_title, fixed = TRUE),
+             "younger", NA_character_)
+    )
+    age_group <- title_group
+  }
   sex <- extract_sex(txt)
 
-  use_continuous_age <- sum(is.finite(age)) >= 20 && length(unique(age[is.finite(age)])) >= 3
-  if (use_continuous_age) {
+
+  # Prefer explicit biological group labels over continuous age.
+  # This prevents bimodal young-control/nonagenarian cohorts
+  # from being incorrectly analysed as a linear age spectrum.
+  group_counts <- table(factor(age_group, levels = c("younger", "older")))
+  has_usable_continuous_age <- sum(is.finite(age)) >= 20 &&
+    length(unique(age[is.finite(age)])) >= 3
+
+  # Force the validated nonagenarian-versus-young-control contrast for GSE65219.
+  # Other cohorts retain continuous-age analysis when adequate exact ages exist.
+  use_group_contrast <- all(group_counts >= 10) &&
+    (identical(accession, "GSE65219") || !has_usable_continuous_age)
+
+  if (use_group_contrast) {
+    use_continuous_age <- FALSE
+    keep <- !is.na(age_group)
+    design_data <- data.frame(
+      age_group = factor(age_group[keep], levels = c("younger", "older"))
+    )
+    effect_name <- "age_groupolder"
+    design_label <- "explicit_older_vs_younger"
+  } else {
+    use_continuous_age <- sum(is.finite(age)) >= 20 &&
+      length(unique(age[is.finite(age)])) >= 3
+
+    if (!use_continuous_age) {
+      stop(sprintf(
+        "Insufficient metadata: %d younger and %d older labels; %d exact ages",
+        group_counts[["younger"]], group_counts[["older"]],
+        sum(is.finite(age))
+      ))
+    }
+
     keep <- is.finite(age)
     design_data <- data.frame(age = age[keep])
     effect_name <- "age"
     design_label <- "continuous_age_years"
-  } else {
-    keep <- !is.na(age_group)
-    if (sum(keep) < 20 || length(unique(age_group[keep])) != 2) {
-      stop(sprintf(
-        "only %d samples have exact ages and %d have usable older/younger group labels",
-        sum(is.finite(age)), sum(keep)
-      ))
-    }
-    design_data <- data.frame(age_group = factor(age_group[keep], levels = c("younger", "older")))
-    effect_name <- "age_groupolder"
-    design_label <- "older_vs_younger"
   }
 
-  if (sum(keep) < 20) stop("fewer than 20 samples remain after metadata validation")
-  sex_used <- all(!is.na(sex[keep])) && length(unique(sex[keep])) >= 2
-  if (sex_used) design_data$sex <- factor(sex[keep])
-  expr <- exprs(eset)[, keep, drop = FALSE]
-  design <- if (sex_used) {
-    if (use_continuous_age) model.matrix(~ age + sex, data = design_data)
-    else model.matrix(~ age_group + sex, data = design_data)
-  } else {
-    if (use_continuous_age) model.matrix(~ age, data = design_data)
-    else model.matrix(~ age_group, data = design_data)
+  if (sum(keep) < 20) {
+    stop("Fewer than 20 samples remain after metadata validation")
   }
-  if (!effect_name %in% colnames(design)) stop("requested age coefficient is absent from design matrix")
+
+  sex_used <- all(!is.na(sex[keep])) &&
+    length(unique(sex[keep])) >= 2
+
+  if (sex_used) {
+    design_data$sex <- factor(sex[keep])
+  }
+
+  if (use_group_contrast) {
+    design <- if (sex_used) {
+      model.matrix(~ age_group + sex, data = design_data)
+    } else {
+      model.matrix(~ age_group, data = design_data)
+    }
+  } else {
+    design <- if (sex_used) {
+      model.matrix(~ age + sex, data = design_data)
+    } else {
+      model.matrix(~ age, data = design_data)
+    }
+  }
+
+  if (qr(design)$rank < ncol(design)) {
+    stop("Design matrix is rank-deficient; age effect cannot be reliably estimated")
+  }
+
+  if (!effect_name %in% colnames(design)) {
+    stop("Requested age coefficient is absent from design matrix")
+  }
+
+  # Verify expression columns match phenotype metadata sample order.
+  raw_expr <- exprs(eset)
+  if (is.null(colnames(raw_expr)) || is.null(rownames(pd)) ||
+      !identical(colnames(raw_expr), rownames(pd))) {
+    stop("Expression columns do not match phenotype metadata sample order")
+  }
+
+  expr <- raw_expr[, keep, drop = FALSE]
+  if (ncol(expr) != nrow(design_data)) {
+    stop("Expression and design sample counts do not match")
+  }
+  if (any(colSums(is.finite(expr)) == 0)) {
+    stop("At least one selected sample has no finite expression measurements")
+  }
 
   fd <- fData(eset)
   symbol_col <- grep("gene.?symbol|symbol", colnames(fd), ignore.case = TRUE, value = TRUE)
@@ -124,21 +190,56 @@ analyse_eset <- function(eset, accession, index) {
   expr <- expr[valid, , drop = FALSE]
   symbols <- symbols[valid]
   groups <- split(seq_along(symbols), toupper(symbols))
+  if (!length(groups)) stop("No valid gene symbols remain after annotation")
+
   gene_expr <- vapply(groups, function(ix) {
     apply(expr[ix, , drop = FALSE], 2, median, na.rm = TRUE)
   }, numeric(ncol(expr)))
+
   gene_expr <- t(gene_expr)
+
+  # Preserve missing measurements; never convert them into artificial values.
+  gene_expr[!is.finite(gene_expr)] <- NA_real_
+
+  # Record gene-level missingness before filtering.
+  gene_expression_measurements_total <- length(gene_expr)
+  gene_expression_missing_measurements <- sum(!is.finite(gene_expr))
+
+  # Remove genes with no usable measurements in any sample.
+  gene_keep <- rowSums(is.finite(gene_expr)) > 0
+  genes_removed_all_missing <- sum(!gene_keep)
+  gene_expr <- gene_expr[gene_keep, , drop = FALSE]
+
+  if (!nrow(gene_expr)) stop("No genes have usable expression measurements")
+  if (any(colSums(is.finite(gene_expr)) == 0)) {
+    stop("At least one sample has no usable gene expression measurements")
+  }
+
+  residual_df <- nrow(design) - qr(design)$rank
+  if (residual_df <= 0) {
+    stop("Insufficient residual degrees of freedom for statistical testing")
+  }
 
   fit <- eBayes(lmFit(gene_expr, design), trend = TRUE, robust = TRUE)
   all_results <- topTable(fit, coef = effect_name, number = Inf, sort.by = "P")
   all_results$gene_symbol <- rownames(all_results)
-  all_results$direction <- ifelse(all_results$logFC > 0, "higher_in_older", "lower_in_older")
+  all_results$direction <- if (use_continuous_age) {
+    ifelse(all_results$logFC > 0, "higher_with_age", "lower_with_age")
+  } else {
+    ifelse(all_results$logFC > 0, "higher_in_older", "lower_in_older")
+  }
   selected <- all_results[toupper(all_results$gene_symbol) %in% candidate_genes, , drop = FALSE]
   selected$centenarian_candidate_gene <- toupper(selected$gene_symbol)
   selected <- selected[match(candidate_genes, toupper(selected$gene_symbol), nomatch = 0), , drop = FALSE]
 
   platform <- annotation(eset)
   tag <- paste0(accession, "_platform", index)
+
+  sex_counts <- table(factor(
+    tolower(sex[keep]),
+    levels = c("female", "male")
+  ))
+
   write.csv(all_results, file.path(outdir, paste0(tag, "_all_genes_age_association.csv")), row.names = FALSE)
   write.csv(selected, file.path(outdir, paste0(tag, "_longevity_candidate_genes.csv")), row.names = FALSE)
 
@@ -148,6 +249,20 @@ analyse_eset <- function(eset, accession, index) {
     platform = platform,
     design = design_label,
     sex_adjusted = sex_used,
+    sex_distribution = list(
+      female = unname(as.integer(sex_counts[["female"]])),
+      male = unname(as.integer(sex_counts[["male"]])),
+      missing = sum(is.na(sex[keep]))
+    ),
+    residual_degrees_of_freedom = residual_df,
+    probe_expression_measurements_total = length(expr),
+    probe_expression_missing_measurements = sum(!is.finite(expr)),
+    probe_expression_missing_fraction = sum(!is.finite(expr)) / length(expr),
+    gene_expression_measurements_total = gene_expression_measurements_total,
+    gene_expression_missing_measurements = gene_expression_missing_measurements,
+    gene_expression_missing_fraction = gene_expression_missing_measurements /
+      gene_expression_measurements_total,
+    genes_removed_all_missing = genes_removed_all_missing,
     samples_total = nrow(pd),
     samples_analyzed = sum(keep),
     exact_age_samples = sum(is.finite(age)),
