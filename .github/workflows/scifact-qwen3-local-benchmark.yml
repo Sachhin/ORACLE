@@ -157,6 +157,11 @@ jobs:
               ]
               if report.get("scored_claim_count") != 300 or report.get("prediction_coverage") != 1.0:
                   raise SystemExit("Full 300-claim prediction coverage was not achieved.")
+              if run.get("invalid_model_response_count", 0) != 0:
+                  raise SystemExit(
+                      f"Qwen3 benchmark contains {run.get('invalid_model_response_count')} "
+                      "invalid/failed model responses; do not treat this as a valid full benchmark."
+                  )
           else:
               summary.append("- Benchmark report missing; inspect inference and server logs.")
           with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as handle:

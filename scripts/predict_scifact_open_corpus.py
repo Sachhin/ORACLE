@@ -17,7 +17,7 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
-from oracle.language_model import SelfHostedLanguageModel, SelfHostedModelConfig
+from oracle.language_model import LanguageModelError, SelfHostedLanguageModel, SelfHostedModelConfig
 from oracle.scifact_benchmark import _jsonl, evaluate_scifact
 try:
     from scripts.predict_scifact_local import parse_model_json, validate_prediction, sha256
@@ -194,14 +194,19 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 evidence = {}
             else:
                 messages, allowed = build_prompt(claim, candidates)
-                raw = model.generate(messages, temperature=0.0, response_format={"type": "json_object"})
+                # llama.cpp CPU server versions do not consistently implement OpenAI response_format.
+                # Request strict JSON in the system prompt and validate it locally instead.
+                raw = ""
                 try:
+                    raw = model.generate(messages, temperature=0.0)
                     evidence = validate_prediction(parse_model_json(raw), allowed)
-                except ValueError as exc:
+                except (LanguageModelError, ValueError) as exc:
+                    # Preserve one output row per claim when local inference fails.
+                    # A transport failure is an abstention, not a scientific prediction.
                     evidence = {}
                     invalid_responses.append({
                         "claim_id": cid,
-                        "error": str(exc),
+                        "error": f"{type(exc).__name__}: {exc}",
                         "raw_response_preview": raw[:1200],
                     })
             prediction = {"id": claim["id"], "evidence": evidence}

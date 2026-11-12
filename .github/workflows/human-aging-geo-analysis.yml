@@ -7,6 +7,11 @@ on:
       - ".github/workflows/human-aging-geo-analysis.yml"
       - "scripts/analyze_human_aging_geo.R"
       - "docs/REQUESTED_VALIDATION_BLOCKERS.md"
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/human-aging-geo-analysis.yml"
+      - "scripts/analyze_human_aging_geo.R"
   workflow_dispatch:
 
 permissions:
@@ -22,10 +27,14 @@ jobs:
         with:
           r-version: "release"
           use-public-rspm: true
+      - name: Install GEOquery and limma system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcurl4-openssl-dev libssl-dev libxml2-dev libhdf5-dev libbz2-dev liblzma-dev
       - name: Install GEOquery and limma
         run: |
-          Rscript -e 'if (!requireNamespace("BiocManager", quietly=TRUE)) install.packages("BiocManager"); BiocManager::install(c("GEOquery","limma","lumiHumanIDMapping"), ask=FALSE, update=FALSE)'
-          Rscript -e 'stopifnot(requireNamespace("GEOquery"), requireNamespace("limma"), requireNamespace("lumiHumanIDMapping"), requireNamespace("Biobase"), requireNamespace("jsonlite"))'
+          Rscript -e 'if (!requireNamespace("BiocManager", quietly=TRUE)) install.packages("BiocManager", repos="https://cloud.r-project.org"); BiocManager::install(c("GEOquery","limma"), ask=FALSE, update=FALSE)'
+          Rscript -e 'stopifnot(requireNamespace("GEOquery"), requireNamespace("limma"), requireNamespace("Biobase"), requireNamespace("jsonlite"))'
       - name: Run public human aging cohort candidate-gene analysis
         run: |
           mkdir -p artifacts/human-aging-geo
@@ -40,7 +49,7 @@ jobs:
           report = json.loads(Path("artifacts/human-aging-geo/human_aging_geo_candidate_gene_report.json").read_text())
           lines = ["## Human aging GEO candidate-gene analysis", f"- Status: {report.get('status')}"]
           for cohort in report.get("successful_platforms", []):
-              lines.append(f"- {cohort['accession']} platform {cohort['platform_index']}: n={cohort['samples_with_age']}, age {cohort['age_min_years']}-{cohort['age_max_years']}, candidates detected={cohort['candidate_genes_detected']}, FDR<0.05={cohort['candidate_genes_fdr_lt_0_05']}")
+              lines.append(f"- {cohort.get('accession', 'unknown')} platform {cohort.get('platform_index', 'NA')}: n={cohort.get('samples_analyzed', cohort.get('samples_total', 'NA'))}, age {cohort.get('age_min_years', 'NA')}-{cohort.get('age_max_years', 'NA')}, candidates detected={cohort.get('candidate_genes_detected', 'NA')}, FDR<0.05={cohort.get('candidate_genes_fdr_lt_0_05', 'NA')}")
           for failure in report.get("failures", []):
               lines.append(f"- Skipped: {failure.get('accession')} — {failure.get('error')}")
           with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as handle:

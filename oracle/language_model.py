@@ -81,7 +81,21 @@ class SelfHostedLanguageModel:
         try:
             with urlopen(request, timeout=self.config.timeout_seconds) as response:
                 result = json.loads(response.read().decode("utf-8"))
-        except (HTTPError, URLError, TimeoutError, OSError, json.JSONDecodeError) as exc:
+        except HTTPError as exc:
+            # Preserve the local server's diagnostic response (e.g. context overflow)
+            # so failed inference can be debugged without exposing credentials.
+            try:
+                body = exc.read().decode("utf-8", errors="replace")[:2000]
+            except OSError:
+                body = ""
+            detail = f"HTTP {exc.code}: {exc.reason}"
+            if body:
+                detail += f"; server response: {body}"
+            raise LanguageModelError(
+                "Self-hosted model request failed; scientific core remains available. "
+                f"Details: {detail}"
+            ) from exc
+        except (URLError, TimeoutError, OSError, json.JSONDecodeError) as exc:
             raise LanguageModelError(
                 "Self-hosted model request failed; scientific core remains available. "
                 f"Details: {exc}"
