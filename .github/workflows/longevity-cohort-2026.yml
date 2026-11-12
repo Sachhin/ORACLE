@@ -2,7 +2,7 @@ name: ORACLE 2026 Chinese longevity cohort acquisition and inventory
 
 concurrency:
   group: oracle-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 on:
   pull_request:
@@ -27,33 +27,64 @@ jobs:
           r-version: "4.4.0"
       - name: Install metadata inspection dependency
         run: Rscript -e 'install.packages("jsonlite", repos="https://cloud.r-project.org")'
-      - name: Download the public 2026 Chinese longevity expression dataset
+      - name: Attempt public archive acquisition and record access status
+        id: acquire
         run: |
           set -euo pipefail
-          mkdir -p data/longevity-2026
-          curl --fail --location --retry 5 --retry-all-errors \
+          mkdir -p data/longevity-2026 artifacts
+          http_code="$(curl --silent --show-error --location --retry 3 --retry-all-errors \
             --connect-timeout 30 --max-time 3600 \
             -H "User-Agent: ORACLE-longevity-research/1.0 (https://github.com/Sachhin/ORACLE)" \
-            "https://api.data.mendeley.com/datasets/fpf4y72kfz/zip/file_downloaded?version=1" \
-            -o data/longevity-2026/source.zip
+            -o data/longevity-2026/source.zip -w "%{http_code}" \
+            "https://api.data.mendeley.com/datasets/fpf4y72kfz/zip/file_downloaded?version=1")"
+          if [ "$http_code" = "401" ] || [ "$http_code" = "403" ]; then
+            HTTP_CODE="$http_code" python - <<'PY'
+          import json, os
+          from pathlib import Path
+          report = {
+              "dataset": "Mendeley Data fpf4y72kfz version 1",
+              "doi": "10.17632/fpf4y72kfz.1",
+              "status": "DEFERRED_AUTH_REQUIRED",
+              "http_status": int(os.environ["HTTP_CODE"]),
+              "reason": "The documented API download redirect requires OAuth2 authorization; GitHub Actions has no Mendeley OAuth credential configured. No dataset bytes were acquired or analyzed.",
+              "release_scope": "Deferred from ORACLE v1.0; no scientific claims may be based on this cohort."
+          }
+          Path("artifacts/longevity-2026-acquisition-status.json").write_text(json.dumps(report, indent=2) + "\n")
+          PY
+            echo "acquired=false" >> "$GITHUB_OUTPUT"
+            {
+              echo "## Chinese longevity cohort"
+              echo "- Status: DEFERRED_AUTH_REQUIRED (HTTP $http_code)"
+              echo "- The Mendeley API download requires OAuth2; this cohort is deferred from v1.0."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          if [ "$http_code" != "200" ]; then
+            echo "Unexpected Mendeley download HTTP status: $http_code" >&2
+            exit 1
+          fi
           test -s data/longevity-2026/source.zip
           sha256sum data/longevity-2026/source.zip | tee data/longevity-2026/source.sha256
           unzip -t data/longevity-2026/source.zip
           mkdir -p data/longevity-2026/extracted
           unzip -q data/longevity-2026/source.zip -d data/longevity-2026/extracted
+          echo "acquired=true" >> "$GITHUB_OUTPUT"
       - name: Inventory R objects and cohort metadata without exposing sample IDs
+        if: steps.acquire.outputs.acquired == 'true'
         run: |
           mkdir -p artifacts
           Rscript scripts/inspect_mendeley_longevity_dataset.R \
             data/longevity-2026/extracted \
             artifacts/longevity-2026-dataset-inventory.json
           cat artifacts/longevity-2026-dataset-inventory.json
-      - name: Upload source hash and inventory
+      - name: Upload source hash, inventory, or explicit deferral status
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: oracle-longevity-cohort-2026-inventory
           path: |
             data/longevity-2026/source.sha256
             artifacts/longevity-2026-dataset-inventory.json
-          if-no-files-found: error
+            artifacts/longevity-2026-acquisition-status.json
+          if-no-files-found: warn
           retention-days: 90
