@@ -122,6 +122,32 @@ jobs:
           cat qwen3-models.json
           grep -q "$MODEL_ALIAS" qwen3-models.json
 
+      - name: Run five-claim Qwen3 output-format preflight
+        run: |
+          python scripts/predict_scifact_open_corpus.py \
+            --claims data/scifact/benchmark-input/claims_dev.jsonl \
+            --corpus data/scifact/benchmark-input/corpus.jsonl \
+            --output data/scifact/qwen3_preflight_predictions.jsonl \
+            --report data/scifact/qwen3_preflight_report.json \
+            --base-url http://127.0.0.1:8000/v1 \
+            --model "$MODEL_ALIAS" \
+            --top-k "$TOP_K" \
+            --max-tokens 384 \
+            --timeout 180 \
+            --max-claims 5 \
+            --max-invalid-responses 0
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report = json.loads(Path("data/scifact/qwen3_preflight_report.json").read_text())
+          run = report.get("prediction_run", {})
+          if report.get("scored_claim_count") != 5 or report.get("prediction_coverage") != 1.0 or run.get("invalid_model_response_count", 0) != 0:
+              errors = Path("data/scifact/qwen3_preflight_predictions.jsonl.errors.jsonl")
+              preview = errors.read_text()[:3000] if errors.exists() else "No error sidecar was produced."
+              raise SystemExit("Qwen3 five-claim preflight failed; full benchmark will not start.\\n" + preview)
+          print("Qwen3 preflight passed: 5/5 valid predictions.")
+          PY
+
       - name: Run full open-corpus inference and score all 300 dev claims
         run: |
           python scripts/predict_scifact_open_corpus.py \
@@ -133,7 +159,8 @@ jobs:
             --model "$MODEL_ALIAS" \
             --top-k "$TOP_K" \
             --max-tokens 384 \
-            --timeout 180
+            --timeout 180 \\
+            --max-invalid-responses 0
 
       - name: Enforce complete prediction coverage and publish score summary
         if: always()
@@ -176,6 +203,9 @@ jobs:
             data/scifact/qwen3_0.6b_open_corpus_dev_predictions.jsonl
             data/scifact/qwen3_0.6b_open_corpus_dev_report.json
             data/scifact/qwen3_0.6b_open_corpus_dev_predictions.jsonl.errors.jsonl
+            data/scifact/qwen3_preflight_predictions.jsonl
+            data/scifact/qwen3_preflight_report.json
+            data/scifact/qwen3_preflight_predictions.jsonl.errors.jsonl
             data/scifact/benchmark-input/claims_dev.jsonl
             data/scifact/benchmark-input/corpus.jsonl
             data/scifact/model_provenance.json
