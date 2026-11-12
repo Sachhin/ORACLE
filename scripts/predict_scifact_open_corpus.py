@@ -194,15 +194,15 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 evidence = {}
             else:
                 messages, allowed = build_prompt(claim, candidates)
+                # llama.cpp CPU server versions do not consistently implement OpenAI response_format.
+                # Request strict JSON in the system prompt and validate it locally instead.
                 raw = ""
                 try:
-                    raw = model.generate(messages, temperature=0.0, response_format={"type": "json_object"})
+                    raw = model.generate(messages, temperature=0.0)
                     evidence = validate_prediction(parse_model_json(raw), allowed)
                 except (LanguageModelError, ValueError) as exc:
-                    # A malformed/empty response is an explicit abstention for this
-                    # claim, not a reason to lose the remaining dev-set predictions.
-                    # Preserve the failure in the sidecar and report; never treat it
-                    # as positive or negative scientific evidence.
+                    # Preserve one output row per claim when local inference fails.
+                    # A transport failure is an abstention, not a scientific prediction.
                     evidence = {}
                     invalid_responses.append({
                         "claim_id": cid,
