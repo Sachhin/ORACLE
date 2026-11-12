@@ -18,7 +18,7 @@ on:
       top_k:
         description: BM25 candidate abstracts per claim
         required: true
-        default: "10"
+        default: "5"
         type: string
   pull_request:
     branches: [main]
@@ -39,7 +39,7 @@ jobs:
     timeout-minutes: 360
     env:
       MODEL_ALIAS: Qwen3-0.6B
-      TOP_K: ${{ github.event_name == 'workflow_dispatch' && inputs.top_k || '10' }}
+      TOP_K: ${{ github.event_name == 'workflow_dispatch' && inputs.top_k || '5' }}
       HF_REPO: Qwen/Qwen3-0.6B-GGUF
       HF_REVISION: 8e42d41f70cb6c571f58c3f31bd9287b372d97cc
       HF_FILE: Qwen3-0.6B-Q4_K_M.gguf
