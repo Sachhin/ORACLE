@@ -159,7 +159,7 @@ jobs:
             --model "$MODEL_ALIAS" \
             --top-k "$TOP_K" \
             --max-tokens 384 \
-            --timeout 180 \\
+            --timeout 180 \
             --max-invalid-responses 0
 
       - name: Enforce complete prediction coverage and publish score summary
