@@ -210,6 +210,12 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                         "raw_response_preview": raw[:1200],
                     })
             prediction = {"id": claim["id"], "evidence": evidence}
+            if len(invalid_responses) > args.max_invalid_responses:
+                print(f"Stopping early: invalid model responses exceeded limit ({args.max_invalid_responses}).", file=sys.stderr)
+                handle.write(json.dumps(prediction, ensure_ascii=False) + "\\n")
+                handle.flush()
+                completed[cid] = prediction
+                break
             if invalid_responses and invalid_responses[-1]["claim_id"] == cid:
                 prediction["inference_error"] = invalid_responses[-1]["error"]
             handle.write(json.dumps(prediction, ensure_ascii=False) + "\n")
@@ -265,11 +271,14 @@ def main() -> None:
     parser.add_argument("--max-tokens", type=int, default=512)
     parser.add_argument("--max-claims", type=int, default=0, help="Optional pilot limit; 0 means all claims")
     parser.add_argument("--resume", action="store_true", help="Resume by skipping claim IDs already in OUTPUT")
+    parser.add_argument("--max-invalid-responses", type=int, default=0, help="Stop after this many invalid model responses; 0 fails fast on the first invalid response")
     args = parser.parse_args()
     if args.top_k < 1:
         parser.error("--top-k must be at least 1")
     if args.max_claims < 0:
         parser.error("--max-claims must be zero or positive")
+    if args.max_invalid_responses < 0:
+        parser.error("--max-invalid-responses must be zero or positive")
     report = run(args)
     print(json.dumps({
         "claim_count": report["claim_count"],
