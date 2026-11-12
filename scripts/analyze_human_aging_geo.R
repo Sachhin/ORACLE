@@ -26,26 +26,56 @@ metadata_text <- function(pd) {
 
 extract_age <- function(txt) {
   vapply(txt, function(value) {
+    # Require a whole-word age field: without the boundary, "percentage"
+    # contains the substring "age" and can make unrelated values look like ages.
+    # Reject impossible values rather than silently treating them as human ages.
     match <- regexec(
-      "(?i)(?:age|years?[ _-]*old|age[ _-]*years?)[^0-9]{0,16}([0-9]{1,3}(?:\\.[0-9]+)?)(?!\\s*[-–]\\s*[0-9])",
+      "(?i)\\b(?:age|years?[ _-]*old|age[ _-]*years?)\\b[^0-9]{0,16}([0-9]{1,3}(?:\\.[0-9]+)?)(?!\\s*[-–]\\s*[0-9])",
       value, perl = TRUE
     )
     parts <- regmatches(value, match)[[1]]
-    if (length(parts) >= 2) as.numeric(parts[[2]]) else NA_real_
+    if (length(parts) >= 2) {
+      age_value <- as.numeric(parts[[2]])
+      if (is.finite(age_value) && age_value >= 0 && age_value <= 120) age_value else NA_real_
+    } else NA_real_
   }, numeric(1))
+}
+
+# Guard against false matches inside unrelated words such as "percentage".
+.age_parser_test <- extract_age(c(
+  "age: 90 ; cf-dna (ug/ml): 1.015",
+  "percentage: 811",
+  "years old: 23"
+))
+if (!identical(.age_parser_test[[1]], 90) ||
+    !is.na(.age_parser_test[[2]]) ||
+    !identical(.age_parser_test[[3]], 23)) {
+  stop("Age metadata parser regression check failed.")
 }
 
 extract_age_group <- function(txt) {
   vapply(txt, function(value) {
     lower <- tolower(value)
-    if (grepl("nonagenarian|centenarian|older adult|elderly|old control", lower)) {
-      "older"
-    } else if (grepl("young control|young adult|younger", lower)) {
+    # A sample can inherit cohort-level text such as "nonagenarian cohort"
+    # while its own title/characteristics say "young control". Specific young
+    # labels must take precedence over broad cohort descriptors.
+    if (grepl("young control|young adult|younger", lower)) {
       "younger"
+    } else if (grepl("nonagenarian|centenarian|older adult|elderly|old control", lower)) {
+      "older"
     } else {
       NA_character_
     }
   }, character(1))
+}
+
+.age_group_parser_test <- extract_age_group(c(
+  "young control; nonagenarian cohort",
+  "nonagenarian age: 92",
+  "young adult age: 25"
+))
+if (!identical(unname(.age_group_parser_test), c("younger", "older", "younger"))) {
+  stop("Age-group metadata parser regression check failed.")
 }
 
 extract_sex <- function(txt) {
@@ -266,8 +296,11 @@ analyse_eset <- function(eset, accession, index) {
     samples_total = nrow(pd),
     samples_analyzed = sum(keep),
     exact_age_samples = sum(is.finite(age)),
-    older_group_samples = sum(age_group[keep] == "older", na.rm = TRUE),
-    younger_group_samples = sum(age_group[keep] == "younger", na.rm = TRUE),
+    # Group counts are not meaningful for continuous-age regression.
+    # Report NA rather than counting cohort descriptors that happen to occur
+    # in sample metadata for those same exact-age samples.
+    older_group_samples = if (use_continuous_age) NA_integer_ else sum(age_group[keep] == "older", na.rm = TRUE),
+    younger_group_samples = if (use_continuous_age) NA_integer_ else sum(age_group[keep] == "younger", na.rm = TRUE),
     age_min_years = if (any(is.finite(age[keep]))) min(age[keep], na.rm = TRUE) else NA_real_,
     age_max_years = if (any(is.finite(age[keep]))) max(age[keep], na.rm = TRUE) else NA_real_,
     gene_symbols_tested = nrow(all_results),

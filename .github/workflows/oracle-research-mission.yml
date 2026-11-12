@@ -1,6 +1,16 @@
 name: ORACLE longevity research mission
 
+concurrency:
+  group: oracle-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/oracle-research-mission.yml"
+      - "oracle/**"
+      - "scripts/analyze_human_aging_geo.R"
   workflow_dispatch:
     inputs:
       question:
@@ -71,6 +81,11 @@ jobs:
     timeout-minutes: 120
     env:
       NASA_ADS_API_TOKEN: ${{ secrets.NASA_ADS_API_TOKEN }}
+      MODEL_ALIAS: Qwen3-0.6B
+      HF_REPO: Qwen/Qwen3-0.6B-GGUF
+      HF_REVISION: 8e42d41f70cb6c571f58c3f31bd9287b372d97cc
+      HF_FILE: Qwen3-0.6B-Q4_K_M.gguf
+      MODEL_SHA256: b0638f08417a2d3c8652760462eb5407c6e30173cf9608ad0820757a281eea0e
       QUESTION: ${{ github.event_name == 'workflow_dispatch' && inputs.question || 'Can we identify previously unknown biological mechanisms involved in human longevity?' }}
       MODE: ${{ github.event_name == 'workflow_dispatch' && inputs.mode || 'both' }}
       DOMAIN: ${{ github.event_name == 'workflow_dispatch' && inputs.domain || 'biology_medicine' }}
@@ -83,6 +98,48 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: pip
+      - name: Install ORACLE and CPU llama.cpp server
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install --only-binary=:all: --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu llama-cpp-python[server]==0.3.36
+          pip install --upgrade huggingface_hub
+      - name: Download and verify pinned local Qwen3 model
+        run: |
+          mkdir -p models/qwen3 data
+          hf download "$HF_REPO" "$HF_FILE" --revision "$HF_REVISION" --local-dir models/qwen3
+          echo "$MODEL_SHA256  models/qwen3/$HF_FILE" | sha256sum --check -
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          Path("data/local-model-provenance.json").write_text(json.dumps({
+              "model_repository": os.environ["HF_REPO"],
+              "model_revision": os.environ["HF_REVISION"],
+              "model_file": os.environ["HF_FILE"],
+              "model_sha256": os.environ["MODEL_SHA256"],
+              "runtime": "llama-cpp-python CPU server",
+              "runtime_version": "0.3.36",
+              "api_key_required": False
+          }, indent=2) + "\n")
+          PY
+      - name: Start local Qwen3 server for the research agents
+        run: |
+          nohup python -m llama_cpp.server \
+            --model "models/qwen3/$HF_FILE" \
+            --model_alias "$MODEL_ALIAS" \
+            --host 127.0.0.1 --port 8000 \
+            --n_ctx 8192 --n_threads 2 --n_batch 256 \
+            > qwen3-mission-server.log 2>&1 &
+          echo $! > qwen3-mission-server.pid
+          for attempt in $(seq 1 120); do
+            if curl --silent --fail http://127.0.0.1:8000/v1/models > qwen3-mission-models.json; then
+              break
+            fi
+            sleep 5
+          done
+          test -s qwen3-mission-models.json
+          grep -q "$MODEL_ALIAS" qwen3-mission-models.json
       - name: Run full ORACLE literature and discovery mission
         shell: bash
         run: |
@@ -102,8 +159,18 @@ jobs:
             --dataset-max-mb "$DATASET_MAX_MB" \
             --limit "$LIMIT" \
             --provider "$PROVIDER" \
+            --local-model-url http://127.0.0.1:8000/v1 \
+            --local-model-name "$MODEL_ALIAS" \
+            --local-model-max-tokens 1024 \
+            --local-model-timeout 180 \
             --db data/oracle.sqlite3 \
             --json > artifacts/oracle_research_run.json
+      - name: Analyze public centenarian miRNA cohort
+        run: |
+          python scripts/analyze_gse32493_centenarian_mirna.py \
+            --download \
+            --data-dir data/gse32493 \
+            --output artifacts/gse32493-centenarian-mirna-report.json
       - name: Summarize research run
         if: always()
         run: |
@@ -148,5 +215,8 @@ jobs:
             artifacts/
             data/oracle.sqlite3
             data/geo/
+            data/local-model-provenance.json
+            qwen3-mission-server.log
+            qwen3-mission-models.json
           if-no-files-found: warn
           retention-days: 90
