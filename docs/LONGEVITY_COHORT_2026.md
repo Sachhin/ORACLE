@@ -14,10 +14,21 @@ Original centenarian transcriptome study: https://pubmed.ncbi.nlm.nih.gov/303528
 
 ## ORACLE acquisition workflow
 
-`.github/workflows/longevity-cohort-2026.yml` downloads the public versioned
-Mendeley archive through its documented public ZIP redirect, hashes the
-archive, validates the ZIP, and inventories RData objects and phenotype
-metadata. The inventory deliberately omits individual sample identifiers.
+`.github/workflows/longevity-cohort-2026.yml` attempts the documented
+Mendeley ZIP redirect and records the archive hash before inventorying RData
+objects and phenotype metadata. The inventory deliberately omits individual
+sample identifiers.
+
+**v1.0 scope decision (2026-11-12): deferred.** The previous GitHub Actions
+attempt received HTTP 401 from the API download redirect. Mendeley's current
+API documentation marks this redirect as OAuth2-authorized. No Mendeley OAuth
+credential is configured in this repository, so the workflow now records an
+explicit `DEFERRED_AUTH_REQUIRED` artifact for HTTP 401/403 rather than
+repeatedly failing CI or pretending the cohort was analyzed. The public
+landing page remains available, but API archive acquisition has not been
+verified from the CI runner. Do not use this cohort for v1.0 biological
+conclusions until a compliant acquisition route is established and the source
+archive hash/schema are recorded.
 
 This first workflow is a data-acquisition and schema-validation stage only.
 It does not claim differential expression, pathway enrichment, a new
