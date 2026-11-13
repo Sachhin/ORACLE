@@ -330,6 +330,8 @@ class GEOExpressionAnalyzer:
         for dataset_file in list(run.dataset_files):
             if dataset_file.status != "downloaded" or not dataset_file.local_path:
                 continue
+            if dataset_file.filename.lower().endswith((".tar", ".tar.gz", ".tgz", ".zip")):
+                continue
             if any(item.file_id == dataset_file.file_id for item in run.dataset_analyses):
                 continue
             report.files_examined += 1
