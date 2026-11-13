@@ -38,6 +38,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             libcurl4-openssl-dev libssl-dev libxml2-dev libhdf5-dev \
             libbz2-dev liblzma-dev libz-dev
+      # Keep the annotation-only lumi package optional; GEOquery/limma are the analysis requirements.
       - name: Install GEOquery and limma
         run: |
           Rscript -e 'if (!requireNamespace("BiocManager", quietly=TRUE)) install.packages("BiocManager"); BiocManager::install(c("GEOquery","limma"), ask=FALSE, update=FALSE, Ncpus=2)'
