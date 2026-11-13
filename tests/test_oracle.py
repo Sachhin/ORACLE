@@ -124,12 +124,13 @@ class OracleTests(unittest.TestCase):
         kb = KnowledgeBase()
         hypothesis = Hypothesis("Pathway X influences longevity", "Provisional")
         kb.add_hypothesis(run, hypothesis)
-        source_a = kb.add_source(run, __import__(
-            "oracle.models", fromlist=["SourceRecord"]
-        ).SourceRecord(title="Study supporting X", source_id="audit-source-a"))
-        source_b = kb.add_source(run, __import__(
-            "oracle.models", fromlist=["SourceRecord"]
-        ).SourceRecord(title="Study challenging X", source_id="audit-source-b"))
+        from oracle.models import SourceRecord
+        source_a = kb.add_source(run, SourceRecord(
+            title="Study supporting X", source_id="audit-source-a"
+        ))
+        source_b = kb.add_source(run, SourceRecord(
+            title="Study challenging X", source_id="audit-source-b"
+        ))
         support = Evidence(
             "Study reports a positive association.", source_a.title,
             EvidenceKind.SOURCE, source_id=source_a.source_id,
