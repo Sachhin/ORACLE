@@ -22,7 +22,7 @@ class DashboardTests(unittest.TestCase):
         self.assertNotIn("--gemini-model", source)
         self.assertIn('literature_provider = "auto"', source)
         self.assertIn('"--provider", literature_provider', source)
-        self.assertIn("No model API key or paid AI API is used", PAGE)
+        self.assertIn("Without a configured model, ORACLE uses deterministic agents only", PAGE)
         self.assertIn('command.append("--discover-geo-files")', source)
         self.assertIn('command.append("--analyze-geo-files")', source)
 
