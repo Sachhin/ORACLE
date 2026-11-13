@@ -871,6 +871,57 @@ class OracleTests(unittest.TestCase):
             self.assertEqual(loaded.dataset_analyses[0].sha256, checksum)
             self.assertEqual(loaded.dataset_analyses[0].evidence_id, analysis.evidence_id)
 
+    def test_geo_analyzer_extracts_supported_matrices_from_tar_archives(self):
+        import gzip
+        import hashlib
+        import io
+        import tarfile
+        from oracle.geo_analysis import GEOExpressionAnalyzer
+        from oracle.models import DatasetFileRecord, SourceRecord
+
+        run = ResearchRun("GEO archive matrix parsing")
+        source = SourceRecord(
+            title="GEO archive study", source_id="geo-archive-source",
+            dataset_accession="GSE654321",
+        )
+        run.sources.append(source)
+        matrix = (
+            "!series_matrix_table_begin\n"
+            "ID_REF\tGSM_A\tGSM_B\n"
+            "gene_1\t1.0\t2.0\n"
+            "gene_2\t3.0\tNA\n"
+            "!series_matrix_table_end\n"
+        ).encode()
+        compressed = gzip.compress(matrix)
+        with tempfile.TemporaryDirectory() as directory:
+            archive_path = Path(directory) / "GSE654321_supplementary.tar"
+            with tarfile.open(archive_path, "w") as archive:
+                info = tarfile.TarInfo("nested/GSE654321_series_matrix.txt.gz")
+                info.size = len(compressed)
+                archive.addfile(info, io.BytesIO(compressed))
+                ignored = b"not a matrix"
+                info = tarfile.TarInfo("GSM999999.CEL")
+                info.size = len(ignored)
+                archive.addfile(info, io.BytesIO(ignored))
+            checksum = hashlib.sha256(archive_path.read_bytes()).hexdigest()
+            run.dataset_files.append(DatasetFileRecord(
+                accession="GSE654321", source_id=source.source_id,
+                filename=archive_path.name,
+                url="https://ftp.ncbi.nlm.nih.gov/geo/series/GSE654nnn/GSE654321/suppl/archive.tar",
+                status="downloaded", local_path=str(archive_path), sha256=checksum,
+            ))
+
+            report = GEOExpressionAnalyzer().analyze(run)
+
+            self.assertEqual(report.files_analyzed, 1)
+            self.assertEqual(report.files_skipped, 0)
+            self.assertEqual(len(run.dataset_analyses), 1)
+            self.assertEqual(run.dataset_analyses[0].sample_count, 2)
+            self.assertEqual(run.dataset_analyses[0].feature_rows, 2)
+            child = next(item for item in run.dataset_files if item.category == "archive_member")
+            self.assertTrue(child.sha256)
+            self.assertTrue(Path(child.local_path).is_file())
+
     def test_geo_matrix_parser_rejects_checksum_mismatch_and_unsupported_files(self):
         from oracle.geo_analysis import GEOExpressionAnalyzer
         from oracle.models import DatasetFileRecord, SourceRecord
