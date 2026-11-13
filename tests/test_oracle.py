@@ -173,7 +173,7 @@ class OracleTests(unittest.TestCase):
         assessment = kb.assess_hypothesis(run, hypothesis.hypothesis_id)
         self.assertEqual(assessment.evidence_count, 0)
         self.assertIsNone(assessment.confidence_estimate)
-        self.assertIn("does not imply", assessment.rationale)
+        self.assertIn("do not imply", assessment.rationale)
         self.assertIn("provisional", assessment.rationale)
 
     def test_completed_run_contains_per_hypothesis_quality_audit(self):
