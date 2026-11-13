@@ -12,10 +12,12 @@ import hashlib
 import io
 import math
 import shlex
+import tarfile
+import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .models import DatasetAnalysisRecord, Evidence, EvidenceKind, ResearchRun
+from .models import DatasetAnalysisRecord, DatasetFileRecord, Evidence, EvidenceKind, ResearchRun
 
 
 @dataclass
@@ -211,10 +213,121 @@ class GEOExpressionAnalyzer:
                 float(global_stats.mean), float(global_stats.minimum),
                 float(global_stats.maximum))
 
+    def _extract_matrix_archive(self, archive_path: Path, output_dir: Path) -> list[dict]:
+        """Extract only supported matrix-like regular files from TAR/ZIP archives."""
+        extracted: list[dict] = []
+        seen: set[str] = set()
+        total = 0
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        def store(name: str, size: int, stream) -> None:
+            nonlocal total
+            parts = Path(name).parts
+            filename = parts[-1] if parts else ""
+            if (not filename or Path(name).is_absolute()
+                    or any(part in {"..", ""} for part in parts)
+                    or "\\" in name or not self._supported(filename)):
+                return
+            if filename in seen:
+                raise ValueError(f"Archive contains duplicate matrix filename: {filename}")
+            if size < 0 or size > self.max_uncompressed_bytes:
+                return
+            if total + size > self.max_uncompressed_bytes * 5:
+                raise ValueError("Archive matrix extraction exceeds the total uncompressed byte limit.")
+            seen.add(filename)
+            destination = output_dir / filename
+            temporary = destination.with_name(destination.name + ".part")
+            copied = 0
+            digest = hashlib.sha256()
+            try:
+                with temporary.open("wb") as output:
+                    while True:
+                        chunk = stream.read(1024 * 1024)
+                        if not chunk:
+                            break
+                        copied += len(chunk)
+                        if copied > size or copied > self.max_uncompressed_bytes:
+                            raise ValueError(f"Archive member exceeded its declared or configured size: {filename}")
+                        digest.update(chunk)
+                        output.write(chunk)
+                if copied != size:
+                    raise ValueError(f"Archive member size mismatch: {filename}")
+                temporary.replace(destination)
+            except Exception:
+                temporary.unlink(missing_ok=True)
+                raise
+            total += copied
+            extracted.append({
+                "filename": filename, "local_path": str(destination),
+                "size_bytes": copied, "sha256": digest.hexdigest(),
+            })
+
+        if tarfile.is_tarfile(archive_path):
+            with tarfile.open(archive_path, mode="r:*") as archive:
+                members = archive.getmembers()
+                if len(members) > 5000:
+                    raise ValueError("Archive contains more than 5000 members.")
+                for member in members:
+                    if not member.isfile():
+                        continue
+                    stream = archive.extractfile(member)
+                    if stream is not None:
+                        with stream:
+                            store(member.name, member.size, stream)
+        elif zipfile.is_zipfile(archive_path):
+            with zipfile.ZipFile(archive_path) as archive:
+                members = archive.infolist()
+                if len(members) > 5000:
+                    raise ValueError("Archive contains more than 5000 members.")
+                for member in members:
+                    if member.is_dir():
+                        continue
+                    with archive.open(member, "r") as stream:
+                        store(member.filename, member.file_size, stream)
+        else:
+            raise ValueError("Downloaded archive is not a valid TAR or ZIP file.")
+        return extracted
+
     def analyze(self, run: ResearchRun) -> GEOAnalysisReport:
         report = GEOAnalysisReport()
         sources = {item.source_id: item for item in run.sources}
-        for dataset_file in run.dataset_files:
+        # Expand supported text matrices from bounded TAR/ZIP supplementary files.
+        for archive_record in list(run.dataset_files):
+            if archive_record.status != "downloaded" or not archive_record.local_path:
+                continue
+            if not archive_record.filename.lower().endswith((".tar", ".tar.gz", ".tgz", ".zip")):
+                continue
+            if any(item.category == "archive_member" and item.source_id == archive_record.source_id
+                   and item.url.startswith(archive_record.url + "#member=")
+                   for item in run.dataset_files):
+                continue
+            archive_path = Path(archive_record.local_path)
+            try:
+                if not archive_path.is_file():
+                    raise ValueError("Downloaded archive is missing.")
+                actual_hash = self._sha256(archive_path)
+                if archive_record.sha256 and actual_hash.lower() != archive_record.sha256.lower():
+                    raise ValueError("Archive SHA-256 checksum does not match its download record.")
+                members = self._extract_matrix_archive(
+                    archive_path, archive_path.parent / (archive_path.name + "_matrices")
+                )
+                for member in members:
+                    run.dataset_files.append(DatasetFileRecord(
+                        accession=archive_record.accession,
+                        source_id=archive_record.source_id,
+                        filename=member["filename"],
+                        url=archive_record.url + "#member=" + member["filename"],
+                        category="archive_member", status="downloaded",
+                        local_path=member["local_path"], size_bytes=member["size_bytes"],
+                        sha256=member["sha256"],
+                    ))
+                if not members:
+                    report.warnings.append(
+                        f"{archive_record.filename}: archive contained no supported text matrix members."
+                    )
+            except Exception as exc:
+                report.warnings.append(f"{archive_record.filename}: archive expansion failed: {exc}")
+        for dataset_file in list(run.dataset_files):
             if dataset_file.status != "downloaded" or not dataset_file.local_path:
                 continue
             if any(item.file_id == dataset_file.file_id for item in run.dataset_analyses):
