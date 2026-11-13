@@ -8,7 +8,10 @@ class DashboardTests(unittest.TestCase):
     def test_page_exposes_research_controls_and_history(self):
         for expected in (
             "Start a research mission", "Research question", "Deep research",
-            "Autonomous discovery", "Research history", "No model API key or paid AI API is used", "Discover GEO supplementary files", "Download and analyze supported GEO matrices", "/api/run", "/api/runs",
+            "Autonomous discovery", "Research history", "No hosted AI model is called",
+            "Quick answer · 1 cycle · 5 records", "Balanced · 3 cycles · 15 records",
+            "Deep research · 5 cycles · 30 records", "function applySpeed()",
+            "Discover GEO supplementary files", "Download and analyze supported GEO matrices", "/api/run", "/api/runs",
         ):
             with self.subTest(expected=expected):
                 self.assertIn(expected, PAGE)
