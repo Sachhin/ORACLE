@@ -101,3 +101,47 @@ The release report must keep these statuses separate:
 
 A green CI run only supports the first or second category for the workflow
 that actually ran. It does not imply categories three or four.
+
+
+### CRA000515 acquisition/provenance update (2026-11-14)
+
+A targeted check of the current CNCB-NGDC public GSA pages found that CRA000515
+is browseable at run level. For example, GSA run CRR022098 is associated with
+BioSample SAMC016783 (alias CHHA67), library CRX019999, paired-end RNA-seq on
+Illumina HiSeq 4000, and exposes an HTTPS BAM download URL. The displayed BAM
+size is 5,420.55 MB. A second example, CRR022179, exposes the same class of
+run/BioSample/library metadata and a 5,144.74 MB BAM. The BioSample page for
+SAMC016790 exposes submitter, tissue, sex, project and related-sample fields;
+its age attribute is blank in the returned public record. These examples prove
+that public run-level acquisition and metadata inspection are possible for at
+least some records; they do not constitute a complete cohort manifest.
+
+Reproducible acquisition must therefore be staged, not treated as one small
+GEO-style matrix download:
+1. Enumerate every run under CRA000515 from the GSA project/run listing and
+   freeze the complete run-to-experiment-to-BioSample table.
+2. Save the raw metadata response/page for each run and BioSample, recording
+   retrieval time, source URL, HTTP status and SHA-256.
+3. Validate expected sample count and cohort labels against the Xiao et al.
+   study design (76 centenarians, 54 offspring, 41 offspring spouses); do not
+   infer age/group from alias strings such as CHHA67.
+4. Check library strategy/layout, reference genome, BAM integrity and whether
+   all samples are comparable. Resolve any missing ages, duplicated people,
+   technical replicates and group inconsistencies from source records.
+5. Only after a complete manifest passes those checks, acquire all required
+   BAMs (multi-GB each), quantify consistently against a pinned hg19-compatible
+   annotation/reference, and freeze the count matrix plus checksums.
+
+The currently verified example URLs are:
+- https://ngdc.cncb.ac.cn/gsa/browse/CRA000515/CRR022098
+- https://download.cncb.ac.cn/gsa3/CRA000515/CRR022098/CRR022098.bam
+- https://ngdc.cncb.ac.cn/gsa/browse/CRA000515/CRR022179
+- https://ngdc.cncb.ac.cn/biosample/browse/SAMC016790
+
+**Current status remains BLOCKED for a reproducible cohort-level reanalysis:**
+the examples above are not a complete enumerated manifest, no full cohort
+download or integrity audit has been run, and the available sample page
+example has no age value. This update narrows the blocker from "no acquisition
+route known" to "cohort-wide enumeration, metadata validation and large-file
+acquisition not yet executed". GSE58137/GSE65219 remain age-association checks,
+not direct centenarian replication.
