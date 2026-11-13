@@ -163,6 +163,42 @@ def retrieval_diagnostics(claims: list[dict[str, Any]], retrieved: dict[str, lis
     }
 
 
+def generate_validated_prediction(model: SelfHostedLanguageModel,
+                                 messages: list[dict[str, str]],
+                                 allowed: dict[str, int], *,
+                                 max_attempts: int = 3) -> tuple[dict[str, dict[str, Any]], int, str]:
+    """Retry malformed local-model output without weakening evidence validation.
+
+    Returns validated evidence, the number of failed attempts, and the final raw
+    response. Transport/server failures are retried too; after the bounded retry
+    budget, the caller records an abstention rather than fabricating evidence.
+    """
+    if max_attempts < 1:
+        raise ValueError("max_attempts must be at least 1")
+    last_error: Exception | None = None
+    raw = ""
+    for attempt in range(1, max_attempts + 1):
+        attempt_messages = messages
+        if attempt > 1:
+            attempt_messages = [*messages, {
+                "role": "user",
+                "content": (
+                    "Your previous response did not pass strict JSON/schema validation. "
+                    "Try again. Return only one JSON object with an evidence array. "
+                    "Use only supplied candidate document IDs and valid zero-based sentence indices. "
+                    "If uncertain, abstain with {\\"evidence\\":[]}."
+                ),
+            }]
+        try:
+            raw = model.generate(attempt_messages, temperature=0.0)
+            return validate_prediction(parse_model_json(raw), allowed), attempt - 1, raw
+        except (LanguageModelError, ValueError, TypeError) as exc:
+            last_error = exc
+            print(f"Model output attempt {attempt}/{max_attempts} rejected: {type(exc).__name__}: {exc}", file=sys.stderr)
+    assert last_error is not None
+    raise ValueError(f"model output remained invalid after {max_attempts} attempts: {last_error}") from last_error
+
+
 def run(args: argparse.Namespace) -> dict[str, Any]:
     claims = _jsonl(args.claims)
     corpus_rows = _jsonl(args.corpus)
@@ -184,6 +220,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     ))
     retrieved: dict[str, list[str]] = {}
     invalid_responses: list[dict[str, Any]] = []
+    model_retry_count = 0
     with output.open("a" if args.resume else "w", encoding="utf-8") as handle:
         for position, claim in enumerate(selected, 1):
             cid = str(claim.get("id"))
@@ -201,11 +238,13 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 # Request strict JSON in the system prompt and validate it locally instead.
                 raw = ""
                 try:
-                    raw = model.generate(messages, temperature=0.0)
-                    evidence = validate_prediction(parse_model_json(raw), allowed)
-                except (LanguageModelError, ValueError) as exc:
-                    # Preserve one output row per claim when local inference fails.
-                    # A transport failure is an abstention, not a scientific prediction.
+                    evidence, retries_used, raw = generate_validated_prediction(
+                        model, messages, allowed, max_attempts=args.max_model_attempts
+                    )
+                    model_retry_count += retries_used
+                except (LanguageModelError, ValueError, TypeError) as exc:
+                    # Preserve one output row per claim when bounded recovery fails.
+                    # Abstention is explicit and never counted as a valid prediction.
                     evidence = {}
                     invalid_responses.append({
                         "claim_id": cid,
@@ -254,6 +293,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "predictions_sha256": sha256(output),
         "gold_evidence_exposed_to_model": False,
         "invalid_model_response_count": len(invalid_responses),
+        "model_retry_count": model_retry_count,
+        "max_model_attempts": args.max_model_attempts,
         "invalid_model_responses_path": str(errors_path),
         "invalid_model_responses_sha256": sha256(errors_path),
     }
@@ -276,6 +317,7 @@ def main() -> None:
     parser.add_argument("--max-claims", type=int, default=0, help="Optional pilot limit; 0 means all claims")
     parser.add_argument("--resume", action="store_true", help="Resume by skipping claim IDs already in OUTPUT")
     parser.add_argument("--max-invalid-responses", type=int, default=0, help="Stop after this many invalid model responses; 0 fails fast on the first invalid response")
+    parser.add_argument("--max-model-attempts", type=int, default=3, help="Bounded inference attempts per claim, including the first attempt")
     args = parser.parse_args()
     if args.top_k < 1:
         parser.error("--top-k must be at least 1")
@@ -283,6 +325,8 @@ def main() -> None:
         parser.error("--max-claims must be zero or positive")
     if args.max_invalid_responses < 0:
         parser.error("--max-invalid-responses must be zero or positive")
+    if args.max_model_attempts < 1 or args.max_model_attempts > 5:
+        parser.error("--max-model-attempts must be between 1 and 5")
     report = run(args)
     print(json.dumps({
         "claim_count": report["claim_count"],
