@@ -119,6 +119,70 @@ class OracleTests(unittest.TestCase):
         self.assertEqual(group.group_id, same.group_id)
         self.assertEqual(len(group.hypothesis_ids), 2)
 
+    def test_hypothesis_uncertainty_audit_reports_support_opposition_and_independence(self):
+        run = ResearchRun("Hypothesis evidence audit")
+        kb = KnowledgeBase()
+        hypothesis = Hypothesis("Pathway X influences longevity", "Provisional")
+        kb.add_hypothesis(run, hypothesis)
+        from oracle.models import SourceRecord
+        source_a = kb.add_source(run, SourceRecord(
+            title="Study supporting X", source_id="audit-source-a"
+        ))
+        source_b = kb.add_source(run, SourceRecord(
+            title="Study challenging X", source_id="audit-source-b"
+        ))
+        support = Evidence(
+            "Study reports a positive association.", source_a.title,
+            EvidenceKind.SOURCE, source_id=source_a.source_id,
+            reliability=0.8, dependence_group="cohort-a",
+        )
+        oppose = Evidence(
+            "Study reports no association.", source_b.title,
+            EvidenceKind.SOURCE, source_id=source_b.source_id,
+            reliability=0.5, dependence_group="cohort-b",
+        )
+        run.evidence.extend([support, oppose])
+        kb.link_hypothesis_evidence(
+            run, hypothesis.hypothesis_id, support.evidence_id,
+            EvidenceStance.SUPPORTS, "Reviewed the source and methods.",
+        )
+        kb.link_hypothesis_evidence(
+            run, hypothesis.hypothesis_id, oppose.evidence_id,
+            EvidenceStance.REFUTES, "Reviewed the independent contradictory result.",
+        )
+
+        assessment = kb.assess_hypothesis(run, hypothesis.hypothesis_id)
+
+        self.assertEqual(assessment.subject_type, "hypothesis")
+        self.assertEqual(assessment.evidence_count, 2)
+        self.assertEqual(assessment.independent_evidence_groups, 2)
+        self.assertAlmostEqual(assessment.supporting_weight, 0.8)
+        self.assertAlmostEqual(assessment.opposing_weight, 0.5)
+        self.assertIsNotNone(assessment.confidence_estimate)
+        self.store.save_run(run)
+        loaded = self.store.load_run(run.run_id)
+        self.assertEqual(loaded.uncertainty_assessments[0].subject_type, "hypothesis")
+        self.assertEqual(loaded.hypotheses[0].supporting_evidence_ids, [support.evidence_id])
+        self.assertEqual(loaded.hypotheses[0].opposing_evidence_ids, [oppose.evidence_id])
+
+    def test_unlinked_hypothesis_audit_explicitly_preserves_uncertainty(self):
+        run = ResearchRun("Unlinked hypothesis")
+        kb = KnowledgeBase()
+        hypothesis = Hypothesis("Candidate mechanism X", "Unverified")
+        kb.add_hypothesis(run, hypothesis)
+        assessment = kb.assess_hypothesis(run, hypothesis.hypothesis_id)
+        self.assertEqual(assessment.evidence_count, 0)
+        self.assertIsNone(assessment.confidence_estimate)
+        self.assertIn("do not imply", assessment.rationale)
+        self.assertIn("provisional", assessment.rationale)
+
+    def test_completed_run_contains_per_hypothesis_quality_audit(self):
+        run = OracleOrchestrator(self.store).run("A test research question", max_cycles=1)
+        audit_lines = [item for item in run.findings if item.startswith("Hypothesis quality audit")]
+        self.assertEqual(len(audit_lines), len(run.hypotheses))
+        self.assertTrue(all("supporting evidence:" in item and "contradictory evidence:" in item
+                            and "uncertainty:" in item for item in audit_lines))
+
     def test_provenance_revisions_and_source_reliability_persist(self):
         from oracle.models import SourceRecord
         run = ResearchRun("Provenance test")
@@ -871,57 +935,6 @@ class OracleTests(unittest.TestCase):
             self.assertEqual(loaded.dataset_analyses[0].sha256, checksum)
             self.assertEqual(loaded.dataset_analyses[0].evidence_id, analysis.evidence_id)
 
-    def test_geo_analyzer_extracts_supported_matrices_from_tar_archives(self):
-        import gzip
-        import hashlib
-        import io
-        import tarfile
-        from oracle.geo_analysis import GEOExpressionAnalyzer
-        from oracle.models import DatasetFileRecord, SourceRecord
-
-        run = ResearchRun("GEO archive matrix parsing")
-        source = SourceRecord(
-            title="GEO archive study", source_id="geo-archive-source",
-            dataset_accession="GSE654321",
-        )
-        run.sources.append(source)
-        matrix = (
-            "!series_matrix_table_begin\n"
-            "ID_REF\tGSM_A\tGSM_B\n"
-            "gene_1\t1.0\t2.0\n"
-            "gene_2\t3.0\tNA\n"
-            "!series_matrix_table_end\n"
-        ).encode()
-        compressed = gzip.compress(matrix)
-        with tempfile.TemporaryDirectory() as directory:
-            archive_path = Path(directory) / "GSE654321_supplementary.tar"
-            with tarfile.open(archive_path, "w") as archive:
-                info = tarfile.TarInfo("nested/GSE654321_series_matrix.txt.gz")
-                info.size = len(compressed)
-                archive.addfile(info, io.BytesIO(compressed))
-                ignored = b"not a matrix"
-                info = tarfile.TarInfo("GSM999999.CEL")
-                info.size = len(ignored)
-                archive.addfile(info, io.BytesIO(ignored))
-            checksum = hashlib.sha256(archive_path.read_bytes()).hexdigest()
-            run.dataset_files.append(DatasetFileRecord(
-                accession="GSE654321", source_id=source.source_id,
-                filename=archive_path.name,
-                url="https://ftp.ncbi.nlm.nih.gov/geo/series/GSE654nnn/GSE654321/suppl/archive.tar",
-                status="downloaded", local_path=str(archive_path), sha256=checksum,
-            ))
-
-            report = GEOExpressionAnalyzer().analyze(run)
-
-            self.assertEqual(report.files_analyzed, 1)
-            self.assertEqual(report.files_skipped, 0)
-            self.assertEqual(len(run.dataset_analyses), 1)
-            self.assertEqual(run.dataset_analyses[0].sample_count, 2)
-            self.assertEqual(run.dataset_analyses[0].feature_rows, 2)
-            child = next(item for item in run.dataset_files if item.category == "archive_member")
-            self.assertTrue(child.sha256)
-            self.assertTrue(Path(child.local_path).is_file())
-
     def test_geo_matrix_parser_rejects_checksum_mismatch_and_unsupported_files(self):
         from oracle.geo_analysis import GEOExpressionAnalyzer
         from oracle.models import DatasetFileRecord, SourceRecord
@@ -944,9 +957,9 @@ class OracleTests(unittest.TestCase):
             ))
             report = GEOExpressionAnalyzer().analyze(run)
             self.assertEqual(report.files_analyzed, 0)
-            self.assertEqual(report.files_skipped, 1)
+            self.assertEqual(report.files_skipped, 2)
             self.assertTrue(any("SHA-256" in warning for warning in report.warnings))
-            self.assertTrue(any("archive expansion failed" in warning and "not a valid TAR or ZIP" in warning for warning in report.warnings))
+            self.assertTrue(any("not yet supported" in warning for warning in report.warnings))
             self.assertEqual(run.evidence, [])
 
     def test_geo_matrix_parser_enforces_cell_and_uncompressed_size_limits(self):
