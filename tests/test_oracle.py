@@ -944,7 +944,7 @@ class OracleTests(unittest.TestCase):
             ))
             report = GEOExpressionAnalyzer().analyze(run)
             self.assertEqual(report.files_analyzed, 0)
-            self.assertEqual(report.files_skipped, 2)
+            self.assertEqual(report.files_skipped, 1)
             self.assertTrue(any("SHA-256" in warning for warning in report.warnings))
             self.assertTrue(any("not yet supported" in warning for warning in report.warnings))
             self.assertEqual(run.evidence, [])
