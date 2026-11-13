@@ -17,8 +17,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-import requests
-from openpyxl import load_workbook
 
 BASE = "https://ngdc.cncb.ac.cn/gsa"
 RUN_URL = f"{BASE}/search/getRunInfoByCra"
@@ -77,7 +75,7 @@ def _read_csv(payload: bytes) -> tuple[list[str], list[dict[str, str]]]:
 
 
 def _read_workbook(payload: bytes) -> dict[str, tuple[list[str], list[dict[str, Any]]]]:
-    wb = load_workbook(io.BytesIO(payload), read_only=True, data_only=True)
+    from openpyxl import load_workbook\n    wb = load_workbook(io.BytesIO(payload), read_only=True, data_only=True)
     result: dict[str, tuple[list[str], list[dict[str, Any]]]] = {}
     try:
         for ws in wb.worksheets:
@@ -114,13 +112,13 @@ def acquire_metadata(
     accession: str = "CRA000515",
     output_dir: str | Path = "artifacts/cra000515",
     *,
-    session: requests.Session | None = None,
+    session: Any = None,
 ) -> dict[str, Any]:
     if not re.fullmatch(r"CRA\d{6}", accession):
         raise ValueError("Only a CRA accession such as CRA000515 is accepted.")
     out = Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)
-    client = session or requests.Session()
+    if session is None:\n        import requests\n        session = requests.Session()\n    client = session
     headers = {"User-Agent": USER_AGENT, "Accept": "*/*"}
 
     run_payload = _request(
