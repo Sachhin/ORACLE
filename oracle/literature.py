@@ -426,6 +426,43 @@ class LiteratureClient:
                     "license": "Sequence record and submitter-specific terms apply",
                     "citation_count": None, "dataset": True, "dataset_accession": accession,
                 })
+        if database == "pubmed" and records:
+            # ESummary contains citation metadata but not article abstracts. Fetch
+            # abstracts in one bounded EFetch request so PMID-backed records can
+            # become usable evidence without relying only on Europe PMC enrichment.
+            try:
+                fetch_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?" + urlencode({
+                    "db": "pubmed", "id": ",".join(
+                        item["pmid"] for item in records if item.get("pmid")
+                    ), "retmode": "xml", "tool": "ORACLE",
+                    "email": self.mailto or "",
+                })
+                request = Request(fetch_url, headers={
+                    "Accept": "application/xml",
+                    "User-Agent": "ORACLE-Scientific-Literature/2.0",
+                })
+                with urlopen(request, timeout=self.timeout) as response:
+                    xml_payload = response.read(8_000_000)
+                root = ET.fromstring(xml_payload)
+                abstracts = {}
+                for article in root.findall(".//PubmedArticle"):
+                    pmid_node = article.find(".//PMID")
+                    pmid = (pmid_node.text or "").strip() if pmid_node is not None else ""
+                    parts = []
+                    for node in article.findall(".//Abstract/AbstractText"):
+                        text = "".join(node.itertext()).strip()
+                        if text:
+                            label = str(node.attrib.get("Label") or "").strip()
+                            parts.append((label + ": " if label else "") + text)
+                    if pmid and parts:
+                        abstracts[pmid] = self._clean(" ".join(parts))
+                for record in records:
+                    if record.get("pmid") in abstracts:
+                        record["abstract"] = abstracts[record["pmid"]]
+            except (HTTPError, URLError, TimeoutError, ET.ParseError, OSError, ValueError):
+                # Preserve citation metadata if the separate abstract endpoint is
+                # unavailable; downstream reporting still marks the abstract absent.
+                pass
         return records
 
 
