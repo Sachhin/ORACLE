@@ -124,7 +124,10 @@ def build_prompt(claim: dict[str, Any], candidates: list[dict[str, Any]]) -> tup
         "zero-based indices. Never invent IDs or indices. If no candidate provides direct evidence, "
         'return {"evidence":[]}. Do not include confidence, prose, markdown, or extra fields.'
     )
-    user = json.dumps({
+    # Qwen3 supports an explicit /no_think control token in the user turn.
+    # Putting it here as well as in the system prompt prevents the small GGUF
+    # model from spending its short completion budget on an unclosed <think> block.
+    user = "/no_think\n" + json.dumps({
         "claim_id": claim.get("id"),
         "claim": claim.get("claim", ""),
         "candidate_abstracts": docs,
