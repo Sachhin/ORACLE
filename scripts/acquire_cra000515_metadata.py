@@ -119,7 +119,10 @@ def acquire_metadata(
         raise ValueError("Only a CRA accession such as CRA000515 is accepted.")
     out = Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)
-    if session is None:\n        import requests\n        session = requests.Session()\n    client = session
+    if session is None:
+        import requests
+        session = requests.Session()
+    client = session
     headers = {"User-Agent": USER_AGENT, "Accept": "*/*"}
 
     run_payload = _request(
