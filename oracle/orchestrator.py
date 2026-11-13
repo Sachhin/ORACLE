@@ -559,10 +559,33 @@ class OracleOrchestrator:
                 self._add_unique_experiments(run, design.items)
                 novelty = self.novelty.run(review_context)
                 warnings = skeptic.warnings + audit.warnings + novelty.warnings
+                evidence_by_id = {item.evidence_id: item for item in run.evidence}
+                source_by_id = {item.source_id: item for item in run.sources}
+                hypothesis_audit_lines = []
+                for hypothesis in run.hypotheses:
+                    assessment = self.knowledge.assess_hypothesis(run, hypothesis.hypothesis_id)
+                    def describe_links(identifiers):
+                        descriptions = []
+                        for evidence_id in identifiers:
+                            evidence = evidence_by_id.get(evidence_id)
+                            if evidence is None:
+                                continue
+                            source = source_by_id.get(evidence.source_id)
+                            title = source.title if source else evidence.source
+                            descriptions.append(f"{title} [{evidence_id}]")
+                        return "; ".join(descriptions) if descriptions else "none human-reviewed"
+                    hypothesis_audit_lines.append(
+                        f"Hypothesis quality audit [{hypothesis.hypothesis_id}]: "
+                        f"supporting evidence: {describe_links(hypothesis.supporting_evidence_ids)}; "
+                        f"contradictory evidence: {describe_links(hypothesis.opposing_evidence_ids)}; "
+                        f"independent evidence groups: {assessment.independent_evidence_groups}; "
+                        f"uncertainty: {assessment.rationale}"
+                    )
                 self._add_unique_strings(
                     run.findings,
                     ["Skeptic review: " + warning for warning in skeptic.warnings]
-                    + ["Novelty assessment: " + novelty.summary],
+                    + ["Novelty assessment: " + novelty.summary]
+                    + hypothesis_audit_lines,
                 )
 
                 after = (len(run.evidence), len(run.hypotheses), len(run.experiments),

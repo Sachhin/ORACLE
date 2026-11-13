@@ -119,6 +119,70 @@ class OracleTests(unittest.TestCase):
         self.assertEqual(group.group_id, same.group_id)
         self.assertEqual(len(group.hypothesis_ids), 2)
 
+    def test_hypothesis_uncertainty_audit_reports_support_opposition_and_independence(self):
+        run = ResearchRun("Hypothesis evidence audit")
+        kb = KnowledgeBase()
+        hypothesis = Hypothesis("Pathway X influences longevity", "Provisional")
+        kb.add_hypothesis(run, hypothesis)
+        from oracle.models import SourceRecord
+        source_a = kb.add_source(run, SourceRecord(
+            title="Study supporting X", source_id="audit-source-a"
+        ))
+        source_b = kb.add_source(run, SourceRecord(
+            title="Study challenging X", source_id="audit-source-b"
+        ))
+        support = Evidence(
+            "Study reports a positive association.", source_a.title,
+            EvidenceKind.SOURCE, source_id=source_a.source_id,
+            reliability=0.8, dependence_group="cohort-a",
+        )
+        oppose = Evidence(
+            "Study reports no association.", source_b.title,
+            EvidenceKind.SOURCE, source_id=source_b.source_id,
+            reliability=0.5, dependence_group="cohort-b",
+        )
+        run.evidence.extend([support, oppose])
+        kb.link_hypothesis_evidence(
+            run, hypothesis.hypothesis_id, support.evidence_id,
+            EvidenceStance.SUPPORTS, "Reviewed the source and methods.",
+        )
+        kb.link_hypothesis_evidence(
+            run, hypothesis.hypothesis_id, oppose.evidence_id,
+            EvidenceStance.REFUTES, "Reviewed the independent contradictory result.",
+        )
+
+        assessment = kb.assess_hypothesis(run, hypothesis.hypothesis_id)
+
+        self.assertEqual(assessment.subject_type, "hypothesis")
+        self.assertEqual(assessment.evidence_count, 2)
+        self.assertEqual(assessment.independent_evidence_groups, 2)
+        self.assertAlmostEqual(assessment.supporting_weight, 0.8)
+        self.assertAlmostEqual(assessment.opposing_weight, 0.5)
+        self.assertIsNotNone(assessment.confidence_estimate)
+        self.store.save_run(run)
+        loaded = self.store.load_run(run.run_id)
+        self.assertEqual(loaded.uncertainty_assessments[0].subject_type, "hypothesis")
+        self.assertEqual(loaded.hypotheses[0].supporting_evidence_ids, [support.evidence_id])
+        self.assertEqual(loaded.hypotheses[0].opposing_evidence_ids, [oppose.evidence_id])
+
+    def test_unlinked_hypothesis_audit_explicitly_preserves_uncertainty(self):
+        run = ResearchRun("Unlinked hypothesis")
+        kb = KnowledgeBase()
+        hypothesis = Hypothesis("Candidate mechanism X", "Unverified")
+        kb.add_hypothesis(run, hypothesis)
+        assessment = kb.assess_hypothesis(run, hypothesis.hypothesis_id)
+        self.assertEqual(assessment.evidence_count, 0)
+        self.assertIsNone(assessment.confidence_estimate)
+        self.assertIn("do not imply", assessment.rationale)
+        self.assertIn("provisional", assessment.rationale)
+
+    def test_completed_run_contains_per_hypothesis_quality_audit(self):
+        run = OracleOrchestrator(self.store).run("A test research question", max_cycles=1)
+        audit_lines = [item for item in run.findings if item.startswith("Hypothesis quality audit")]
+        self.assertEqual(len(audit_lines), len(run.hypotheses))
+        self.assertTrue(all("supporting evidence:" in item and "contradictory evidence:" in item
+                            and "uncertainty:" in item for item in audit_lines))
+
     def test_provenance_revisions_and_source_reliability_persist(self):
         from oracle.models import SourceRecord
         run = ResearchRun("Provenance test")
