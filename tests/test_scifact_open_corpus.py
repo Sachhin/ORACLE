@@ -1,6 +1,8 @@
 import unittest
 
-from scripts.predict_scifact_open_corpus import (\n    BM25Index, build_prompt, generate_validated_prediction, retrieval_diagnostics,\n)
+from scripts.predict_scifact_open_corpus import (
+    BM25Index, build_prompt, generate_validated_prediction, retrieval_diagnostics,
+)
 
 
 class FakeModel:
