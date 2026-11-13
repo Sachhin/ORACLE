@@ -186,7 +186,7 @@ def generate_validated_prediction(model: SelfHostedLanguageModel,
                     "Your previous response did not pass strict JSON/schema validation. "
                     "Try again. Return only one JSON object with an evidence array. "
                     "Use only supplied candidate document IDs and valid zero-based sentence indices. "
-                    "If uncertain, abstain with an empty evidence array."evidence\\":[]}."
+                    "If uncertain, abstain with an empty evidence array."
                 ),
             }]
         try:
