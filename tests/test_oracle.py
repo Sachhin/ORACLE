@@ -946,7 +946,7 @@ class OracleTests(unittest.TestCase):
             self.assertEqual(report.files_analyzed, 0)
             self.assertEqual(report.files_skipped, 1)
             self.assertTrue(any("SHA-256" in warning for warning in report.warnings))
-            self.assertTrue(any("archive contained no supported text matrix members" in warning for warning in report.warnings))
+            self.assertTrue(any("archive expansion failed" in warning and "not a valid TAR or ZIP" in warning for warning in report.warnings))
             self.assertEqual(run.evidence, [])
 
     def test_geo_matrix_parser_enforces_cell_and_uncompressed_size_limits(self):
