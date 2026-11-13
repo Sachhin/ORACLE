@@ -75,7 +75,8 @@ def _read_csv(payload: bytes) -> tuple[list[str], list[dict[str, str]]]:
 
 
 def _read_workbook(payload: bytes) -> dict[str, tuple[list[str], list[dict[str, Any]]]]:
-    from openpyxl import load_workbook\n    wb = load_workbook(io.BytesIO(payload), read_only=True, data_only=True)
+    from openpyxl import load_workbook
+    wb = load_workbook(io.BytesIO(payload), read_only=True, data_only=True)
     result: dict[str, tuple[list[str], list[dict[str, Any]]]] = {}
     try:
         for ws in wb.worksheets:
