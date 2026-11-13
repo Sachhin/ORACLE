@@ -31,7 +31,7 @@ class OpenCorpusSciFactTests(unittest.TestCase):
         }
         messages, allowed = build_prompt(claim, [self.corpus[0]])
         self.assertEqual(allowed, {"1": 1})
-        self.assertTrue(messages[1]["content"].startswith("/no_think\\n"))
+        self.assertTrue(messages[1]["content"].startswith("/no_think"))
         self.assertNotIn("evidence", messages[1]["content"])
         self.assertNotIn("SUPPORT", messages[1]["content"])
         self.assertIn("candidate_abstracts", messages[1]["content"])
