@@ -8,7 +8,7 @@ class DashboardTests(unittest.TestCase):
     def test_page_exposes_research_controls_and_history(self):
         for expected in (
             "Start a research mission", "Research question", "Deep research",
-            "Autonomous discovery", "Research history", "No model API key or paid AI API is used", "Discover GEO supplementary files", "Download and analyze supported GEO matrices", "/api/run", "/api/runs",
+            "Autonomous discovery", "Research history", "Without a configured model, ORACLE uses deterministic agents only", "Discover GEO supplementary files", "Download and analyze supported GEO matrices", "/api/run", "/api/runs",
         ):
             with self.subTest(expected=expected):
                 self.assertIn(expected, PAGE)
