@@ -370,6 +370,77 @@ class KnowledgeBase:
         run.uncertainty_assessments.append(assessment)
         return assessment
 
+    def assess_hypothesis(self, run: ResearchRun, hypothesis_id: str) -> UncertaintyAssessment:
+        """Summarize explicitly human-reviewed evidence without inferring support."""
+        hypothesis = next((item for item in run.hypotheses
+                           if item.hypothesis_id == hypothesis_id), None)
+        if hypothesis is None:
+            raise ValueError(f"Unknown hypothesis: {hypothesis_id}")
+        evidence_by_id = {item.evidence_id: item for item in run.evidence}
+        source_ids = {item.source_id for item in run.sources}
+        linked = []
+        for stance, identifiers in (
+            (EvidenceStance.SUPPORTS, hypothesis.supporting_evidence_ids),
+            (EvidenceStance.REFUTES, hypothesis.opposing_evidence_ids),
+        ):
+            for evidence_id in identifiers:
+                evidence = evidence_by_id.get(evidence_id)
+                if (evidence is None or evidence.kind == EvidenceKind.INFERENCE
+                        or not evidence.source_id or evidence.source_id not in source_ids):
+                    raise ValueError(
+                        f"Hypothesis {hypothesis_id} has an invalid or non-source-backed evidence link: {evidence_id}"
+                    )
+                linked.append((stance, evidence))
+
+        # Count each independent study/dependence group only once per stance.
+        buckets: dict[tuple[str, str], float] = {}
+        for stance, evidence in linked:
+            group = evidence.dependence_group.strip() or evidence.source_id
+            key = (stance.value, group)
+            buckets[key] = max(buckets.get(key, 0.0), evidence.reliability)
+        support = sum(value for (stance, _), value in buckets.items()
+                      if stance == EvidenceStance.SUPPORTS.value)
+        oppose = sum(value for (stance, _), value in buckets.items()
+                     if stance == EvidenceStance.REFUTES.value)
+        independent_groups = len({group for _, group in buckets})
+        estimate = None if not buckets or support + oppose == 0 else support / (support + oppose)
+
+        if not linked:
+            rationale = (
+                "No human-reviewed source-backed evidence is linked in support of or against this hypothesis. "
+                "It remains provisional and unsubstantiated; missing links do not imply that contradictory "
+                "evidence is absent."
+            )
+        else:
+            rationale = (
+                "Evidence-balance indicator uses the strongest reliability value per independent study and stance; "
+                "it is not a calibrated probability. Only explicitly human-reviewed links are counted."
+            )
+            if not hypothesis.opposing_evidence_ids:
+                rationale += " No reviewed contradictory evidence is linked; this is not evidence that none exists."
+            if not hypothesis.supporting_evidence_ids:
+                rationale += " No reviewed supporting evidence is linked."
+        assessment = next((item for item in reversed(run.uncertainty_assessments)
+                           if item.subject_id == hypothesis_id
+                           and item.subject_type == "hypothesis"), None)
+        if assessment is None:
+            assessment = UncertaintyAssessment(
+                subject_id=hypothesis_id, subject_type="hypothesis",
+                evidence_count=len(linked), supporting_weight=support,
+                opposing_weight=oppose, unresolved_contradictions=0,
+                confidence_estimate=estimate, rationale=rationale,
+                independent_evidence_groups=independent_groups,
+            )
+            run.uncertainty_assessments.append(assessment)
+        else:
+            assessment.evidence_count = len(linked)
+            assessment.supporting_weight = support
+            assessment.opposing_weight = oppose
+            assessment.confidence_estimate = estimate
+            assessment.rationale = rationale
+            assessment.independent_evidence_groups = independent_groups
+        return assessment
+
     @staticmethod
     def _normalize(value: str) -> str:
         return re.sub(r"[^a-z0-9 ]", "", value.lower()).strip()
