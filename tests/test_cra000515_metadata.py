@@ -5,9 +5,10 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import Mock
-
-from openpyxl import Workbook
+try:
+    from openpyxl import Workbook
+except ImportError:
+    raise unittest.SkipTest("openpyxl is installed by the dedicated CRA metadata workflow")
 
 from scripts.acquire_cra000515_metadata import acquire_metadata
 
