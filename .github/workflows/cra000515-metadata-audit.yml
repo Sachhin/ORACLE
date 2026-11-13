@@ -1,6 +1,12 @@
 name: ORACLE CRA000515 centenarian metadata acquisition and audit
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/cra000515-metadata-audit.yml"
+      - "scripts/acquire_cra000515_metadata.py"
+      - "tests/test_cra000515_metadata.py"
   workflow_dispatch:
     inputs:
       accession:
