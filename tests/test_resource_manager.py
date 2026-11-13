@@ -107,6 +107,38 @@ class ResourceManagerTests(unittest.TestCase):
             "aspirin", limit=3, resources=("pubchem",))
         self.assertEqual(result, ("aspirin", 3, ("pubchem",)))
 
+    def test_pubmed_search_recovers_abstracts_with_efetch(self):
+        import json
+        from unittest.mock import patch
+
+        class FakeResponse:
+            def __enter__(self):
+                return self
+            def __exit__(self, *_args):
+                return False
+            def read(self, *_args):
+                return b"""<PubmedArticleSet><PubmedArticle><MedlineCitation>
+                <PMID>12345</PMID><Article><Abstract>
+                <AbstractText Label="BACKGROUND">A structured abstract.</AbstractText>
+                <AbstractText>Second section.</AbstractText>
+                </Abstract></Article></MedlineCitation></PubmedArticle></PubmedArticleSet>"""
+
+        client = LiteratureClient()
+        with patch.object(client, "_get_json", side_effect=[
+            {"esearchresult": {"idlist": ["12345"]}},
+            {"result": {"12345": {
+                "uid": "12345", "title": "A longevity study",
+                "authors": [], "pubdate": "2025",
+            }}},
+        ]), patch("oracle.literature.urlopen", return_value=FakeResponse()) as fetch:
+            records = client._search_pubmed("human longevity", 5)
+
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records[0]["pmid"], "12345")
+        self.assertIn("A structured abstract.", records[0]["abstract"])
+        self.assertIn("Second section.", records[0]["abstract"])
+        self.assertIn("db=pubmed", fetch.call_args.args[0].full_url)
+
     def test_geo_provider_alias_dispatches_to_ncbi_geo_connector(self):
         class StubClient:
             def search(self, query, limit, providers):
