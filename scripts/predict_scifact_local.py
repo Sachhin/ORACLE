@@ -52,12 +52,14 @@ def validate_prediction(payload: dict[str, Any], allowed_docs: dict[str, int]) -
             raise ValueError("Each evidence item must be an object")
         doc_id = str(item.get("doc_id", ""))
         label = item.get("label")
-        sentences = item.get("sentences")
+        # Preserve document-level stance if the model omits sentence rationales;
+        # an empty list earns no sentence-level credit and invents no IDs.
+        sentences = item.get("sentences", [])
         if doc_id not in allowed_docs:
             raise ValueError(f"Model cited a document outside this claim's supplied candidate set: {doc_id}")
         if label not in {"SUPPORT", "CONTRADICT"}:
             raise ValueError(f"Invalid evidence label for document {doc_id}")
-        if (not isinstance(sentences, list) or not sentences
+        if (not isinstance(sentences, list)
                 or any(isinstance(i, bool) or not isinstance(i, int)
                        or i < 0 or i >= allowed_docs[doc_id] for i in sentences)
                 or len(set(sentences)) != len(sentences)):
