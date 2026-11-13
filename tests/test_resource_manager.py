@@ -137,7 +137,7 @@ class ResourceManagerTests(unittest.TestCase):
     def test_auto_source_selection_uses_domain_adapters(self):
         self.assertEqual(
             resolve_literature_providers("Can we identify aging mechanisms?", "auto"),
-            ("openalex", "europepmc", "pubmed", "crossref", "geo", "pubchem", "genbank", "ensembl", "clinical_trials", "sra", "zenodo", "harvard_dataverse", "pdb", "pride", "figshare"),
+            ("openalex", "europepmc", "pubmed", "crossref", "geo", "sra", "pride"),
         )
         with patch.dict("os.environ", {"NASA_ADS_API_TOKEN": "test-token"}):
             self.assertEqual(
@@ -153,6 +153,17 @@ class ResourceManagerTests(unittest.TestCase):
             resolve_literature_providers("How does a polymer catalyst work?", "auto"),
             ("openalex", "pubchem", "crossref"),
         )
+
+    def test_biology_auto_routing_avoids_unrelated_compound_sequence_and_registry_apis(self):
+        providers = resolve_literature_providers(
+            "Can we identify previously unknown biological mechanisms involved in human longevity?",
+            "biology_medicine",
+        )
+        self.assertIn("europepmc", providers)
+        self.assertIn("pubmed", providers)
+        self.assertIn("geo", providers)
+        for unrelated in ("pubchem", "genbank", "ensembl", "clinical_trials", "pdb", "zenodo", "harvard_dataverse"):
+            self.assertNotIn(unrelated, providers)
 
     def test_auto_source_selection_uses_openalex_for_humanities_and_social_sciences(self):
         self.assertEqual(
