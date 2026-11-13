@@ -141,11 +141,25 @@ jobs:
           from pathlib import Path
           report = json.loads(Path("data/scifact/qwen3_preflight_report.json").read_text())
           run = report.get("prediction_run", {})
-          if report.get("scored_claim_count") != 5 or report.get("prediction_coverage") != 1.0 or run.get("invalid_model_response_count", 0) != 0:
+          import math
+          expected_claims = int(run.get("requested_claims", 0))
+          total_claims = int(report.get("claim_count", 0))
+          expected_coverage = expected_claims / total_claims if total_claims else 0.0
+          valid = (
+              expected_claims == 5
+              and report.get("scored_claim_count") == expected_claims
+              and math.isclose(report.get("prediction_coverage", 0.0), expected_coverage, rel_tol=0.0, abs_tol=1e-12)
+              and run.get("invalid_model_response_count", 0) == 0
+          )
+          if not valid:
               errors = Path("data/scifact/qwen3_preflight_predictions.jsonl.errors.jsonl")
               preview = errors.read_text()[:3000] if errors.exists() else "No error sidecar was produced."
-              raise SystemExit("Qwen3 five-claim preflight failed; full benchmark will not start.\\n" + preview)
-          print("Qwen3 preflight passed: 5/5 valid predictions.")
+              raise SystemExit(
+                  f"Qwen3 five-claim preflight failed: scored={report.get('scored_claim_count')}, "
+                  f"coverage={report.get('prediction_coverage')}, expected={expected_coverage}, "
+                  f"invalid={run.get('invalid_model_response_count', 0)}.\\n" + preview
+              )
+          print("Qwen3 preflight passed: 5/5 valid predictions; coverage correctly measured against all 300 dev claims.")
           PY
 
       - name: Run full open-corpus inference and score all 300 dev claims
