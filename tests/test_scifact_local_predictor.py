@@ -34,6 +34,14 @@ class LocalSciFactPredictionTests(unittest.TestCase):
                 "doc_id": "1", "label": "SUPPORT", "sentences": [2]
             }]}, {"1": 2})
 
+    def test_keeps_document_stance_when_model_omits_sentence_rationale(self):
+        self.assertEqual(
+            validate_prediction({"evidence": [{
+                "doc_id": "1", "label": "SUPPORT"
+            }]}, {"1": 2}),
+            {"1": {"label": "SUPPORT", "sentences": []}},
+        )
+
     def test_prompt_excludes_gold_labels_and_rationales(self):
         claim = {
             "id": 7, "claim": "A scientific claim.",

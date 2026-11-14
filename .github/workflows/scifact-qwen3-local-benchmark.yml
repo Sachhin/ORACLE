@@ -1,5 +1,9 @@
 name: ORACLE SciFact Qwen3 local-model full dev benchmark
 
+concurrency:
+  group: oracle-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
 on:
   push:
     branches: [main]
@@ -14,7 +18,7 @@ on:
       top_k:
         description: BM25 candidate abstracts per claim
         required: true
-        default: "10"
+        default: "5"
         type: string
   pull_request:
     branches: [main]
@@ -35,7 +39,7 @@ jobs:
     timeout-minutes: 360
     env:
       MODEL_ALIAS: Qwen3-0.6B
-      TOP_K: ${{ github.event_name == 'workflow_dispatch' && inputs.top_k || '10' }}
+      TOP_K: ${{ github.event_name == 'workflow_dispatch' && inputs.top_k || '5' }}
       HF_REPO: Qwen/Qwen3-0.6B-GGUF
       HF_REVISION: 8e42d41f70cb6c571f58c3f31bd9287b372d97cc
       HF_FILE: Qwen3-0.6B-Q4_K_M.gguf
@@ -118,6 +122,47 @@ jobs:
           cat qwen3-models.json
           grep -q "$MODEL_ALIAS" qwen3-models.json
 
+      - name: Run five-claim Qwen3 output-format preflight
+        run: |
+          python scripts/predict_scifact_open_corpus.py \
+            --claims data/scifact/benchmark-input/claims_dev.jsonl \
+            --corpus data/scifact/benchmark-input/corpus.jsonl \
+            --output data/scifact/qwen3_preflight_predictions.jsonl \
+            --report data/scifact/qwen3_preflight_report.json \
+            --base-url http://127.0.0.1:8000/v1 \
+            --model "$MODEL_ALIAS" \
+            --top-k "$TOP_K" \
+            --max-tokens 384 \
+            --timeout 180 \
+            --max-claims 5 \
+            --max-invalid-responses 0 \
+            --max-model-attempts 3
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report = json.loads(Path("data/scifact/qwen3_preflight_report.json").read_text())
+          run = report.get("prediction_run", {})
+          import math
+          expected_claims = int(run.get("requested_claims", 0))
+          total_claims = int(report.get("claim_count", 0))
+          expected_coverage = expected_claims / total_claims if total_claims else 0.0
+          valid = (
+              expected_claims == 5
+              and report.get("scored_claim_count") == expected_claims
+              and math.isclose(report.get("prediction_coverage", 0.0), expected_coverage, rel_tol=0.0, abs_tol=1e-12)
+              and run.get("invalid_model_response_count", 0) == 0
+          )
+          if not valid:
+              errors = Path("data/scifact/qwen3_preflight_predictions.jsonl.errors.jsonl")
+              preview = errors.read_text()[:3000] if errors.exists() else "No error sidecar was produced."
+              raise SystemExit(
+                  f"Qwen3 five-claim preflight failed: scored={report.get('scored_claim_count')}, "
+                  f"coverage={report.get('prediction_coverage')}, expected={expected_coverage}, "
+                  f"invalid={run.get('invalid_model_response_count', 0)}.\\n" + preview
+              )
+          print("Qwen3 preflight passed: 5/5 valid predictions; coverage correctly measured against all 300 dev claims.")
+          PY
+
       - name: Run full open-corpus inference and score all 300 dev claims
         run: |
           python scripts/predict_scifact_open_corpus.py \
@@ -129,7 +174,9 @@ jobs:
             --model "$MODEL_ALIAS" \
             --top-k "$TOP_K" \
             --max-tokens 384 \
-            --timeout 180
+            --timeout 180 \
+            --max-invalid-responses 0 \
+            --max-model-attempts 3
 
       - name: Enforce complete prediction coverage and publish score summary
         if: always()
@@ -153,6 +200,8 @@ jobs:
                   f"- Open retrieval document recall: {run.get('retrieval_metrics', {}).get('document_recall')}",
                   f"- Gold evidence exposed to model: {run.get('gold_evidence_exposed_to_model')}",
                   f"- Invalid model responses: {run.get('invalid_model_response_count')}",
+                  f"- Recovered malformed responses (retry attempts): {run.get('model_retry_count')}",
+                  f"- Max model attempts per claim: {run.get('max_model_attempts')}",
                   f"- Prediction SHA-256: {run.get('predictions_sha256')}",
               ]
               if report.get("scored_claim_count") != 300 or report.get("prediction_coverage") != 1.0:
@@ -172,6 +221,9 @@ jobs:
             data/scifact/qwen3_0.6b_open_corpus_dev_predictions.jsonl
             data/scifact/qwen3_0.6b_open_corpus_dev_report.json
             data/scifact/qwen3_0.6b_open_corpus_dev_predictions.jsonl.errors.jsonl
+            data/scifact/qwen3_preflight_predictions.jsonl
+            data/scifact/qwen3_preflight_report.json
+            data/scifact/qwen3_preflight_predictions.jsonl.errors.jsonl
             data/scifact/benchmark-input/claims_dev.jsonl
             data/scifact/benchmark-input/corpus.jsonl
             data/scifact/model_provenance.json

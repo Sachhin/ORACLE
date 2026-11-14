@@ -1,6 +1,21 @@
 import unittest
 
-from scripts.predict_scifact_open_corpus import BM25Index, build_prompt, retrieval_diagnostics
+from scripts.predict_scifact_open_corpus import (
+    BM25Index, build_prompt, generate_validated_prediction, retrieval_diagnostics,
+)
+
+
+class FakeModel:
+    def __init__(self, responses):
+        self.responses = list(responses)
+        self.calls = 0
+
+    def generate(self, messages, temperature=0.0):
+        self.calls += 1
+        response = self.responses.pop(0)
+        if isinstance(response, Exception):
+            raise response
+        return response
 
 
 class OpenCorpusSciFactTests(unittest.TestCase):
@@ -31,9 +46,34 @@ class OpenCorpusSciFactTests(unittest.TestCase):
         }
         messages, allowed = build_prompt(claim, [self.corpus[0]])
         self.assertEqual(allowed, {"1": 1})
+        self.assertTrue(messages[1]["content"].startswith("/no_think"))
         self.assertNotIn("evidence", messages[1]["content"])
         self.assertNotIn("SUPPORT", messages[1]["content"])
         self.assertIn("candidate_abstracts", messages[1]["content"])
+
+    def test_retries_malformed_json_and_accepts_only_validated_response(self):
+        model = FakeModel([
+            "not json",
+            '{"evidence":[{"doc_id":"1","label":"SUPPORT","sentences":[0]}]}',
+        ])
+        evidence, retries, raw = generate_validated_prediction(
+            model, [{"role": "user", "content": "claim"}], {"1": 1}, max_attempts=3
+        )
+        self.assertEqual(model.calls, 2)
+        self.assertEqual(retries, 1)
+        self.assertEqual(evidence["1"]["label"], "SUPPORT")
+        self.assertIn('"evidence"', raw)
+
+    def test_rejects_invalid_document_even_after_all_retries(self):
+        model = FakeModel([
+            '{"evidence":[{"doc_id":"999","label":"SUPPORT","sentences":[0]}]}',
+            '{"evidence":[{"doc_id":"999","label":"SUPPORT","sentences":[0]}]}',
+        ])
+        with self.assertRaisesRegex(ValueError, "after 2 attempts"):
+            generate_validated_prediction(
+                model, [{"role": "user", "content": "claim"}], {"1": 1}, max_attempts=2
+            )
+        self.assertEqual(model.calls, 2)
 
     def test_retrieval_diagnostics_are_post_inference_gold_only(self):
         claims = [

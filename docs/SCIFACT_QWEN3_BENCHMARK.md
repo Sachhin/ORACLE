@@ -13,7 +13,7 @@ Gemini, a hosted inference API, or an API key.
 - Inference: llama.cpp CPU server, loopback only
 - Retrieval: deterministic BM25 over the full 5,183-abstract SciFact corpus
 - Evaluation: all 300 labelled dev claims, no gold evidence supplied to retrieval or model prompts
-- Candidate abstracts per claim: top 10 by default
+- Candidate abstracts per claim: top 5 by default. This is a runtime/recall trade-off for the CPU runner; the exact value is recorded in each report.
 
 ## What is measured
 
@@ -23,9 +23,13 @@ evidence precision/recall/F1, and post-inference retrieval recall. The workflow
 stores the frozen predictions, input datasets, report, model file, and server
 log as a 90-day artifact.
 
-A run is scientifically complete only if all 300 dev claims receive validated
-predictions and the report is uploaded. A failed or incomplete run is not
-re-labelled as PASS.
+A five-claim format preflight runs before the full benchmark. If any pilot
+response is malformed, the full run is skipped and the raw error sidecar is
+uploaded for diagnosis. During the full run, inference stops on the first
+invalid response so a broken output format does not consume the entire CPU
+budget. A run is scientifically complete only if all 300 dev claims receive
+validated predictions and the report is uploaded. A failed or incomplete run
+is not re-labelled as PASS.
 
 ## Interpretation
 
