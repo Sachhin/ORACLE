@@ -35,11 +35,25 @@ def parse_model_json(raw: str) -> dict[str, Any]:
         if len(lines) < 3 or lines[0].strip() not in ("```", "```json") or lines[-1].strip() != "```":
             raise ValueError("Unsupported Markdown fence in model response")
         text = "\n".join(lines[1:-1]).strip()
-    if not text.startswith("{"):
-        start, end = text.find("{"), text.rfind("}")
-        if start >= 0 and end > start:
-            text = text[start:end + 1]
-    payload = json.loads(text)
+    start = text.find("{")
+    if start < 0:
+        raise ValueError("Model response contains no JSON object")
+    decoder = json.JSONDecoder()
+    payload, end = decoder.raw_decode(text, start)
+    trailing = text[end:].strip()
+    # Small local models occasionally emit the same completed JSON object twice.
+    # Accept only exact duplicate objects; conflicting second answers or prose
+    # remain invalid so no ambiguous prediction is silently selected.
+    while trailing:
+        if trailing in {"<|im_end|>", "</s>", "<|endoftext|>"}:
+            break
+        try:
+            duplicate, duplicate_end = decoder.raw_decode(trailing)
+        except json.JSONDecodeError as exc:
+            raise ValueError("Unexpected content after model JSON object") from exc
+        if duplicate != payload:
+            raise ValueError("Conflicting JSON objects in model response")
+        trailing = trailing[duplicate_end:].strip()
     if not isinstance(payload, dict) or not isinstance(payload.get("evidence"), list):
         raise ValueError("Model response must be a JSON object with an evidence array")
     return payload
@@ -52,12 +66,14 @@ def validate_prediction(payload: dict[str, Any], allowed_docs: dict[str, int]) -
             raise ValueError("Each evidence item must be an object")
         doc_id = str(item.get("doc_id", ""))
         label = item.get("label")
-        sentences = item.get("sentences")
+        # Preserve document-level stance if the model omits sentence rationales;
+        # an empty list earns no sentence-level credit and invents no IDs.
+        sentences = item.get("sentences", [])
         if doc_id not in allowed_docs:
             raise ValueError(f"Model cited a document outside this claim's supplied candidate set: {doc_id}")
         if label not in {"SUPPORT", "CONTRADICT"}:
             raise ValueError(f"Invalid evidence label for document {doc_id}")
-        if (not isinstance(sentences, list) or not sentences
+        if (not isinstance(sentences, list)
                 or any(isinstance(i, bool) or not isinstance(i, int)
                        or i < 0 or i >= allowed_docs[doc_id] for i in sentences)
                 or len(set(sentences)) != len(sentences)):
