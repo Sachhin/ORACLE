@@ -508,6 +508,18 @@ class OracleOrchestrator:
                     self._event(run, "hypotheses_created", {"count": len(hypotheses.items)}, False,
                                 f"cycle:{cycle}:hypotheses")
 
+                from .reasoning import analyze_evidence_gaps, generate_competing_hypotheses
+                evidence_hyps = generate_competing_hypotheses(run.question, run.evidence, max_candidates=4)
+                known_hyps = {self._normalise(h.statement) for h in run.hypotheses}
+                for hyp in evidence_hyps:
+                    if self._normalise(hyp.statement) not in known_hyps:
+                        self.knowledge.add_hypothesis(run, hyp)
+                        known_hyps.add(self._normalise(hyp.statement))
+                gap_report = analyze_evidence_gaps(run.question, run.evidence)
+                if gap_report.gaps:
+                    uncovered = ", ".join(g.term for g in gap_report.gaps[:6])
+                    self._add_unique_strings(run.findings, [f"Lexical evidence gap terms: {uncovered}"])
+
                 if self.language_reasoner is not None:
                     language_result = self.language_reasoner.run(context)
                     language_reasoning_succeeded = language_result.summary.startswith(
@@ -613,6 +625,7 @@ class OracleOrchestrator:
                     replan_context = AgentContext(
                         run.question, cycle, run.mode.value,
                         run.evidence, run.hypotheses, run.findings, run.tasks,
+                        self.domain_profile,
                     )
                     revised = self.planner.run(replan_context)
                     self.task_manager.validate_plan(revised.items)

@@ -4,7 +4,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from html import unescape
-import json, re, os
+import json, re, os, threading, time
 import xml.etree.ElementTree as ET
 from typing import Any
 from urllib.error import HTTPError, URLError
@@ -42,17 +42,41 @@ class LiteratureClient:
             raise ValueError("max_abstract_enrichments must be between 0 and 20")
         self.timeout, self.mailto = timeout, mailto.strip()
         self.max_abstract_enrichments = max_abstract_enrichments
+        self._ncbi_lock = threading.Lock()
+        self._last_ncbi_call = 0.0
 
     def _get_json(self, url: str, headers: dict[str, str] | None = None) -> dict[str, Any]:
         request_headers = {"Accept":"application/json",
             "User-Agent":"ORACLE-Scientific-Literature/2.0 (mailto: "+(self.mailto or "not-provided")+")"}
         request_headers.update(headers or {})
-        req = Request(url, headers=request_headers)
-        try:
-            with urlopen(req, timeout=self.timeout) as response:
-                return json.loads(response.read(8_000_000).decode("utf-8"))
-        except (HTTPError, URLError, TimeoutError, json.JSONDecodeError, UnicodeDecodeError) as exc:
-            raise LiteratureSearchError(f"Request failed for {url.split('?')[0]}: {exc}") from exc
+        is_ncbi = "eutils.ncbi.nlm.nih.gov" in url
+        last_exc: Exception | None = None
+        for attempt in range(3):
+            if is_ncbi:
+                with self._ncbi_lock:
+                    wait = 0.36 - (time.monotonic() - self._last_ncbi_call)
+                    if wait > 0:
+                        time.sleep(wait)
+                    self._last_ncbi_call = time.monotonic()
+            req = Request(url, headers=request_headers)
+            try:
+                with urlopen(req, timeout=self.timeout) as response:
+                    return json.loads(response.read(8_000_000).decode("utf-8"))
+            except HTTPError as exc:
+                last_exc = exc
+                if exc.code in (429, 500, 502, 503, 504) and attempt < 2:
+                    retry_after = exc.headers.get("Retry-After") if exc.headers else None
+                    delay = float(retry_after) if (retry_after and retry_after.isdigit()) else (1.5 * (attempt + 1))
+                    time.sleep(min(delay, 10.0))
+                    continue
+                raise LiteratureSearchError(f"Request failed for {url.split('?')[0]}: {exc}") from exc
+            except (URLError, TimeoutError, json.JSONDecodeError, UnicodeDecodeError) as exc:
+                last_exc = exc
+                if attempt < 2:
+                    time.sleep(1.0 * (attempt + 1))
+                    continue
+                raise LiteratureSearchError(f"Request failed for {url.split('?')[0]}: {exc}") from exc
+        raise LiteratureSearchError(f"Request failed for {url.split('?')[0]}: {last_exc}")
 
     @staticmethod
     def _clean(value: str) -> str:

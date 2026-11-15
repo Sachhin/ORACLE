@@ -58,7 +58,7 @@ button:disabled{opacity:.5;cursor:wait}.muted{color:var(--muted)}.status{padding
 <label class="check"><input id="citations" type="checkbox"> Expand citation network</label>
 <label class="check"><input id="geoDiscover" type="checkbox"> Discover GEO supplementary files (no downloads)</label>
 <label class="check"><input id="geoAnalyze" type="checkbox"> Download and analyze supported GEO matrices (uses bandwidth and disk space)</label>
-<button id="start" type="submit">Start research</button>
+<button id="start" type="submit" style="width:100%; padding:14px; font-size:16px; background:var(--accent); font-weight:bold;">Get quick answer / Start research</button>
 <div id="status" class="status" role="status">Quick answer is selected. Choose Deep research when you need multi-cycle investigation.</div>
 </form><h2 style="margin-top:22px">Selected run</h2><div id="detail" class="muted">Select a run from the history panel to inspect its summary.</div></section>
 <section><h2>Research history</h2><button id="refresh" type="button">Refresh runs</button><div id="runs" class="muted" style="margin-top:12px">Loading…</div></section>
@@ -71,7 +71,26 @@ function applySpeed(){const speed=$('speed').value;const presets={quick:{cycles:
 $('speed').onchange=applySpeed;applySpeed();
 async function refresh(){try{const d=await api('/api/runs');$('runs').replaceChildren();if(!d.runs.length){$('runs').textContent='No saved research runs yet.';return}
 for(const r of d.runs){const el=document.createElement('div');el.className='item';const b=document.createElement('strong');b.textContent=r.question;const m=document.createElement('span');m.className='muted';m.textContent=r.status+' · '+r.run_id+' · '+r.updated_at;el.append(b,m);el.onclick=()=>selectRun(r.run_id);$('runs').append(el)}}catch(e){$('runs').textContent=e.message}}
-async function selectRun(id){try{const d=await api('/api/runs/'+encodeURIComponent(id));const r=d.run;$('detail').replaceChildren();const h=document.createElement('h3');h.textContent=r.question;const p=document.createElement('p');p.textContent='Status: '+r.status+' · Cycles: '+r.current_cycle+'/'+r.max_cycles+' · Sources: '+r.sources.length+' · Evidence: '+r.evidence.length+' · Claims: '+r.claims.length+' · Hypotheses: '+r.hypotheses.length;const pre=document.createElement('pre');pre.textContent=(r.findings||[]).join('\n\n')||'No findings recorded.';$('detail').append(h,p,pre)}catch(e){showStatus(e.message)}}
+async function selectRun(id){try{const d=await api('/api/runs/'+encodeURIComponent(id));const r=d.run;$("detail").replaceChildren();
+const h=document.createElement('h3');h.textContent=r.question;
+const p=document.createElement('p');p.className='muted';p.textContent='Status: '+r.status+' · Cycles: '+r.current_cycle+'/'+r.max_cycles;
+const cont=document.createElement('div');cont.style.marginTop='12px';
+
+const h1=document.createElement('h4');h1.textContent='Findings & Limitations';
+const pre=document.createElement('pre');pre.textContent=(r.findings||[]).join('
+
+')||'No findings recorded.';
+
+const h2=document.createElement('h4');h2.textContent='Retrieved Sources ('+(r.sources?r.sources.length:0)+')';
+const dSrc=document.createElement('div');dSrc.style.maxHeight='220px';dSrc.style.overflow='auto';
+if(r.sources&&r.sources.length>0){r.sources.forEach(s=>{const it=document.createElement('div');it.style.padding='6px 0';it.style.borderBottom='1px solid var(--line)';it.innerHTML=`<strong>${s.title}</strong> <span class="muted">${s.journal||s.publisher||""} (${s.published_at||""})</span><br><a href="${s.url}" target="_blank" style="color:var(--accent);font-size:13px;">${s.url}</a>`;dSrc.appendChild(it)})}else{dSrc.textContent='No sources recorded.';}
+
+const h3=document.createElement('h4');h3.textContent='Generated Hypotheses ('+(r.hypotheses?r.hypotheses.length:0)+')';
+const dHyp=document.createElement('div');dHyp.style.maxHeight='180px';dHyp.style.overflow='auto';
+if(r.hypotheses&&r.hypotheses.length>0){r.hypotheses.forEach(hp=>{const it=document.createElement('div');it.style.padding='6px 0';it.style.borderBottom='1px solid var(--line)';it.innerHTML=`<strong>[${hp.hypothesis_id||'hyp'}]</strong> ${hp.statement||hp.description||JSON.stringify(hp)}`;dHyp.appendChild(it)})}else{dHyp.textContent='No hypotheses recorded.';}
+
+cont.append(h1,pre,h2,dSrc,h3,dHyp);
+$("detail").append(h,p,cont)}catch(e){showStatus(e.message)}catch(e){showStatus(e.message)}}
 $('mission').onsubmit=async e=>{e.preventDefault();$('start').disabled=true;showStatus('Submitting research mission…');
 try{const payload={question:$('question').value,mode:$('mode').value,domain:$('domain').value,cycles:Number($('cycles').value),limit:Number($('limit').value),full_text:$('fulltext').checked,citations:$('citations').checked,geo_discover:$('geoDiscover').checked,geo_analyze:$('geoAnalyze').checked,local_model_url:$('modelUrl').value.trim(),local_model_name:$('modelName').value.trim()};
 const d=await api('/api/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});activeJob=d.job_id;showStatus('Run started: '+activeJob);poll()}catch(err){showStatus('Could not start: '+err.message);$('start').disabled=false}};
@@ -202,8 +221,8 @@ class OracleDashboardHandler(BaseHTTPRequestHandler):
                 command.append("--analyze-geo-files")
             if model_url:
                 command.extend(["--local-model-url", model_url, "--local-model-name", model_name])
-            with log.open("w", encoding="utf-8") as handle:
-                process = subprocess.Popen(command, cwd=root, stdout=output.open("w", encoding="utf-8"),
+            with output.open("w", encoding="utf-8") as out_handle, log.open("w", encoding="utf-8") as handle:
+                process = subprocess.Popen(command, cwd=root, stdout=out_handle,
                     stderr=handle, env=os.environ.copy())
             with JOBS_LOCK:
                 JOBS[job_id] = {"process": process, "output": str(output), "log": str(log)}

@@ -1,7 +1,9 @@
 """Structured, optional language reasoning over source-backed research context."""
 from __future__ import annotations
 
+import inspect
 import json
+import re
 from typing import Protocol
 
 from .agents import AgentContext, AgentResult
@@ -75,8 +77,16 @@ class LanguageReasoningAgent:
             },
         ]
         try:
-            raw = self.model.generate(messages, temperature=0.2)
-            response_text = raw.strip()
+            sig = inspect.signature(self.model.generate)
+            supports_rf = (
+                "response_format" in sig.parameters
+                or any(p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values())
+            )
+            if supports_rf:
+                raw = self.model.generate(messages, temperature=0.2, response_format={"type": "json_object"})
+            else:
+                raw = self.model.generate(messages, temperature=0.2)
+            response_text = re.sub(r"<think>.*?</think>", "", raw, flags=re.DOTALL).strip()
             # Small local models often wrap otherwise-valid JSON in Markdown fences.
             # Accept only a complete fenced JSON block; do not extract arbitrary
             # substrings from prose, which could hide malformed or ambiguous output.
