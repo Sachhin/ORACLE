@@ -171,6 +171,9 @@ def main() -> None:
     if report["mRPG8_genes_missing"]:
         raise RuntimeError(f"Missing mRPG genes in RIKEN var index: {report['mRPG8_genes_missing']}")
     (out / "pseudobulk_manifest.json").write_text(json.dumps(report, indent=2) + "\n")
+    # Source files are checksum-recorded above; keep the workflow artifact compact.
+    h5ad_path.unlink()
+    meta_path.unlink()
     print(json.dumps(report, indent=2))
 
 
