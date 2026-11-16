@@ -212,3 +212,48 @@ and download control but does not expose the file inventory; its documented
 API uses OAuth2 for dataset retrieval. Therefore no clinical group labels are
 inferred from the 2026 paper's aggregate counts. A submitter-provided or
 publicly downloadable sample annotation table is still required.
+
+
+
+
+## Source-count discrepancy requiring explicit resolution (2026-11-16)
+
+A fresh cross-source check found a material mismatch that must be preserved
+rather than normalized away:
+
+- Ahmed et al. (2022), the clinical study linked to PXD047528, reports **13
+  plasma samples** in the proteomics analysis: 8 HIV and 5 herpes. Its HAND
+  sub-analysis is 5 HAND (3 MND + 2 HAD) versus 3 cognitively normal HIV
+  participants.
+- The PEPerMINT publication's Table 2 reports PXD047528 as **15 samples, 15
+  biological samples, and one technical replicate per biological sample**.
+- The PRIDE/ProteomeXchange deposit contains 32 raw files. The raw-file count
+  alone cannot identify which files are DDA/DIA pairs, clinical participants,
+  technical repeats, quality controls, or exclusions.
+
+These statements do not currently establish a valid 15-alias-to-13-patient
+crosswalk. In particular, ORACLE must **not assume** that two of the 15
+processed aliases are technical repeats merely to force agreement with the
+13-person clinical paper. The 15-biological-sample statement may indicate a
+broader or version-different analysis set; the submitter must explain the
+difference and provide the corresponding sample manifest.
+
+The current validator deliberately retains the strict 15-alias/13-clinical-
+participant acceptance target because the clinical outcome analysis is tied
+to the 2022 paper. A manifest that maps 15 distinct biological samples, or
+that cannot document the relationship of two aliases to the clinical cohort,
+must remain blocked for clinical outcome concordance. Reconstruction-only
+DDA/DIA benchmarking remains valid independently of clinical labels.
+
+Required submitter clarification:
+1. Are all 15 PEPerMINT aliases part of the same 13-participant clinical
+   cohort, or is the processed set broader/different?
+2. If there are 15 biological samples, provide the participant/sample IDs and
+   explain how those differ from the 13 plasma samples reported in the paper.
+3. Identify any QC samples, excluded samples, repeated acquisitions, or
+   additional samples, with DDA/DIA raw filenames and reasons.
+4. Provide the mapping from each processed alias to raw DDA and DIA files and
+   to the original clinical table row, where applicable.
+
+Until this is source-authenticated, clinical validation remains **BLOCKED**.
+
