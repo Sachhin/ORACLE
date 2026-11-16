@@ -1,4 +1,6 @@
 import csv
+import tempfile
+import unittest
 import hashlib
 from pathlib import Path
 
@@ -67,52 +69,58 @@ def write_rows(path: Path, rows):
         writer.writerows(rows)
 
 
-def test_valid_synthetic_crosswalk_is_ready(tmp_path):
-    path = tmp_path / "mapping.tsv"
-    write_rows(path, make_rows())
-    report = validate_mapping(path)
-    assert report["status"] == "READY_FOR_CLINICAL_VALIDATION"
-    assert report["processed_aliases_mapped"] == 15
-    assert report["distinct_included_clinical_patients"] == 13
-    assert report["patient_phenotype_counts"] == {"HIV": 8, "HERPES": 5}
-    assert report["patient_hand_counts"] == {"HAND": 5, "COGNITIVELY_NORMAL": 3}
+class PXD047528ClinicalMappingTests(unittest.TestCase):
+    def test_valid_synthetic_crosswalk_is_ready(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "mapping.tsv"
+            write_rows(path, make_rows())
+            report = validate_mapping(path)
+            self.assertEqual(report["status"], "READY_FOR_CLINICAL_VALIDATION")
+            self.assertEqual(report["processed_aliases_mapped"], 15)
+            self.assertEqual(report["distinct_included_clinical_patients"], 13)
+            self.assertEqual(report["patient_phenotype_counts"], {"HIV": 8, "HERPES": 5})
+            self.assertEqual(report["patient_hand_counts"], {"HAND": 5, "COGNITIVELY_NORMAL": 3})
 
 
-def test_missing_alias_blocks_mapping(tmp_path):
-    path = tmp_path / "mapping.tsv"
-    write_rows(path, make_rows()[:-1])
-    report = validate_mapping(path)
-    assert report["status"] == "BLOCKED"
-    assert any("Missing sample aliases" in error for error in report["errors"])
+    def test_missing_alias_blocks_mapping(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "mapping.tsv"
+            write_rows(path, make_rows()[:-1])
+            report = validate_mapping(path)
+            self.assertEqual(report["status"], "BLOCKED")
+            self.assertTrue(any("Missing sample aliases" in error for error in report["errors"]))
 
 
-def test_technical_replicate_cannot_be_counted_twice(tmp_path):
-    path = tmp_path / "mapping.tsv"
-    rows = make_rows()
-    rows[-1]["include_in_hiv_vs_herpes"] = "true"
-    write_rows(path, rows)
-    report = validate_mapping(path)
-    assert report["status"] == "BLOCKED"
-    assert any("technical replicate" in error for error in report["errors"])
+    def test_technical_replicate_cannot_be_counted_twice(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "mapping.tsv"
+            rows = make_rows()
+            rows[-1]["include_in_hiv_vs_herpes"] = "true"
+            write_rows(path, rows)
+            report = validate_mapping(path)
+            self.assertEqual(report["status"], "BLOCKED")
+            self.assertTrue(any("technical replicate" in error for error in report["errors"]))
 
 
-def test_conflicting_patient_phenotype_blocks_mapping(tmp_path):
-    path = tmp_path / "mapping.tsv"
-    rows = make_rows()
-    rows[-1]["phenotype"] = "HERPES"
-    rows[-1]["hand_status"] = "NA"
-    write_rows(path, rows)
-    report = validate_mapping(path)
-    assert report["status"] == "BLOCKED"
-    assert any("conflicting phenotype/HAND" in error for error in report["errors"])
+    def test_conflicting_patient_phenotype_blocks_mapping(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "mapping.tsv"
+            rows = make_rows()
+            rows[-1]["phenotype"] = "HERPES"
+            rows[-1]["hand_status"] = "NA"
+            write_rows(path, rows)
+            report = validate_mapping(path)
+            self.assertEqual(report["status"], "BLOCKED")
+            self.assertTrue(any("conflicting phenotype/HAND" in error for error in report["errors"]))
 
 
-def test_unverified_row_cannot_carry_clinical_labels(tmp_path):
-    path = tmp_path / "mapping.tsv"
-    rows = make_rows()
-    rows[-1]["provenance_status"] = "UNRESOLVED"
-    rows[-1]["phenotype"] = "HIV"
-    write_rows(path, rows)
-    report = validate_mapping(path)
-    assert report["status"] == "BLOCKED"
-    assert any("unverified rows must not carry" in error for error in report["errors"])
+    def test_unverified_row_cannot_carry_clinical_labels(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "mapping.tsv"
+            rows = make_rows()
+            rows[-1]["provenance_status"] = "UNRESOLVED"
+            rows[-1]["phenotype"] = "HIV"
+            write_rows(path, rows)
+            report = validate_mapping(path)
+            self.assertEqual(report["status"], "BLOCKED")
+            self.assertTrue(any("unverified rows must not carry" in error for error in report["errors"]))
