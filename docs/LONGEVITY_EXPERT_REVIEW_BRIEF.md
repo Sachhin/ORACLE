@@ -89,3 +89,8 @@ Reviewers should also provide a categorical recommendation for each hypothesis: 
 - GSE58137/GSE65219 are age-association checks on a different candidate panel; they do not independently reproduce the 8-mRPG signature.
 - No ORACLE longevity mechanism has passed independent replication or functional validation.
 - This brief is prepared; **human expert evaluation is still pending**.
+
+
+### Exact gene panels and public validation cohort
+
+The 2026 article's Figure 4B defines the mRPG-8 panel as MRPL3, MRPL32, MRPL42, MRPL45, MRPL50, MRPS10, MRPS33 and MRPS35, and the cRPG-7 comparator as RPL10A, RPL22, RPL4, RPL5, RPS13, RPS23 and RPS6. ORACLE has a deterministic reanalysis workflow for GSE16717 (GPL2895), which contains 50 long-lived siblings, 50 offspring and 50 controls/offspring partners. This is the same Leiden validation cohort cited in the 2026 paper; its reanalysis tests reproducibility, not a new independent cohort. Individual age/sex metadata availability is being audited, and group comparisons will be explicitly labelled exploratory if covariate adjustment is not possible.
