@@ -96,6 +96,37 @@ def main() -> None:
                             "sha256": sha256(target),
                         })
 
+    europe_url = f"https://www.ebi.ac.uk/europepmc/webservices/rest/{PMCID}/fullTextXML"
+    europe_xml_path = out / "europepmc_fulltext.xml"
+    europe_status = None
+    europe_content_type = None
+    supplement_links = []
+    downloaded_supplements = []
+    try:
+        europe_status, europe_content_type = fetch(europe_url, europe_xml_path)
+        europe_root = ET.parse(europe_xml_path).getroot()
+        xlink = "{http://www.w3.org/1999/xlink}href"
+        for node in europe_root.iter():
+            href = node.attrib.get(xlink) or node.attrib.get("href")
+            if href and re.search(r"(supp|table|sample|metadata|\\.(?:xlsx?|csv|tsv|zip|pdf|txt)$)", href, flags=re.I):
+                supplement_links.append(urljoin("https://europepmc.org/articles/PMC6211641/", href))
+        for link in sorted(set(supplement_links)):
+            filename = link.rsplit("/", 1)[-1].split("?", 1)[0] or "supplement"
+            target = out / "europepmc_supplements" / filename
+            target.parent.mkdir(parents=True, exist_ok=True)
+            try:
+                link_status, link_type = fetch(link, target)
+                downloaded_supplements.append({
+                    "url": link, "file_name": filename, "http_status": link_status,
+                    "content_type": link_type, "bytes": target.stat().st_size,
+                    "sha256": sha256(target), "local_path": str(target.relative_to(out)),
+                })
+            except Exception as exc:
+                downloaded_supplements.append({"url": link, "error": str(exc)})
+    except Exception as exc:
+        europe_status = "unavailable"
+        europe_content_type = str(exc)
+
     candidate_files = [
         x for x in extracted_files
         if re.search(r"(supp|table|sample|metadata|data)", x["path"], flags=re.I)
@@ -109,6 +140,11 @@ def main() -> None:
         "oa_response_sha256": sha256(xml_path),
         "response_text": raw_xml[:5000],
         "links": links,
+        "europepmc_fulltext_url": europe_url,
+        "europepmc_http_status": europe_status,
+        "europepmc_content_type": europe_content_type,
+        "europepmc_supplement_links": sorted(set(supplement_links)),
+        "downloaded_europepmc_supplements": downloaded_supplements,
         "archive": archive_info,
         "extracted_file_count": len(extracted_files),
         "extracted_files": extracted_files,
