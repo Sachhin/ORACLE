@@ -190,3 +190,25 @@ CRA000515, PXD047528, longevity-audit, and blinded-review artifacts. It
 returns BLOCKED rather than allowing missing external evidence to be marked
 PASS. The command and input schema are documented in
 `docs/ORACLE_V1_RELEASE_GATE.md`.
+
+
+## CRA000515 additional cross-study provenance source (2026-11-16)
+
+A 2026 Cell Reports Medicine paper, DOI
+`10.1016/j.xcrm.2026.102767`, explicitly lists 171 RNA-seq samples from
+CRA000515 and 271 from HRA000656, plus 1,310 newly generated samples in
+HRA000721, HRA015371, and HRA015372. Its public expression matrix is deposited
+as Mendeley Data DOI `10.17632/fpf4y72kfz.1`. The paper names Qing-Peng Kong
+(`kongqp@mail.kiz.ac.cn`) as lead contact and says additional reanalysis
+information is available on request.
+
+This strengthens the source chain and identifies the corresponding 2026
+cohort, but it does not itself publish a sample-level crosswalk for all 171
+CRA aliases. The public GSA project record lists 171 BioSamples and the study
+description's broad groups (centenarians, offspring, spouses), while the
+per-sample BioSample records inspected do not provide all required ages and
+cohort labels. The Mendeley page's text-accessible view identifies the dataset
+and download control but does not expose the file inventory; its documented
+API uses OAuth2 for dataset retrieval. Therefore no clinical group labels are
+inferred from the 2026 paper's aggregate counts. A submitter-provided or
+publicly downloadable sample annotation table is still required.
