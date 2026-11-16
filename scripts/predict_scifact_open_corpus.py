@@ -103,7 +103,7 @@ class BM25Index:
         return scores[:top_k]
 
 
-MAX_ABSTRACT_CHARS_PER_DOCUMENT = 2400
+MAX_ABSTRACT_CHARS_PER_DOCUMENT = 1600
 
 
 def _bounded_abstract_sentences(abstract: list[str], max_chars: int = MAX_ABSTRACT_CHARS_PER_DOCUMENT) -> list[dict[str, Any]]:
@@ -351,7 +351,7 @@ def main() -> None:
     parser.add_argument("--base-url", required=True, help="Explicit local OpenAI-compatible model endpoint")
     parser.add_argument("--model", required=True, help="Model name served by the local endpoint")
     parser.add_argument("--top-k", type=int, default=20, help="BM25 retrieval documents per claim for recall diagnostics")
-    parser.add_argument("--context-top-k", type=int, default=4, help="Top-ranked documents actually shown to the model")
+    parser.add_argument("--context-top-k", type=int, default=3, help="Top-ranked documents actually shown to the model")
     parser.add_argument("--timeout", type=float, default=120.0)
     parser.add_argument("--max-tokens", type=int, default=512)
     parser.add_argument("--max-claims", type=int, default=0, help="Optional pilot limit; 0 means all claims")
