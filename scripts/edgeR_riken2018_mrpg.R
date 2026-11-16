@@ -80,6 +80,29 @@ summary <- data.frame(
   stringsAsFactors = FALSE
 )
 write.table(summary, file.path(outdir, paste0("mRPG8_panel_summary_", label, ".tsv")), sep = "\t", quote = FALSE, row.names = FALSE)
+
+loo_rows <- lapply(seq_along(scores), function(drop_i) {
+  keep <- setdiff(seq_along(scores), drop_i)
+  loo_scores <- scores[keep]
+  loo_group <- droplevels(group[keep])
+  observed_loo <- mean(loo_scores[loo_group == "SC"]) - mean(loo_scores[loo_group == "CT"])
+  loo_combinations <- combn(seq_along(loo_scores), sum(loo_group == "SC"))
+  loo_permuted <- apply(loo_combinations, 2, function(idx) {
+    is_sc <- seq_along(loo_scores) %in% idx
+    mean(loo_scores[is_sc]) - mean(loo_scores[!is_sc])
+  })
+  data.frame(
+    dropped_patient = metadata$patient[drop_i],
+    dropped_group = as.character(group[drop_i]),
+    score_difference_SC_minus_CT = observed_loo,
+    exact_two_sided_permutation_p = mean(abs(loo_permuted) >= abs(observed_loo) - 1e-12),
+    assignments = ncol(loo_combinations),
+    stringsAsFactors = FALSE
+  )
+})
+loo_df <- do.call(rbind, loo_rows)
+write.table(loo_df, file.path(outdir, paste0("mRPG8_panel_leave_one_out_", label, ".tsv")),
+            sep = "\t", quote = FALSE, row.names = FALSE)
 writeLines(capture.output(sessionInfo()), file.path(outdir, paste0("R_sessionInfo_", label, ".txt")))
 cat("RIKEN SC2018 edgeR complete\n")
 print(summary)
