@@ -12,6 +12,7 @@ import re
 import tarfile
 import urllib.error
 import urllib.request
+from urllib.parse import urljoin
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from pathlib import Path
