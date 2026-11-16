@@ -6,6 +6,7 @@ on:
     paths:
       - ".github/workflows/gse32493-sra-per-sample.yml"
       - "scripts/build_gse32493_sra_counts.py"
+      - "scripts/download_gse32493_ena_fastq.py"
       - "scripts/edgeR_gse32493.R"
       - "tests/test_gse32493_sra_counts.py"
   workflow_dispatch:
@@ -29,7 +30,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y bowtie fastp r-base-core r-bioc-edger
           python --version
-          Rscript -e 'library(edgeR); packageVersion("edgeR")'
           bowtie --version
           fastp --version
           Rscript -e 'library(edgeR); packageVersion("edgeR")'
