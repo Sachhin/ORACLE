@@ -129,3 +129,13 @@ Ahmed et al. (2022) Table 1 reports 13 participants: 8 virally suppressed people
 The PRIDE project was announced on 2024-03-05 and its metadata was updated on 2024-10-22, after the 2022 article. PEPerMINT reports 15 samples and 15 biological samples for PXD047528. The 15 raw DDA/DIA acquisition pairs and 15 HIVPCA labels in the SEARCH report are not linked to the 13 clinical-paper rows. The two-count difference could reflect additional samples or a different data scope, but the public evidence does not resolve it.
 
 Source: Ahmed et al. 2022, Table 1, DOI 10.1007/s13365-022-01077-0; PRIDE/ProteomeXchange project PXD047528; PEPerMINT Table 2.
+
+## Newly established technical alias clue (not a clinical crosswalk)
+
+The PEPerMINT source code's `load_blood_hiv_dda_dia_dataset()` explicitly uses processed columns `1_Slot1` through `15_Slot1` (see `DILiS-lab/pepermint/datasets.py`). The PRIDE SEARCH report header contains 15 DIA-NN sample columns named `HIVPCA1_Slot1-5` through `HIVPCA15_Slot1-19` (in a non-sequential header order). The numeric suffix relationship is consistent with the candidate technical alias pattern:
+
+`n_Slot1` ↔ `HIVPCA n` ↔ `Slot1-(n+4)`, for n = 1…15.
+
+This is a useful technical hypothesis, but it is **not** yet a source-authenticated mapping to the 2019 PRIDE RAW pairs or to clinical participants. The SEARCH report's DIA-NN column names contain 2020 run identifiers, whereas PRIDE's raw DDA/DIA files are named with 2019 acquisition suffixes (03M, 23Y, 32S, 41S, 44S, 47Y, 50V, 590, 60P, 61Q, 62R, 67W, 74D, 77K, 9T2). No public file currently bridges those two naming systems or supplies HIV/herpes/HAND labels for each alias.
+
+The clinical paper reports 13 plasma samples (8 HIV and 5 herpes), while PEPerMINT/PRIDE expose 15 processed biological-sample aliases and 15 DDA/DIA acquisition pairs. The two-sample discrepancy remains unresolved. Do not promote the numeric alias pattern to a patient identity or phenotype assignment without submitter confirmation.

@@ -66,3 +66,7 @@ The submitter request is recorded in `docs/PXD047528_SUBMITTER_METADATA_REQUEST.
 - Clinical or causal interpretation: **NOT PERMITTED**
 
 Do not convert a successful preparation workflow into a clinical-validation pass.
+
+## Technical alias mapping update
+
+The public PEPerMINT loader and PRIDE SEARCH report now provide a candidate numeric alias bridge: processed aliases `1_Slot1`…`15_Slot1` align numerically with `HIVPCA1`…`HIVPCA15`, whose report headers carry `Slot1-5`…`Slot1-19`. The 2019 raw DDA/DIA file suffixes are still not bridged to these 2020 report run identifiers, and no clinical phenotype/patient labels are supplied. The 13-participant clinical paper versus 15 processed-alias discrepancy therefore remains open.
