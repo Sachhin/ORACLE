@@ -151,6 +151,9 @@ def main() -> None:
         "reference": {
             "name": "miRBase human mature miRNA reference",
             "declared_release": "23.1",
+            "source_url": "https://mirbase.org/ftp/23.1/mature.fa.gz",
+            "source_archive_sha256": sha256(args.reference.parent / "mature.fa.gz"),
+            "source_readme_sha256": sha256(args.reference.parent / "README"),
             "file": args.reference.name,
             "sha256": sha256(args.reference),
             "alignment": "Bowtie 1; up to one mismatch; all best-stratum alignments; only uniquely mapped reads counted",
