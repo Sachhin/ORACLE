@@ -38,6 +38,16 @@ The 8-mRPG bulk-blood association may partly reflect leukocyte subtype proportio
 
 The 2026 study includes cell-composition modelling in parts of its age-related analysis, but independent within-cell-type replication remains important.
 
+### H4 — Autophagy–lysosome maintenance in long-lived humans
+
+A stronger autophagy–lysosomal expression program may contribute to cellular maintenance in some long-lived populations. This is already published prior art, not a new ORACLE hypothesis discovery.
+
+**Prior art and context**
+- 2018 Genome Research: in 76 Hainan centenarians, 54 offspring and 41 spouses, the autophagy–lysosomal pathway was upregulated in centenarians. CTSB, ATP6V0C, ATG4D and WIPI1 overexpression promoted autophagy and delayed senescence in IMR-90 cells; Drosophila Atg18a overexpression extended fly lifespan (DOI 10.1101/gr.220780.117).
+- The 171-person Hainan cohort in that paper is the same cohort represented by the 171 CRA000515 records audited by ORACLE. These data must not be counted as an independent cohort replication of one another. Individual CRA000515 alias-to-cohort labels remain unavailable.
+
+The review should assess whether autophagy is a separate mechanistic arm, an upstream/downstream correlate of the mRPG signal, or a shared consequence of cell composition and health status. Human causal evidence remains absent.
+
 ## Questions for each reviewer
 
 1. Is each hypothesis clearly distinguished from published prior art? Identify any claim that is not novel.
