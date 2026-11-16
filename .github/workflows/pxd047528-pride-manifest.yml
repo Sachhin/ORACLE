@@ -1,0 +1,30 @@
+name: ORACLE PXD047528 PRIDE metadata manifest audit
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/pxd047528-pride-manifest.yml"
+      - "scripts/audit_pxd047528_pride_manifest.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pride-metadata:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Fetch PRIDE public project and file metadata
+        run: python scripts/audit_pxd047528_pride_manifest.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: oracle-pxd047528-pride-metadata
+          path: artifacts/pxd047528-pride/
+          if-no-files-found: error
+          retention-days: 90
