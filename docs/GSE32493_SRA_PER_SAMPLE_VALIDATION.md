@@ -61,3 +61,34 @@ Evidence:
 - A public GEO record documents the exact Illumina v1.0 small-RNA 3′ adapter sequence `TCGTATGCCGTCTTCTGCTTG`: https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSM803573
 
 The new workflow preserves the raw-read preview artifact even if trimming or mapping fails. No differential-expression result is considered valid until all six samples have non-zero post-trim reads, per-sample mapping QC is inspected, and the edgeR output is independently checked.
+
+
+## Verified raw-read result (GitHub Actions run 43900103792)
+
+The six-run workflow completed successfully. The source-authenticated mapping is three controls (GSM804340–GSM804342 / SRR350239–SRR350241) and three centenarians (GSM804343–GSM804345 / SRR350242–SRR350244).
+
+| QC metric | Total across 6 runs |
+|---|---:|
+| Raw reads | 26,934,368 |
+| Reads retained after adapter/length processing | 21,629,996 |
+| Reads with adapter trimmed | 25,129,847 |
+| Reads with at least one best-stratum miRNA alignment | 12,973,535 |
+| Uniquely mapped reads counted | 11,637,986 |
+| Multi-mapped reads excluded | 1,335,549 |
+| Features in count matrix | 1,105 |
+| Features retained/tested by edgeR | 302 |
+| Features with FDR < 0.05 | 0 |
+
+The six sample-level counts, raw/trimmed FASTQ checksums, SAM checksums, fastp JSON/HTML QC and edgeR results are frozen in the workflow artifact `oracle-gse32493-sra-per-sample-validation`.
+
+**Statistical result:** with only three biological samples per group, edgeR identified no miRNA with BH FDR below 0.05. Several nominal p-values were below 0.05, but their FDR values were 1.0 after correction. ORACLE therefore reports no statistically significant differential miRNA from this reanalysis.
+
+**Interpretation limits:**
+- GSE32493 is a small study of EBV-transformed B-cell lines, not a whole-blood or tissue-level human longevity cohort.
+- It measures mature miRNAs, not the 8 mitochondrial ribosomal protein mRNAs; it is not a direct replication of the 2026 mRPG signature.
+- The three-versus-three design is underpowered and exploratory.
+- The archive's FASTQ quality strings were Q0–Q10 in the inspected records; quality filtering was disabled to avoid discarding all reads. This makes count uncertainty higher and must be reported.
+- The analysis uses the current miRBase 23.1 human mature reference, not necessarily the exact historical annotation used by the 2012 study. It is a reproducible reanalysis, not a bit-for-bit reproduction of the original pipeline.
+- No causal or organism-level longevity mechanism is established.
+
+This closes the live raw-read execution blocker for GSE32493, but does not create a new validated longevity mechanism.
