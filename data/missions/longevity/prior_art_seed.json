@@ -5,6 +5,73 @@
   "novelty_policy": "The 8-mRPG signature and its association with transcriptomic aging are published prior art. ORACLE must not claim this signature itself as a novel discovery.",
   "sources": [
     {
+      "source_id": "doi:10.1038/nature12188",
+      "title": "Mitonuclear protein imbalance as a conserved longevity mechanism",
+      "journal": "Nature",
+      "publication_year": 2013,
+      "doi": "10.1038/nature12188",
+      "pmid": "23698443",
+      "pmcid": "PMC3663447",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC3663447/",
+      "claims": [
+        "MRPS5 and other mitochondrial ribosomal proteins were implicated in lifespan regulation using mouse genetics and C. elegans RNAi.",
+        "MRP knockdown induced mitonuclear protein imbalance, reduced mitochondrial respiration, activated UPRmt, and extended C. elegans lifespan."
+      ],
+      "limitations": [
+        "Functional evidence is mainly from model organisms and cells; it does not establish human longevity causality.",
+        "Intervention direction differs from the higher-than-age-expected expression of selected mRPGs in long-lived humans; dose, tissue and timing may matter."
+      ]
+    },
+    {
+      "source_id": "doi:10.1080/15476286.2021.1875647",
+      "title": "Ribosome profiling analysis of human skeletal muscle identifies reduced translation of mitochondrial proteins with age",
+      "journal": "RNA Biology",
+      "publication_year": 2021,
+      "doi": "10.1080/15476286.2021.1875647",
+      "pmid": "33472542",
+      "pmcid": "PMC8583053",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC8583053/",
+      "claims": [
+        "Human skeletal-muscle ribosome profiling found lower ribosome occupancy for several mitochondrial-genome-encoded oxidative-phosphorylation transcripts with older age."
+      ],
+      "limitations": [
+        "This does not measure the nuclear-encoded 8-mRPG signature or exceptional longevity; mitochondrial-genome-encoded OXPHOS translation is a distinct readout."
+      ]
+    },
+    {
+      "source_id": "doi:10.1101/gr.275636.121",
+      "title": "Mendelian randomization analyses implicate biogenesis of translation machinery in human aging",
+      "journal": "Genome Research",
+      "publication_year": 2022,
+      "doi": "10.1101/gr.275636.121",
+      "pmid": "35078808",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/35078808/",
+      "claims": [
+        "Mendelian-randomization analyses reported associations between genetically proxied expression of Pol I/III and ribosomal-protein machinery and human longevity.",
+        "Reduced expression of translation machinery in several tissues was reported as longevity-associated."
+      ],
+      "limitations": [
+        "This is not specific to mitochondrial ribosomal proteins; causal interpretation depends on instrument validity and does not validate the 8-mRPG signature."
+      ]
+    },
+    {
+      "source_id": "doi:10.1126/sciadv.abf2017",
+      "title": "ETS1 acts as a regulator of human healthy aging via decreasing ribosomal activity",
+      "journal": "Science Advances",
+      "publication_year": 2022,
+      "doi": "10.1126/sciadv.abf2017",
+      "pmid": "35476452",
+      "pmcid": "PMC9045719",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/35476452/",
+      "claims": [
+        "Transcriptomes from 185 long-lived individuals and 86 offspring spouses in two Chinese cohorts showed downregulation of the cytosolic ribosome pathway.",
+        "ETS1 was lower in long-lived individuals; ETS1 knockdown reduced cytosolic ribosomal-protein expression and cellular senescence in fibroblast models."
+      ],
+      "limitations": [
+        "The reported pathway is cytosolic ribosome biogenesis, not the mitochondrial 8-mRPG signature; fibroblast assays do not establish organismal lifespan causality."
+      ]
+    },
+    {
       "source_id": "doi:10.1016/j.xcrm.2026.102767",
       "title": "Preserved mitochondrial ribosomal protein gene expression marks a youthful transcriptional state in Chinese nonagenarians and centenarians",
       "journal": "Cell Reports Medicine",
