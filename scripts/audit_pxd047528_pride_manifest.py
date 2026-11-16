@@ -128,6 +128,27 @@ def main():
             "local_path": str(target.relative_to(out)),
         })
 
+    raw_pairs = {}
+    for record in files:
+        name = record.get("fileName") or ""
+        match = re.search(r"_(DDA|DIA)_([A-Za-z0-9]+)\\.raw$", name, flags=re.I)
+        if match:
+            method, code = match.group(1).upper(), match.group(2)
+            raw_pairs.setdefault(code, {})[method] = name
+
+    search_report_columns = []
+    for item in downloaded_search_files:
+        search_path = out / item["local_path"]
+        with search_path.open("rt", encoding="utf-8", errors="replace") as handle:
+            header = handle.readline().rstrip("\\r\\n").split("\\t")
+        for column in header[3:]:
+            if ".PG.Quantity" in column:
+                sample_match = re.search(r"HIVPCA([0-9]+)", column)
+                search_report_columns.append({
+                    "sample_label_in_report": f"HIVPCA{sample_match.group(1)}" if sample_match else "",
+                    "column_name": column,
+                })
+
     by_category = {}
     for row in rows:
         by_category[row["category"]] = by_category.get(row["category"], 0) + 1
@@ -137,6 +158,11 @@ def main():
         "project_file_count": len(files),
         "downloaded_search_files": downloaded_search_files,
         "category_counts": by_category,
+        "paired_raw_acquisition_suffixes": {code: pair for code, pair in sorted(raw_pairs.items()) if "DDA" in pair and "DIA" in pair},
+        "unpaired_raw_acquisition_suffixes": {code: pair for code, pair in sorted(raw_pairs.items()) if not ("DDA" in pair and "DIA" in pair)},
+        "search_report_sample_columns": search_report_columns,
+        "search_report_sample_column_count": len(search_report_columns),
+        "processed_alias_to_search_report_mapping": "NOT_ESTABLISHED",
         "filenames_with_slot_alias_tokens": [r["file_name"] for r in rows if r["alias_tokens"]],
         "files_with_sample_accession": [r["file_name"] for r in rows if r["sample_accession"]],
         "clinical_crosswalk_status": "NOT_ESTABLISHED_BY_FILE_METADATA",
