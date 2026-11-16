@@ -109,7 +109,7 @@ def main() -> None:
         for node in europe_root.iter():
             href = node.attrib.get(xlink) or node.attrib.get("href")
             if href and re.search(r"(supp|table|sample|metadata|xlsx|csv|tsv|zip|pdf|txt)", href, flags=re.I):
-                supplement_links.append(urljoin("https://europepmc.org/articles/PMC6211641/", href))
+                supplement_links.append(urljoin("https://europepmc.org/articles/PMC6211641/bin/", href))
         for link in sorted(set(supplement_links)):
             filename = link.rsplit("/", 1)[-1].split("?", 1)[0] or "supplement"
             target = out / "europepmc_supplements" / filename
