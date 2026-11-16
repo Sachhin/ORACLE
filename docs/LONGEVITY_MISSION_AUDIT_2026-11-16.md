@@ -69,7 +69,7 @@ the ORACLE mission artifact was generated:
 
 - Xiao et al., *Preserved mitochondrial ribosomal protein gene expression
   marks a youthful transcriptional state in Chinese nonagenarians and
-  centenarians*, Cell Reports Medicine, 19 May 2026.
+  centenarians*, Cell Reports Medicine, 23 April 2026 (collection date 19 May 2026).
 - DOI: `10.1016/j.xcrm.2026.102767`
 - PMID: `42030936`; PMCID: `PMC13198318`.
 - Public article: https://pmc.ncbi.nlm.nih.gov/articles/PMC13198318/
