@@ -111,7 +111,6 @@ jobs:
           name: oracle-gse32493-sra-per-sample-validation
           path: |
             artifacts/gse32493-sra/
-            reference/mature.fa
-            reference/hsa_mature.fa
+            reference/
           if-no-files-found: error
           retention-days: 90
