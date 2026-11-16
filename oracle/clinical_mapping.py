@@ -83,7 +83,7 @@ def validate_mapping(path: str | Path) -> dict:
         use_hiv_herpes = _truth(row["include_in_hiv_vs_herpes"])
         use_hand = _truth(row["include_in_hand_vs_cognitively_normal"])
 
-        if relationship not in {"PRIMARY", "TECHNICAL_REPLICATE", "QC", "EXCLUDED", "UNRESOLVED"}:
+        if relationship not in {"PRIMARY", "TECHNICAL_REPLICATE", "REPEAT_BIOLOGICAL_SAMPLE", "QC", "EXCLUDED", "UNRESOLVED"}:
             errors.append(f"Line {line}: invalid relationship_to_patient {relationship!r}")
         if provenance not in {"SOURCE_AUTHENTICATED", "TECHNICAL_ONLY", "UNRESOLVED"}:
             errors.append(f"Line {line}: invalid provenance_status {provenance!r}")
@@ -113,8 +113,8 @@ def validate_mapping(path: str | Path) -> dict:
             errors.append(f"Line {line}: HIV row requires HAND or COGNITIVELY_NORMAL")
         if phenotype == "HERPES" and hand not in {"NA", "NOT_APPLICABLE"}:
             errors.append(f"Line {line}: HERPES row must use NA hand_status")
-        if relationship == "TECHNICAL_REPLICATE" and (use_hiv_herpes or use_hand):
-            errors.append(f"Line {line}: technical replicate must not be counted as an independent participant")
+        if relationship in {"TECHNICAL_REPLICATE", "REPEAT_BIOLOGICAL_SAMPLE"} and (use_hiv_herpes or use_hand):
+            errors.append(f"Line {line}: repeat/technical samples must not be counted as independent participants")
         if use_hiv_herpes and relationship != "PRIMARY":
             errors.append(f"Line {line}: only PRIMARY samples may enter HIV-versus-herpes comparison")
         if use_hand and phenotype != "HIV":
