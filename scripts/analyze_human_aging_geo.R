@@ -66,6 +66,11 @@ analyse_eset <- function(eset, accession, index) {
   if (nrow(pd) < 20) stop("fewer than 20 samples; exploratory age analysis not run")
   txt <- metadata_text(pd)
   age <- extract_age(txt)
+  # Reject impossible ages before reporting or modelling them. The GSE65219
+  # group contrast is defined by explicit cohort titles, so invalid numeric
+  # age metadata must not contaminate the reported age range.
+  invalid_age <- is.finite(age) & (age < 0 | age > 120)
+  age[invalid_age] <- NA_real_
   age_group <- extract_age_group(txt)
 
   # GSE65219: use explicit sample titles for cohort assignment.
@@ -266,6 +271,7 @@ analyse_eset <- function(eset, accession, index) {
     samples_total = nrow(pd),
     samples_analyzed = sum(keep),
     exact_age_samples = sum(is.finite(age)),
+    invalid_age_samples = sum(invalid_age),
     older_group_samples = sum(age_group[keep] == "older", na.rm = TRUE),
     younger_group_samples = sum(age_group[keep] == "younger", na.rm = TRUE),
     age_min_years = if (any(is.finite(age[keep]))) min(age[keep], na.rm = TRUE) else NA_real_,
