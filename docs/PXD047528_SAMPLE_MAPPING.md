@@ -68,12 +68,9 @@ rather than normalized away:
   participants.
 - The PEPerMINT publication's Table 2 reports PXD047528 as **15 samples, 15
   biological samples, and one technical replicate per biological sample**.
-- The PRIDE/ProteomeXchange deposit contains 32 raw files. The raw-file count
-  alone cannot identify which files are DDA/DIA pairs, clinical participants,
-  technical repeats, quality controls, or exclusions.
+- The live PRIDE Archive v3 API returns 31 deposited files: 30 RAW files (15 DDA and 15 DIA acquisitions) plus one SEARCH report. The 30 RAW files form 15 DDA/DIA pairs with matching opaque suffixes (03M, 23Y, 32S, 41S, 44S, 47Y, 50V, 590, 60P, 61Q, 62R, 67W, 74D, 77K, 9T2). PRIDE returns no sampleAccession value for these files, and none of the raw filenames contains the processed Slot aliases. The count and filenames establish technical acquisitions, not clinical participant labels.
 
-These statements do not currently establish a valid 15-alias-to-13-patient
-crosswalk. In particular, ORACLE must **not assume** that two of the 15
+The one SEARCH report (20200510_SAAV_7g_15min_HIVPlasmaPCA_Report.txt; SHA-256 632c074117c15b48567c6b041b80f2281774097bc22959257fae9bb6dfce366b) contains 15 protein-group quantity columns labelled HIVPCA1 through HIVPCA15. Those labels are not mapped to the processed Slot aliases, the 15 raw acquisition suffixes, or clinical participants. The HIV token in a filename or report column is not accepted as a source-authenticated phenotype. These statements do not currently establish a valid 15-alias-to-13-patient crosswalk. In particular, ORACLE must **not assume** that two of the 15
 processed aliases are technical repeats merely to force agreement with the
 13-person clinical paper. The 15-biological-sample statement may indicate a
 broader or version-different analysis set; the submitter must explain the
@@ -97,3 +94,13 @@ Required submitter clarification:
    to the original clinical table row, where applicable.
 
 Until this is source-authenticated, clinical validation remains **BLOCKED**.
+
+
+## Live PRIDE API evidence (2026-11-16)
+
+The full file manifest and SEARCH report are preserved in docs/PXD047528_PRIDE_FILE_MANIFEST_AUDIT.md and the oracle-pxd047528-pride-metadata workflow artifact. The previous 32-raw-file count was incorrect. No clinical labels were inferred from the 15 raw DDA/DIA pairs or HIVPCA search-report columns.
+
+
+## Independent file-index discrepancy
+
+OmicsDI's public PXD047528 page displays 32 total file entries, whereas the live PRIDE Archive v3 files/all API returned 31 records (30 RAW + 1 SEARCH). ORACLE now probes the paginated PRIDE endpoint as a second check. The former statement “32 raw files” was incorrect: 32 is the external index's total entry count, not a verified raw-file count. The one-record difference remains under investigation.

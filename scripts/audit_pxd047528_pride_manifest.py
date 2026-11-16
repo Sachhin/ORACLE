@@ -56,10 +56,20 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     project_url = f"{BASE}/projects/{ACCESSION}"
     files_url = f"{BASE}/projects/{ACCESSION}/files/all"
+    paginated_files_url = f"{BASE}/projects/{ACCESSION}/files?page=0&size=1000"
 
     project, project_status = get_json(project_url)
     raw_files, files_status = get_json(files_url)
     files = normalize_files(raw_files)
+    paginated_probe = {"url": paginated_files_url, "status": "not_checked", "count": None}
+    paginated_files = []
+    try:
+        paginated_payload, paginated_status = get_json(paginated_files_url)
+        paginated_files = normalize_files(paginated_payload)
+        paginated_probe.update({"status": "success", "http_status": paginated_status,
+                                "count": len(paginated_files)})
+    except Exception as exc:
+        paginated_probe.update({"status": "unavailable", "error": str(exc)})
     if not files:
         raise RuntimeError("PRIDE API returned no files; refusing to treat this as an empty valid project")
 
@@ -67,9 +77,12 @@ def main():
         "accession": ACCESSION,
         "retrieved_utc": datetime.now(timezone.utc).isoformat(),
         "api": {"project_url": project_url, "files_url": files_url,
-                "project_http_status": project_status, "files_http_status": files_status},
+                "paginated_files_url": paginated_files_url,
+                "project_http_status": project_status, "files_http_status": files_status,
+                "paginated_probe": paginated_probe},
         "project": project,
         "files": files,
+        "paginated_files": paginated_files,
     }
     (out / "pride_project_and_file_manifest.json").write_text(
         json.dumps(full, indent=2) + "\n", encoding="utf-8"
@@ -156,6 +169,14 @@ def main():
         "accession": ACCESSION,
         "retrieved_utc": full["retrieved_utc"],
         "project_file_count": len(files),
+        "paginated_endpoint_file_count": len(paginated_files) if paginated_files else None,
+        "paginated_endpoint_probe": paginated_probe,
+        "files_all_not_in_paginated_endpoint": sorted(
+            {(x.get("fileName") or "") for x in files} - {(x.get("fileName") or "") for x in paginated_files}
+        ) if paginated_files else None,
+        "paginated_endpoint_not_in_files_all": sorted(
+            {(x.get("fileName") or "") for x in paginated_files} - {(x.get("fileName") or "") for x in files}
+        ) if paginated_files else None,
         "downloaded_search_files": downloaded_search_files,
         "category_counts": by_category,
         "paired_raw_acquisition_suffixes": {code: pair for code, pair in sorted(raw_pairs.items()) if "DDA" in pair and "DIA" in pair},
