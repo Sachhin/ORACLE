@@ -2,6 +2,8 @@
 # Exploratory replication of published human longevity candidate genes in
 # public human age-spectrum GEO expression cohorts. This is not a centenarian
 # cohort analysis and cannot establish exceptional longevity.
+options(timeout = 600)
+
 suppressPackageStartupMessages({
   library(GEOquery)
   library(Biobase)
@@ -24,15 +26,55 @@ metadata_text <- function(pd) {
   apply(pd, 1, function(row) paste(as.character(row), collapse = " ; "))
 }
 
-extract_age <- function(txt) {
-  vapply(txt, function(value) {
-    match <- regexec(
-      "(?i)(?:age|years?[ _-]*old|age[ _-]*years?)[^0-9]{0,16}([0-9]{1,3}(?:\\.[0-9]+)?)(?!\\s*[-–]\\s*[0-9])",
-      value, perl = TRUE
-    )
-    parts <- regmatches(value, match)[[1]]
-    if (length(parts) >= 2) as.numeric(parts[[2]]) else NA_real_
+extract_age <- function(pd) {
+  # Parse only explicit age fields or age-labelled characteristics. Never
+  # search arbitrary metadata text: years, sample numbers, and cohort codes
+  # elsewhere in GEO characteristics are not participant ages.
+  columns <- colnames(pd)
+  direct_cols <- grep(
+    "^(age|age[ _]?(in[ _]?)?years?|age[ _]*\\(years\\)|age at sampling)$",
+    columns, ignore.case = TRUE, value = TRUE
+  )
+  characteristic_cols <- grep("characteristics|^title$", columns, ignore.case = TRUE, value = TRUE)
+  candidate_cols <- unique(c(direct_cols, characteristic_cols))
+  pattern <- "(?i)(?:^|[;|,])\\s*(?:age|age[_ ]?in[_ ]?years|age\\s*\\(years\\))\\s*[:=]\\s*([0-9]{1,3}(?:\\.[0-9]+)?)\\b"
+  vapply(seq_len(nrow(pd)), function(i) {
+    values <- numeric()
+    for (column in candidate_cols) {
+      raw <- trimws(as.character(pd[i, column]))
+      if (is.na(raw) || !nzchar(raw)) next
+      if (column %in% direct_cols) {
+        numeric_value <- suppressWarnings(as.numeric(raw))
+        if (is.finite(numeric_value)) values <- c(values, numeric_value)
+      }
+      match <- regexec(pattern, raw, perl = TRUE)
+      parts <- regmatches(raw, match)[[1]]
+      if (length(parts) >= 2) values <- c(values, as.numeric(parts[[2]]))
+    }
+    values <- unique(values[is.finite(values)])
+    if (length(values) == 1) values[[1]] else NA_real_
   }, numeric(1))
+}
+
+get_geo_with_retry <- function(accession, attempts = 3) {
+  last_error <- NULL
+  for (attempt in seq_len(attempts)) {
+    result <- tryCatch(
+      getGEO(GEO = accession, GSEMatrix = TRUE, getGPL = TRUE),
+      error = function(e) {
+        last_error <<- conditionMessage(e)
+        NULL
+      }
+    )
+    if (!is.null(result)) return(result)
+    if (attempt < attempts) {
+      wait_seconds <- 10 * attempt
+      message("GEO retrieval failed for ", accession, " (attempt ", attempt,
+              "/", attempts, "): ", last_error, "; retrying in ", wait_seconds, " seconds")
+      Sys.sleep(wait_seconds)
+    }
+  }
+  stop(sprintf("GEO retrieval failed after %d attempts: %s", attempts, last_error))
 }
 
 extract_age_group <- function(txt) {
@@ -65,7 +107,12 @@ analyse_eset <- function(eset, accession, index) {
   pd <- pData(eset)
   if (nrow(pd) < 20) stop("fewer than 20 samples; exploratory age analysis not run")
   txt <- metadata_text(pd)
-  age <- extract_age(txt)
+  age <- extract_age(pd)
+  # Reject impossible ages before reporting or modelling them. The GSE65219
+  # group contrast is defined by explicit cohort titles, so invalid numeric
+  # age metadata must not contaminate the reported age range.
+  invalid_age <- is.finite(age) & (age < 0 | age > 120)
+  age[invalid_age] <- NA_real_
   age_group <- extract_age_group(txt)
 
   # GSE65219: use explicit sample titles for cohort assignment.
@@ -266,6 +313,7 @@ analyse_eset <- function(eset, accession, index) {
     samples_total = nrow(pd),
     samples_analyzed = sum(keep),
     exact_age_samples = sum(is.finite(age)),
+    invalid_age_samples = sum(invalid_age),
     older_group_samples = sum(age_group[keep] == "older", na.rm = TRUE),
     younger_group_samples = sum(age_group[keep] == "younger", na.rm = TRUE),
     age_min_years = if (any(is.finite(age[keep]))) min(age[keep], na.rm = TRUE) else NA_real_,
@@ -297,7 +345,7 @@ for (accession in accessions) {
   accession <- trimws(accession)
   message("Retrieving ", accession)
   result <- tryCatch({
-    sets <- getGEO(GEO = accession, GSEMatrix = TRUE, getGPL = TRUE)
+    sets <- get_geo_with_retry(accession)
     if (inherits(sets, "ExpressionSet")) sets <- list(sets)
     if (!length(sets)) stop("GEO returned no processed expression sets")
     cohort_results <- list()
