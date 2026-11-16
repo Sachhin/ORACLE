@@ -123,3 +123,19 @@ The full Europe PMC supplementary archive was retrieved (PMCID PMC13198318; DOI 
 - **7 cRPG comparator:** RPL10A, RPL22, RPL4, RPL5, RPS13, RPS23, RPS6.
 
 These are published prior-art signatures, not newly discovered ORACLE genes. The exact gene list removes one blocker for independent numerical replication in non-overlapping public expression cohorts. The Mendeley sample-level matrix and per-sample age/cohort annotations remain unavailable, so the 811-LLI/940-YC Chinese cohort cannot yet be independently reproduced from source data.
+
+
+## Independent multi-cohort immune-remodelling evidence (2025)
+
+Wang et al., *EBioMedicine* (2025), DOI [10.1016/j.ebiom.2025.105922](https://doi.org/10.1016/j.ebiom.2025.105922), assembled PBMC single-cell data from three centenarian cohorts:
+- Lingao, Hainan: 17 centenarians, 9 offspring, 14 controls (new cohort; GSA-Human HRA011570 / PRJCA038980)
+- Rugao: 7 centenarians, 6 offspring, 9 controls (reuse of HRA002867, the cohort already reported in the 2022 Rugao study)
+- Japan: 7 centenarians, 2 offspring, 3 controls (RIKEN SC2018 public reuse)
+
+The paper reports a combined 31/17/26 count. Across cohorts, it found higher NK-cell proportions and lower B-cell/CD4 T-cell proportions in centenarians; NK cells showed relatively young subset/receptor profiles, with increased RUNX3/KLF4 activity and enhanced NK–T signalling. CyTOF and flow cytometry provided orthogonal validation for selected Lingao findings.
+
+**Interpretation for ORACLE:** this is independent evidence that immune-cell composition and state are major correlates of exceptional longevity. It strengthens H3 (bulk-blood cell-composition/state confounding) and makes cell-type-aware testing essential before interpreting the 8-mRPG bulk signature as cell-intrinsic mitochondrial biology. The study does **not** directly test the 8-mRPG or cRPG gene panels.
+
+**Cohort independence rule:** the 2025 atlas reuses Rugao HRA002867 and Japan RIKEN SC2018; do not count those as new replications on top of their original studies. Lingao is the additional cohort. HRA011570 (Lingao) and HRA002867 (Rugao) are controlled-access; the article says data are available from the corresponding author/GSA-Human. GSA-Human controlled data require DAC authorization, so ORACLE has not downloaded or reanalysed these matrices.
+
+Sources: [Wang et al. 2025 full text](https://pmc.ncbi.nlm.nih.gov/articles/PMC12571583/); [PubMed record](https://pubmed.ncbi.nlm.nih.gov/40945050/); [GSA-Human access policy](https://ngdc.cncb.ac.cn/gsa-human/document/GSA-Human_Request_Guide_for_Users_us.pdf).
