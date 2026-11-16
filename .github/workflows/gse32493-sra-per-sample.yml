@@ -1,0 +1,167 @@
+name: ORACLE GSE32493 raw SRA per-sample validation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/gse32493-sra-per-sample.yml"
+      - "scripts/build_gse32493_sra_counts.py"
+      - "scripts/edgeR_gse32493.R"
+      - "tests/test_gse32493_sra_counts.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: oracle-gse32493-sra-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  per-sample-raw-read-analysis:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install deterministic small-RNA analysis tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y sra-toolkit bowtie fastp r-base-core r-bioc-edger
+          python --version
+          bowtie --version
+          fastp --version
+          Rscript -e 'library(edgeR); packageVersion("edgeR")'
+
+      - name: Run offline parser tests
+        run: python -m unittest discover -s tests -p 'test_gse32493_sra_counts.py' -v
+
+      - name: Download the six source-authenticated SRA runs
+        run: |
+          set -euo pipefail
+          mkdir -p sra fastq tmp
+          for run in SRR350239 SRR350240 SRR350241 SRR350242 SRR350243 SRR350244; do
+            prefetch --max-size 2G --output-directory sra "$run"
+            fasterq-dump "sra/$run/$run.sra" --threads 4 --outdir fastq --temp tmp
+            gzip -f "fastq/$run.fastq"
+          done
+          ls -lh fastq
+          python scripts/inspect_gse32493_fastq.py
+
+      - name: Upload raw FASTQ adapter and quality preview
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oracle-gse32493-fastq-preview
+          path: artifacts/gse32493-sra/fastq_preview.json
+          if-no-files-found: ignore
+          retention-days: 90
+
+      - name: Download and freeze the human mature-miRNA reference
+        run: |
+          set -euo pipefail
+          mkdir -p reference
+          curl --fail --location --retry 4 --connect-timeout 20 --max-time 300 \
+            https://www.mirbase.org/download/CURRENT/README/ \
+            -o reference/README
+          grep -m 1 'Release 23.1' reference/README
+          curl --fail --location --retry 5 --retry-all-errors --connect-timeout 30 --max-time 600 \
+            https://www.mirbase.org/download/CURRENT/mature.fa \
+            -o reference/mature.fa.download
+          python - <<'PY'
+          from html.parser import HTMLParser
+          from pathlib import Path
+          import re
+
+          class Text(HTMLParser):
+              def __init__(self):
+                  super().__init__(convert_charrefs=True)
+                  self.parts = []
+              def handle_starttag(self, tag, attrs):
+                  if tag in {"br", "p", "div", "li"}:
+                      self.parts.append("\n")
+              def handle_endtag(self, tag):
+                  if tag in {"p", "div", "li"}:
+                      self.parts.append("\n")
+              def handle_data(self, data):
+                  self.parts.append(data)
+
+          raw = Path("reference/mature.fa.download").read_text(encoding="utf-8", errors="replace")
+          parser = Text()
+          parser.feed(raw)
+          lines = "".join(parser.parts).splitlines()
+          records = []
+          header = None
+          sequence = []
+          for line in lines:
+              line = line.strip()
+              if line.startswith(">"):
+                  if header and sequence:
+                      records.append((header, "".join(sequence)))
+                  header, sequence = line, []
+              elif header and re.fullmatch(r"[ACGTUNacgtun]+", line):
+                  sequence.append(line)
+          if header and sequence:
+              records.append((header, "".join(sequence)))
+          if len(records) < 1000:
+              raise SystemExit(f"Expected a full miRBase FASTA; parsed only {len(records)} records")
+          Path("reference/mature.fa").write_text(
+              "".join(f"{h}\n{s}\n" for h, s in records), encoding="utf-8"
+          )
+          print(f"Parsed {len(records)} mature-miRNA records from miRBase download page")
+          PY
+          grep -m 3 '^>hsa' reference/mature.fa
+          awk '/^>hsa/{print; if(getline) print}' reference/mature.fa > reference/hsa_mature.rna.fa
+          sed '/^>/!s/U/T/g' reference/hsa_mature.rna.fa > reference/hsa_mature.fa
+          human_count=$(grep -c '^>hsa' reference/hsa_mature.fa || true)
+          echo "Human mature-miRNA reference entries: $human_count"
+          test "$human_count" -gt 100
+          sha256sum reference/mature.fa reference/hsa_mature.fa
+          grep -m 1 -E 'Release 23\.1|23\.1' reference/mature.fa || true
+
+      - name: Trim, map and count uniquely assigned mature miRNAs
+        run: |
+          python scripts/build_gse32493_sra_counts.py \
+            --fastq-dir fastq \
+            --reference reference/hsa_mature.fa \
+            --outdir artifacts/gse32493-sra
+
+      - name: Run replicate-level edgeR exact test
+        run: |
+          Rscript scripts/edgeR_gse32493.R \
+            artifacts/gse32493-sra/mirna_counts.csv \
+            artifacts/gse32493-sra
+
+      - name: Freeze complete per-sample results and QC
+        run: |
+          python - <<'PY'
+          import csv, json
+          from pathlib import Path
+          root = Path("artifacts/gse32493-sra")
+          report_path = root / "raw_read_analysis_manifest.json"
+          report = json.loads(report_path.read_text())
+          with (root / "edger_summary.csv").open() as f:
+              report["differential_expression"]["summary"] = list(csv.DictReader(f))
+          with (root / "edger_differential_expression.csv").open() as f:
+              rows = list(csv.DictReader(f))
+          report["differential_expression"]["status"] = "COMPLETED_EXPLORATORY"
+          report["differential_expression"]["tested_features"] = len(rows)
+          report["differential_expression"]["top_results"] = rows[:30]
+          report["differential_expression"]["significant_fdr_below_0_05"] = sum(float(x["FDR"]) < 0.05 for x in rows)
+          report["differential_expression"]["interpretation"] = (
+              "Three biological samples per group; exploratory only. "
+              "No causal or organism-level longevity claim is supported."
+          )
+          report_path.write_text(json.dumps(report, indent=2) + "\n")
+          print(json.dumps(report["differential_expression"], indent=2))
+          PY
+
+      - name: Upload raw-read analysis, source mapping, and QC artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: oracle-gse32493-sra-per-sample-validation
+          path: |
+            artifacts/gse32493-sra/
+            reference/
+          if-no-files-found: error
+          retention-days: 90
