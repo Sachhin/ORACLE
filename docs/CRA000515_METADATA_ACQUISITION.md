@@ -18,8 +18,7 @@ GitHub Actions → **ORACLE CRA000515 centenarian metadata acquisition and audit
 Download the artifact `cra000515-source-metadata-audit`. It contains:
 - original run metadata CSV and project metadata XLSX;
 - extracted Sample/Experiment/Run sheets as CSV;
-- run-to-BioSample manifest, retaining raw source row JSON and enriched BioSample age/sex/tissue fields where publicly available;
-- raw BioSample API/page snapshots, one per BioSample, with source URLs and SHA-256 hashes;
+- run-to-BioSample manifest, retaining raw source row JSON;
 - metadata audit JSON and SHA256SUMS.txt.
 
 ## Acceptance checks before any BAM download
