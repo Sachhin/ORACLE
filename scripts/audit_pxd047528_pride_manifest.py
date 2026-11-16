@@ -7,6 +7,7 @@ infer participant identities from file order or naming conventions.
 from __future__ import annotations
 
 import csv
+import hashlib
 import json
 import re
 import urllib.error
@@ -95,6 +96,38 @@ def main():
         writer.writeheader()
         writer.writerows(rows)
 
+    downloaded_search_files = []
+    for record in files:
+        if file_category(record) not in {"SEARCH", "RESULT"}:
+            continue
+        locations = record.get("publicFileLocations") or []
+        ftp_url = next((x.get("value") for x in locations
+                        if isinstance(x, dict) and x.get("name") == "FTP Protocol"), None)
+        if not ftp_url:
+            continue
+        download_url = ftp_url.replace("ftp://ftp.pride.ebi.ac.uk/", "https://ftp.pride.ebi.ac.uk/", 1)
+        filename = record.get("fileName") or "search_result_file"
+        target = out / "search_files" / filename
+        target.parent.mkdir(parents=True, exist_ok=True)
+        request = urllib.request.Request(download_url, headers={"User-Agent": "ORACLE-provenance-audit/1.0"})
+        with urllib.request.urlopen(request, timeout=180) as response, target.open("wb") as handle:
+            while True:
+                chunk = response.read(1024 * 1024)
+                if not chunk:
+                    break
+                handle.write(chunk)
+        digest = hashlib.sha256()
+        with target.open("rb") as handle:
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(chunk)
+        downloaded_search_files.append({
+            "file_name": filename,
+            "download_url": download_url,
+            "bytes": target.stat().st_size,
+            "sha256": digest.hexdigest(),
+            "local_path": str(target.relative_to(out)),
+        })
+
     by_category = {}
     for row in rows:
         by_category[row["category"]] = by_category.get(row["category"], 0) + 1
@@ -102,6 +135,7 @@ def main():
         "accession": ACCESSION,
         "retrieved_utc": full["retrieved_utc"],
         "project_file_count": len(files),
+        "downloaded_search_files": downloaded_search_files,
         "category_counts": by_category,
         "filenames_with_slot_alias_tokens": [r["file_name"] for r in rows if r["alias_tokens"]],
         "files_with_sample_accession": [r["file_name"] for r in rows if r["sample_accession"]],
