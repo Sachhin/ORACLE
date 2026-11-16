@@ -139,3 +139,18 @@ The PEPerMINT source code's `load_blood_hiv_dda_dia_dataset()` explicitly uses p
 This is a useful technical hypothesis, but it is **not** yet a source-authenticated mapping to the 2019 PRIDE RAW pairs or to clinical participants. The SEARCH report's DIA-NN column names contain 2020 run identifiers, whereas PRIDE's raw DDA/DIA files are named with 2019 acquisition suffixes (03M, 23Y, 32S, 41S, 44S, 47Y, 50V, 590, 60P, 61Q, 62R, 67W, 74D, 77K, 9T2). No public file currently bridges those two naming systems or supplies HIV/herpes/HAND labels for each alias.
 
 The clinical paper reports 13 plasma samples (8 HIV and 5 herpes), while PEPerMINT/PRIDE expose 15 processed biological-sample aliases and 15 DDA/DIA acquisition pairs. The two-sample discrepancy remains unresolved. Do not promote the numeric alias pattern to a patient identity or phenotype assignment without submitter confirmation.
+
+
+## Deterministic clinical-crosswalk validator
+
+The model-free validator `oracle/clinical_mapping.py` now checks the 15 aliases against the published 13-participant clinical design without creating any labels. It requires raw DDA/DIA filenames, mapping rationale, source URL and a SHA-256 for the source document. It distinguishes primary clinical samples, technical replicates, repeated biological samples, QC, excluded and unresolved aliases. Only source-authenticated primary samples can enter HIV-versus-herpes or HAND-versus-cognitively-normal comparisons.
+
+The validator expects the published clinical totals (8 HIV, 5 herpes; among HIV, 5 HAND and 3 cognitively normal) at the **unique-patient** level. It blocks technical/repeat aliases from being counted as independent participants and blocks all unverified rows from carrying phenotype labels. Synthetic unit tests are fixtures only; they are not a proposed or actual PXD047528 mapping.
+
+Run when the submitter-authenticated TSV is received:
+
+```bash
+python -m oracle.clinical_mapping --mapping data/pxd047528/sample_map.tsv --output artifacts/pxd047528/clinical_mapping_validation.json
+```
+
+The current real sample-map template remains blank and the validator correctly returns BLOCKED until the authors provide the source manifest.
