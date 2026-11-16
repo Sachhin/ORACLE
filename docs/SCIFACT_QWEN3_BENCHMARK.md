@@ -47,10 +47,19 @@ Official references:
 
 The full CPU benchmark uses BM25 top-20 for retrieval diagnostics, but exposes
 only the top 3 documents to Qwen3. Each document's abstract is capped at 1,600
-characters and generated output is capped at 256 tokens. This keeps prompt
+characters and generated output is capped at 192 tokens. This keeps prompt
 size bounded below the 8,192-token llama.cpp context window and makes a
 300-claim run more likely to finish inside the 360-minute Actions limit.
 The report records both broad retrieval metrics and the smaller model-context
 evidence metrics. The narrower context is part of the benchmark configuration
 and must be frozen alongside its results; accuracy must be interpreted at
 this setting, not as a model-independent score.
+
+
+### Output-budget consistency check
+
+The five-claim format preflight and the full 300-claim run both use a
+192-token generation cap. This is a conservative ceiling for the compact
+stance/evidence JSON schema; if outputs are truncated, the run records them
+as invalid rather than silently accepting partial evidence. The cap is frozen
+as part of this benchmark configuration.
