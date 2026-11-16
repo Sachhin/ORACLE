@@ -214,8 +214,10 @@ def generate_validated_prediction(model: SelfHostedLanguageModel,
                 "content": (
                     "Your previous response did not pass strict JSON/schema validation. "
                     "Try again. Return only one JSON object with an evidence array. "
-                    "Use only supplied candidate document IDs and valid zero-based sentence indices. "
-                    "If uncertain, abstain with an empty evidence array."
+                    "Use at most two supplied candidate document IDs. Every included document must have "
+                    "one to three valid zero-based sentence indices; never return empty sentence arrays. "
+                    "Use CONTRADICT only for explicit conflict with the claim. If no direct evidence exists, "
+                    "abstain with an empty evidence array."
                 ),
             }]
         try:
