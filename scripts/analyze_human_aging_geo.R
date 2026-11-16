@@ -2,6 +2,8 @@
 # Exploratory replication of published human longevity candidate genes in
 # public human age-spectrum GEO expression cohorts. This is not a centenarian
 # cohort analysis and cannot establish exceptional longevity.
+options(timeout = 600)
+
 suppressPackageStartupMessages({
   library(GEOquery)
   library(Biobase)
@@ -52,6 +54,27 @@ extract_age <- function(pd) {
     values <- unique(values[is.finite(values)])
     if (length(values) == 1) values[[1]] else NA_real_
   }, numeric(1))
+}
+
+get_geo_with_retry <- function(accession, attempts = 3) {
+  last_error <- NULL
+  for (attempt in seq_len(attempts)) {
+    result <- tryCatch(
+      getGEO(GEO = accession, GSEMatrix = TRUE, getGPL = TRUE),
+      error = function(e) {
+        last_error <<- conditionMessage(e)
+        NULL
+      }
+    )
+    if (!is.null(result)) return(result)
+    if (attempt < attempts) {
+      wait_seconds <- 10 * attempt
+      message("GEO retrieval failed for ", accession, " (attempt ", attempt,
+              "/", attempts, "): ", last_error, "; retrying in ", wait_seconds, " seconds")
+      Sys.sleep(wait_seconds)
+    }
+  }
+  stop(sprintf("GEO retrieval failed after %d attempts: %s", attempts, last_error))
 }
 
 extract_age_group <- function(txt) {
@@ -322,7 +345,7 @@ for (accession in accessions) {
   accession <- trimws(accession)
   message("Retrieving ", accession)
   result <- tryCatch({
-    sets <- getGEO(GEO = accession, GSEMatrix = TRUE, getGPL = TRUE)
+    sets <- get_geo_with_retry(accession)
     if (inherits(sets, "ExpressionSet")) sets <- list(sets)
     if (!length(sets)) stop("GEO returned no processed expression sets")
     cohort_results <- list()
