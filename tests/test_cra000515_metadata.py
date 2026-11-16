@@ -10,7 +10,7 @@ try:
 except ImportError:
     raise unittest.SkipTest("openpyxl is installed by the dedicated CRA metadata workflow")
 
-from scripts.acquire_cra000515_metadata import acquire_metadata
+from scripts.acquire_cra000515_biosample_fallback import acquire_metadata
 
 
 class FakeResponse:
@@ -27,7 +27,25 @@ class FakeSession:
         self.calls = []
     def request(self, method, url, **kwargs):
         self.calls.append((method, url, kwargs))
-        return FakeResponse(self.run_csv if url.endswith("getRunInfoByCra") else self.workbook)
+        if url.endswith("getRunInfoByCra"):
+            return FakeResponse(self.run_csv)
+        if url.endswith("exportExcelFile"):
+            return FakeResponse(self.workbook)
+        if "/gwh/api/public/bioSample/" in url:
+            accession = url.rsplit("/", 1)[-1]
+            payload = {
+                "accession": accession,
+                "name": "RNA-seq of human peripheral white blood cells; CHHA67",
+                "sampleAttribute": {
+                    "age": "", "ageUnit": "year", "sex": "female",
+                    "tissue": "peripheral blood", "disease": "",
+                    "healthState": "", "phenotype": "", "population": "",
+                    "biomaterialProvider": "Kong lab",
+                    "sample": {"prjAccession": "PRJCA000568"}
+                }
+            }
+            return FakeResponse(json.dumps(payload).encode())
+        raise AssertionError("Unexpected source URL: " + url)
 
 
 def workbook_bytes():
@@ -67,7 +85,10 @@ class CRAAcquisitionTests(unittest.TestCase):
             manifest = list(csv.DictReader(open(Path(tmp) / "CRA000515.run_biosample_manifest.csv")))
             self.assertEqual(manifest[0]["sample_alias"], "CHHA67")
             self.assertEqual(manifest[0]["raw_group_label"], "Centenarian")
-            self.assertEqual(len(session.calls), 2)
+            self.assertEqual(manifest[0]["sex"], "female")
+            self.assertEqual(manifest[0]["tissue"], "peripheral blood")
+            self.assertEqual(manifest[0]["biosample_metadata_status"], "retrieved")
+            self.assertGreaterEqual(len(session.calls), 4)
             audit = json.loads((Path(tmp) / "CRA000515.metadata_audit.json").read_text())
             self.assertIn("SHA256SUMS.txt", {p.name for p in Path(tmp).iterdir()})
 
