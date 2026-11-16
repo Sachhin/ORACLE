@@ -38,3 +38,23 @@ A successful metadata workflow means **metadata retrieved and structurally
 audited**, not that sample identities are biologically validated or that the
 centenarian study has been replicated. If the public workbook omits ages or
 cohort labels, request the source-authenticated manifest from the submitter.
+
+
+## Additional 2026 cohort cross-reference
+
+The 2026 Cell Reports Medicine study *Preserved mitochondrial ribosomal protein
+gene expression marks a youthful transcriptional state in Chinese
+nonagenarians and centenarians* (DOI
+`10.1016/j.xcrm.2026.102767`) identifies 171 RNA-seq samples from
+CRA000515 and 271 from HRA000656 as previously reported samples, and lists
+1,310 newly included samples under HRA000721, HRA015371, and HRA015372. It
+states that a 1,751-sample expression matrix is deposited at Mendeley Data
+(DOI `10.17632/fpf4y72kfz.1`). This is a useful independent cross-reference
+for the project, but it does not by itself provide the 171-row
+alias-to-age/cohort crosswalk required by this audit.
+
+The paper's lead contact is Qing-Peng Kong (`kongqp@mail.kiz.ac.cn`). If the
+public sample records remain incomplete, request the sample annotation
+manifest, its field definitions, and the mapping between CRA000515 aliases
+and the 2026 integrated expression matrix before treating the groups as
+validated.
