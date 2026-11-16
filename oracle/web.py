@@ -50,10 +50,7 @@ button:disabled{opacity:.5;cursor:wait}.muted{color:var(--muted)}.status{padding
 <p class="muted">Quick answer skips full-text retrieval, citation expansion and GEO downloads. It is a preliminary source-backed response, not a substitute for deep validation.</p>
 <div class="grid"><div><label>Research cycles (1–8)</label><input id="cycles" type="number" min="1" max="8" value="1"></div>
 <div><label>Literature records (1–50)</label><input id="limit" type="number" min="1" max="50" value="5"></div></div>
-<div class="status">Without a configured model, ORACLE uses deterministic agents only. Optional language reasoning requires an explicitly configured self-hosted OpenAI-compatible model server; model proposals are not scientific evidence.</div>
-<label>Self-hosted model endpoint (optional)</label><input id="modelUrl" type="url" placeholder="http://127.0.0.1:8080/v1">
-<label>Model identifier</label><input id="modelName" type="text" placeholder="e.g. Qwen3-8B">
-<p class="muted">Use a model server you control (llama.cpp, Ollama or vLLM). Both fields are required together. No Gemini or paid hosted provider is selected automatically.</p>
+<div class="status">Model-independent mode: research runs use deterministic planning, source retrieval, and reproducible scientific computation. No AI model or model credentials are used.</div>
 <label class="check"><input id="fulltext" type="checkbox"> Retrieve eligible open-access full text</label>
 <label class="check"><input id="citations" type="checkbox"> Expand citation network</label>
 <label class="check"><input id="geoDiscover" type="checkbox"> Discover GEO supplementary files (no downloads)</label>
@@ -92,7 +89,7 @@ if(r.hypotheses&&r.hypotheses.length>0){r.hypotheses.forEach(hp=>{const it=docum
 cont.append(h1,pre,h2,dSrc,h3,dHyp);
 $("detail").append(h,p,cont)}catch(e){showStatus(e.message)}catch(e){showStatus(e.message)}}
 $('mission').onsubmit=async e=>{e.preventDefault();$('start').disabled=true;showStatus('Submitting research mission…');
-try{const payload={question:$('question').value,mode:$('mode').value,domain:$('domain').value,cycles:Number($('cycles').value),limit:Number($('limit').value),full_text:$('fulltext').checked,citations:$('citations').checked,geo_discover:$('geoDiscover').checked,geo_analyze:$('geoAnalyze').checked,local_model_url:$('modelUrl').value.trim(),local_model_name:$('modelName').value.trim()};
+try{const payload={question:$('question').value,mode:$('mode').value,domain:$('domain').value,cycles:Number($('cycles').value),limit:Number($('limit').value),full_text:$('fulltext').checked,citations:$('citations').checked,geo_discover:$('geoDiscover').checked,geo_analyze:$('geoAnalyze').checked};
 const d=await api('/api/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});activeJob=d.job_id;showStatus('Run started: '+activeJob);poll()}catch(err){showStatus('Could not start: '+err.message);$('start').disabled=false}};
 async function poll(){if(!activeJob)return;try{const d=await api('/api/jobs/'+activeJob);showStatus('Job '+d.status+(d.run_id?' · Run '+d.run_id:'')+(d.error?'\n'+d.error:''));if(d.status==='completed'){activeJob=null;$('start').disabled=false;await refresh();if(d.run_id)await selectRun(d.run_id);return}if(d.status==='failed'){activeJob=null;$('start').disabled=false;return}setTimeout(poll,3000)}catch(e){showStatus(e.message);activeJob=null;$('start').disabled=false}}
 $('refresh').onclick=refresh;refresh();
@@ -195,12 +192,6 @@ class OracleDashboardHandler(BaseHTTPRequestHandler):
             limit = int(payload.get("limit", 20))
             if not 1 <= cycles <= 8 or not 1 <= limit <= 50:
                 raise ValueError("Cycles must be 1–8 and literature limit 1–50.")
-            model_url = str(payload.get("local_model_url", "")).strip()
-            model_name = str(payload.get("local_model_name", "")).strip()
-            if bool(model_url) != bool(model_name):
-                raise ValueError("Enter both the self-hosted model endpoint and model identifier, or leave both blank.")
-            if model_url and not model_url.startswith(("http://", "https://")):
-                raise ValueError("Self-hosted model endpoint must be an explicit http(s) URL.")
             root = Path(os.environ.get("ORACLE_WORKDIR", ".")).resolve()
             job_dir = root / ".oracle-web" / "jobs"
             job_dir.mkdir(parents=True, exist_ok=True)
@@ -219,8 +210,6 @@ class OracleDashboardHandler(BaseHTTPRequestHandler):
                 command.append("--discover-geo-files")
             if payload.get("geo_analyze"):
                 command.append("--analyze-geo-files")
-            if model_url:
-                command.extend(["--local-model-url", model_url, "--local-model-name", model_name])
             with output.open("w", encoding="utf-8") as out_handle, log.open("w", encoding="utf-8") as handle:
                 process = subprocess.Popen(command, cwd=root, stdout=out_handle,
                     stderr=handle, env=os.environ.copy())
