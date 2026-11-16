@@ -99,3 +99,8 @@ Until this is source-authenticated, clinical validation remains **BLOCKED**.
 ## Live PRIDE API evidence (2026-11-16)
 
 The full file manifest and SEARCH report are preserved in docs/PXD047528_PRIDE_FILE_MANIFEST_AUDIT.md and the oracle-pxd047528-pride-metadata workflow artifact. The previous 32-raw-file count was incorrect. No clinical labels were inferred from the 15 raw DDA/DIA pairs or HIVPCA search-report columns.
+
+
+## Independent file-index discrepancy
+
+OmicsDI's public PXD047528 page displays 32 total file entries, whereas the live PRIDE Archive v3 files/all API returned 31 records (30 RAW + 1 SEARCH). ORACLE now probes the paginated PRIDE endpoint as a second check. The former statement “32 raw files” was incorrect: 32 is the external index's total entry count, not a verified raw-file count. The one-record difference remains under investigation.
