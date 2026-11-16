@@ -55,10 +55,9 @@ jobs:
             https://www.mirbase.org/download/CURRENT/README/ \
             -o reference/README
           grep -m 1 'Release 23.1' reference/README
-          curl --fail --location --retry 4 --connect-timeout 20 --max-time 300 \
-            ftp://mirbase.org/pub/mirbase/CURRENT/mature.fa.gz \
-            -o reference/mature.fa.gz
-          gzip -dc reference/mature.fa.gz > reference/mature.fa
+          curl --fail --location --retry 5 --retry-all-errors --connect-timeout 30 --max-time 600 \
+            https://www.mirbase.org/download/CURRENT/mature.fa \
+            -o reference/mature.fa
           grep -m 3 '^>hsa' reference/mature.fa
           awk '/^>hsa/{print; if(getline) print}' reference/mature.fa > reference/hsa_mature.rna.fa
           sed '/^>/!s/U/T/g' reference/hsa_mature.rna.fa > reference/hsa_mature.fa
