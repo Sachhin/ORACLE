@@ -55,9 +55,9 @@ jobs:
           curl --fail --location --retry 4 --connect-timeout 20 --max-time 300 \
             https://www.mirbase.org/download/CURRENT/mature.fa \
             -o reference/mature.fa
-          awk '/^>/{keep=(tolower($0) ~ /^>hsa[-_]/); if(keep) print; next} keep{print}' \
-            reference/mature.fa > reference/hsa_mature.fa
-          human_count=$(grep -c '^>' reference/hsa_mature.fa || true)
+          grep -m 3 '^>hsa' reference/mature.fa
+          awk '/^>hsa/{print; if(getline) print}' reference/mature.fa > reference/hsa_mature.fa
+          human_count=$(grep -c '^>hsa' reference/mature.fa || true)
           echo "Human mature-miRNA reference entries: $human_count"
           test "$human_count" -gt 100
           sha256sum reference/mature.fa reference/hsa_mature.fa
