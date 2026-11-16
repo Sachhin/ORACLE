@@ -252,7 +252,6 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--scifact-predictions", default="", help="Model predictions in official SciFact JSONL format")
     parser.add_argument("--scifact-split", choices=["train", "dev"], default="dev")
     parser.add_argument("--evidence-benchmark", default="", help="Score predictions against a human-adjudicated evidence benchmark JSON file")
-    parser.add_argument("--paired-answer-benchmark", default="", help="Compare paired human rubric scores for a candidate model and deterministic baseline")
     parser.add_argument("--benchmark-results", default="", help="DESeq2 result JSON/TSV to score against a curated known-positive set")
     parser.add_argument("--benchmark-manifest", default="", help="JSON manifest with dataset_accession, HTTPS reference, and known_positive_features")
     parser.add_argument("--benchmark-fdr", type=float, default=0.05, help="Adjusted p-value threshold for benchmark hit selection")
@@ -288,14 +287,6 @@ def main() -> None:
                 print(f"- {item['key']} | {item['status']} | {item['name']}")
                 print(f"  API: {item['api_url']} | Auth: {item['authentication']}")
                 print(f"  Capabilities: {', '.join(item['capabilities']) or 'metadata only'}")
-        return
-    if args.paired_answer_benchmark:
-        from .model_comparison import run_paired_answer_benchmark
-        try:
-            report = run_paired_answer_benchmark(args.paired_answer_benchmark)
-        except (OSError, ValueError, RuntimeError) as exc:
-            raise SystemExit(f"Paired answer benchmark failed: {exc}") from exc
-        print(json.dumps(report, indent=2, ensure_ascii=False))
         return
     if args.scifact_benchmark:
         required = [args.scifact_claims, args.scifact_corpus, args.scifact_predictions]
