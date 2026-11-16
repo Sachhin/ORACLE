@@ -114,6 +114,10 @@ def main() -> None:
 
         counts, mapping_stats = parse_sam(sam)
         count_by_sample[sample["sample"]] = counts
+        trimmed_hash = sha256(trimmed)
+        sam_hash = sha256(sam)
+        trimmed.unlink()
+        sam.unlink()
         fastp = json.loads(fastp_json.read_text(encoding="utf-8"))
         before = fastp.get("summary", {}).get("before_filtering", {})
         after = fastp.get("summary", {}).get("after_filtering", {})
@@ -122,13 +126,13 @@ def main() -> None:
             **sample,
             "raw_fastq": raw.name,
             "raw_fastq_sha256": sha256(raw),
-            "trimmed_fastq_sha256": sha256(trimmed),
+            "trimmed_fastq_sha256": trimmed_hash,
             "raw_reads": before.get("total_reads"),
             "reads_after_filtering": after.get("total_reads"),
             "adapter_trimmed_reads": adapter.get("adapter_trimmed_reads"),
             "mapping": mapping_stats,
             "fastp_json": str(fastp_json.relative_to(args.outdir)),
-            "sam_sha256": sha256(sam),
+            "sam_sha256": sam_hash,
         })
 
     features = sorted({feature for counts in count_by_sample.values() for feature in counts})
