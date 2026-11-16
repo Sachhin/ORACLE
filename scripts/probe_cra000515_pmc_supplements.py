@@ -12,6 +12,7 @@ import re
 import tarfile
 import urllib.error
 import urllib.request
+import zipfile
 from urllib.parse import urljoin
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
@@ -127,6 +128,35 @@ def main() -> None:
         europe_status = "unavailable"
         europe_content_type = str(exc)
 
+    supplementary_api_url = f"https://www.ebi.ac.uk/europepmc/webservices/rest/{PMCID}/supplementaryFiles"
+    supplementary_api_path = out / "europepmc_supplementary_files.zip"
+    supplementary_api_status = None
+    supplementary_api_type = None
+    supplementary_archive_files = []
+    try:
+        supplementary_api_status, supplementary_api_type = fetch(supplementary_api_url, supplementary_api_path)
+        if zipfile.is_zipfile(supplementary_api_path):
+            extract_dir = out / "europepmc_supplementary_archive"
+            extract_dir.mkdir(exist_ok=True)
+            with zipfile.ZipFile(supplementary_api_path) as archive:
+                for info in archive.infolist():
+                    name = info.filename
+                    if name.startswith("/") or ".." in Path(name).parts or info.is_dir():
+                        continue
+                    target = extract_dir / name
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    target.write_bytes(archive.read(info))
+                    supplementary_archive_files.append({
+                        "path": str(target.relative_to(out)),
+                        "bytes": target.stat().st_size,
+                        "sha256": sha256(target),
+                    })
+        else:
+            supplementary_api_type = f"{supplementary_api_type}; response is not a ZIP archive"
+    except Exception as exc:
+        supplementary_api_status = "unavailable"
+        supplementary_api_type = str(exc)
+
     candidate_files = [
         x for x in extracted_files
         if re.search(r"(supp|table|sample|metadata|data)", x["path"], flags=re.I)
@@ -145,6 +175,10 @@ def main() -> None:
         "europepmc_content_type": europe_content_type,
         "europepmc_supplement_links": sorted(set(supplement_links)),
         "downloaded_europepmc_supplements": downloaded_supplements,
+        "europepmc_supplementary_api_url": supplementary_api_url,
+        "europepmc_supplementary_api_status": supplementary_api_status,
+        "europepmc_supplementary_api_content_type": supplementary_api_type,
+        "europepmc_supplementary_archive_files": supplementary_archive_files,
         "archive": archive_info,
         "extracted_file_count": len(extracted_files),
         "extracted_files": extracted_files,
