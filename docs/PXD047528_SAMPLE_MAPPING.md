@@ -97,3 +97,8 @@ Required submitter clarification:
    to the original clinical table row, where applicable.
 
 Until this is source-authenticated, clinical validation remains **BLOCKED**.
+
+
+## Live PRIDE API evidence (2026-11-16)
+
+The full file manifest and SEARCH report are preserved in docs/PXD047528_PRIDE_FILE_MANIFEST_AUDIT.md and the oracle-pxd047528-pride-metadata workflow artifact. The previous 32-raw-file count was incorrect. No clinical labels were inferred from the 15 raw DDA/DIA pairs or HIVPCA search-report columns.
