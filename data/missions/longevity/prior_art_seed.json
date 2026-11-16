@@ -266,6 +266,28 @@
       "limitation": "Does not test the 8-mRPG signature directly. Rugao and Japan are reused datasets; only Lingao adds a new cohort in this atlas. Lingao HRA011570 and Rugao HRA002867 are controlled-access.",
       "doi": "10.1016/j.ebiom.2025.105922",
       "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC12571583/"
+    },
+    {
+      "source_id": "doi:10.1073/pnas.1907883116",
+      "pmid": "31719197",
+      "year": 2019,
+      "design": "single-cell PBMC transcriptomics from seven supercentenarians and five controls; RIKEN SC2018",
+      "finding": "The study reported expansion of cytotoxic CD4 T cells in supercentenarians.",
+      "relevance": "An independent extreme-longevity immune-cell cohort that can help test whether bulk longevity-associated expression signals are cell-composition or cell-state dependent.",
+      "limitation": "This is the same RIKEN SC2018 cohort reused in the 2023 supercentenarian aging-clock study and the Japan arm of the 2025 three-cohort atlas; do not count these publications as separate cohorts. It does not directly test the 8-mRPG signature.",
+      "doi": "10.1073/pnas.1907883116",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/31719197/"
+    },
+    {
+      "source_id": "doi:10.1126/sciadv.abq7599",
+      "pmid": "37379396",
+      "year": 2023,
+      "design": "single-cell PBMC aging-clock analysis using seven supercentenarians from RIKEN SC2018 and a separate 17-donor healthy reference cohort (GSE213516)",
+      "finding": "The paper reported a high-ribosome/low-inflammation single-cell state in supercentenarians and tested ribosome/translation inhibition in monocytes.",
+      "relevance": "Supports a translation-versus-inflammation axis in extreme human longevity and motivates direct cell-level testing of the published mitochondrial ribosomal protein panel.",
+      "limitation": "The high-ribosome score is not the same as the nuclear-encoded 8-mRPG signature; the supercentenarian data reuse RIKEN SC2018 and are not a second independent cohort. GSE213516 contains the 17 healthy reference donors, not the supercentenarians.",
+      "doi": "10.1126/sciadv.abq7599",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/37379396/"
     }
   ],
   "hypothesis_audit": [
@@ -279,7 +301,8 @@
         "doi:10.1016/j.xcrm.2026.102767",
         "doi:10.1126/sciadv.abf2017",
         "doi:10.1101/gr.275636.121",
-        "doi:10.1080/15476286.2021.1875647"
+        "doi:10.1080/15476286.2021.1875647",
+        "doi:10.1126/sciadv.abq7599"
       ],
       "opposing_or_qualifying_evidence": [
         "doi:10.1038/nature12188"
@@ -339,7 +362,8 @@
       "confidence": "plausible_unresolved",
       "supporting_prior_art": [
         "doi:10.1016/j.xcrm.2026.102767",
-        "doi:10.1016/j.ebiom.2025.105922"
+        "doi:10.1016/j.ebiom.2025.105922",
+        "doi:10.1073/pnas.1907883116"
       ],
       "opposing_or_qualifying_evidence": [],
       "falsifiable_tests": [
@@ -436,7 +460,8 @@
     "No mechanism passes novelty or causality review until independent sample-level replication and functional perturbation/rescue are complete.",
     "The 2018 autophagy-lysosome result uses the same 171-person Hainan/CRA000515 cohort; do not count it as independent cohort replication.",
     "GSE16717 is already used as a validation cohort by the 2026 paper; an ORACLE reanalysis is a reproducibility check, not a new independent cohort discovery.",
-    "The 2025 three-cohort single-cell atlas supports immune-cell composition/state as a live bulk-blood confounder, but it does not directly validate the 8-mRPG signature; Rugao and Japan are reused cohorts, while Lingao is the additional cohort."
+    "The 2025 three-cohort single-cell atlas supports immune-cell composition/state as a live bulk-blood confounder, but it does not directly validate the 8-mRPG signature; Rugao and Japan are reused cohorts, while Lingao is the additional cohort.",
+    "RIKEN SC2018 is a distinct Japanese supercentenarian cohort from the Chinese CRA000515 and Leiden GSE16717 cohorts, but the 2019, 2023 and 2025 papers reuse the same SC2018 donors; count the cohort once."
   ],
   "gene_signatures": {
     "source_doi": "10.1016/j.xcrm.2026.102767",
