@@ -155,8 +155,12 @@ def main() -> None:
         "reference": {
             "name": "miRBase human mature miRNA reference",
             "declared_release": "23.1",
-            "source_url": "ftp://mirbase.org/pub/mirbase/CURRENT/mature.fa.gz",
-            "source_archive_sha256": sha256(args.reference.parent / "mature.fa.gz"),
+            "source_url": "https://www.mirbase.org/download/CURRENT/mature.fa",
+            "source_archive_sha256": (
+                sha256(args.reference.parent / "mature.fa.gz")
+                if (args.reference.parent / "mature.fa.gz").exists() else None
+            ),
+            "source_fasta_sha256": sha256(args.reference.parent / "mature.fa"),
             "source_readme_sha256": sha256(args.reference.parent / "README"),
             "file": args.reference.name,
             "sha256": sha256(args.reference),
