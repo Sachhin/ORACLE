@@ -46,6 +46,7 @@ jobs:
             gzip -f "fastq/$run.fastq"
           done
           ls -lh fastq
+          python scripts/inspect_gse32493_fastq.py
 
       - name: Download and freeze the human mature-miRNA reference
         run: |
