@@ -34,13 +34,13 @@ test <- exactTest(y, pair = c("CT", "SC"))
 tab <- topTags(test, n = Inf, sort.by = "PValue")$table
 tab$gene_symbol <- rownames(tab)
 tab <- tab[, c("gene_symbol", "logFC", "logCPM", "PValue", "FDR")]
-write.table(tab, file.path(outdir, "edger_all_genes.tsv"), sep = "\t", quote = FALSE, row.names = FALSE)
+write.table(tab, file.path(outdir, paste0("edger_all_genes_", label, ".tsv")), sep = "\t", quote = FALSE, row.names = FALSE)
 
 panel <- c("MRPL3", "MRPL32", "MRPL42", "MRPL45", "MRPL50", "MRPS10", "MRPS33", "MRPS35")
 missing <- setdiff(panel, rownames(tab))
 if (length(missing)) stop(paste("Missing mRPG8 genes after expression filtering:", paste(missing, collapse = ", ")))
 panel_tab <- tab[match(panel, tab$gene_symbol), ]
-write.table(panel_tab, file.path(outdir, "mRPG8_gene_results.tsv"), sep = "\t", quote = FALSE, row.names = FALSE)
+write.table(panel_tab, file.path(outdir, paste0("mRPG8_gene_results_", label, ".tsv")), sep = "\t", quote = FALSE, row.names = FALSE)
 
 logcpm <- cpm(y, log = TRUE, prior.count = 2)
 panel_logcpm <- logcpm[panel, , drop = FALSE]
@@ -52,7 +52,7 @@ score_df <- data.frame(
   mRPG8_score = as.numeric(scores),
   stringsAsFactors = FALSE
 )
-write.table(score_df, file.path(outdir, "mRPG8_panel_scores.tsv"), sep = "\t", quote = FALSE, row.names = FALSE)
+write.table(score_df, file.path(outdir, paste0("mRPG8_panel_scores_", label, ".tsv")), sep = "\t", quote = FALSE, row.names = FALSE)
 
 observed <- mean(scores[group == "SC"]) - mean(scores[group == "CT"])
 combinations <- combn(seq_along(scores), sum(group == "SC"))
@@ -78,7 +78,7 @@ summary <- data.frame(
   ),
   stringsAsFactors = FALSE
 )
-write.table(summary, file.path(outdir, "mRPG8_panel_summary.tsv"), sep = "\t", quote = FALSE, row.names = FALSE)
-writeLines(capture.output(sessionInfo()), file.path(outdir, "R_sessionInfo.txt"))
+write.table(summary, file.path(outdir, paste0("mRPG8_panel_summary_", label, ".tsv")), sep = "\t", quote = FALSE, row.names = FALSE)
+writeLines(capture.output(sessionInfo()), file.path(outdir, paste0("R_sessionInfo_", label, ".txt")))
 cat("RIKEN SC2018 edgeR complete\n")
 print(summary)
