@@ -21,7 +21,7 @@ The public GSA run CSV and per-BioSample CNCB API/page fallback produced a 171-r
 | Unique CHHA sample aliases | 171 |
 | Alias-to-BioSample cross-references | 171 |
 | Samples with tissue metadata | 171 |
-| Samples with raw sex code | 171 |
+| Samples with raw sex code and independently concordant page label | 171/171 |
 | Samples with age value | **0** |
 | Samples with explicit cohort/group label | **0** |
 | GSA Sample worksheet rows | **0** |
@@ -29,7 +29,7 @@ The public GSA run CSV and per-BioSample CNCB API/page fallback produced a 171-r
 | GSA Run worksheet rows | **0** |
 | Exact run-to-sample joins via GSA workbook | **0** |
 
-Every retrieved BioSample record identifies peripheral blood. The raw sex attribute has two values: code `1` for 70 records and code `2` for 101 records. The source metadata does not include a codebook in this package, so these values are retained as raw codes and are **not** converted to male/female.
+Every retrieved BioSample record identifies peripheral blood. The raw API sex attribute has two values: code `1` for 70 records and code `2` for 101 records. We independently parsed the corresponding 171 BioSample HTML pages and cross-checked every code against the page's explicit sex label: **all 70 code-1 records are male and all 101 code-2 records are female (171/171 concordant; zero mismatches)**. The manifest retains the raw API code and the source HTML so this decoding is reproducible.
 
 The GSA workbook download is non-empty as an XLSX container but its Sample, Experiment and Run sheets contain headers only. The fallback therefore enriches the 171 CRR-to-SAMC records with 171 unique CHHA aliases, submitter, project, tissue and raw sex code, but cannot perform the intended sample-sheet join.
 
