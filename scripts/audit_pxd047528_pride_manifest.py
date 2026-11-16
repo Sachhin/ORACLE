@@ -157,8 +157,12 @@ def main():
         for column in header[3:]:
             if ".PG.Quantity" in column:
                 sample_match = re.search(r"HIVPCA([0-9]+)", column)
+                slot_match = re.search(r"Slot1-([0-9]+)", column, flags=re.I)
                 search_report_columns.append({
+                    "search_report_column_index": len(search_report_columns) + 1,
                     "sample_label_in_report": f"HIVPCA{sample_match.group(1)}" if sample_match else "",
+                    "slot_token_in_same_column_header": f"Slot1-{slot_match.group(1)}" if slot_match else "",
+                    "slot_token_numeric_suffix": int(slot_match.group(1)) if slot_match else None,
                     "column_name": column,
                 })
 
@@ -183,6 +187,13 @@ def main():
         "unpaired_raw_acquisition_suffixes": {code: pair for code, pair in sorted(raw_pairs.items()) if not ("DDA" in pair and "DIA" in pair)},
         "search_report_sample_columns": search_report_columns,
         "search_report_sample_column_count": len(search_report_columns),
+        "search_report_HIVPCA_to_slot_token_mapping": search_report_columns,
+        "interpretation": (
+            "The report directly pairs each HIVPCA label with a Slot1-N token in the same DIA quantity "
+            "column header. This establishes a report-internal sample/slot label bridge only. It does not "
+            "authenticate equivalence to PEPerMINT's 1_Slot1..15_Slot1 processed aliases, the opaque PRIDE "
+            "DDA/DIA raw suffixes, or any clinical participant/phenotype."
+        ),
         "processed_alias_to_search_report_mapping": "NOT_ESTABLISHED",
         "filenames_with_slot_alias_tokens": [r["file_name"] for r in rows if r["alias_tokens"]],
         "files_with_sample_accession": [r["file_name"] for r in rows if r["sample_accession"]],
