@@ -45,7 +45,8 @@ def verify(args: argparse.Namespace) -> dict[str, Any]:
             and bool(run.get("corpus_sha256"))
             and bool(run.get("claims_sha256"))
             and bool(provenance.get("model_sha256"))
-            and provenance.get("model_sha256") == provenance.get("verified_model_sha256", provenance.get("model_sha256"))
+            and provenance.get("download_sha256_verified") is True
+            and provenance.get("model_sha256") == provenance.get("verified_model_sha256")
         )
         add("qwen3_full_frozen_benchmark", qwen_ok,
             f"scored={report.get('scored_claim_count')}/300; coverage={report.get('prediction_coverage')}; "
