@@ -22,19 +22,12 @@ class DashboardTests(unittest.TestCase):
         source = inspect.getsource(web.OracleDashboardHandler.do_POST)
         self.assertNotIn("GEMINI_API_KEY", source)
         self.assertNotIn("--agent-provider", source)
-        self.assertNotIn("--gemini-model", source)
+        self.assertNotIn("--local-model-url", source)
+        self.assertNotIn("--local-model-name", source)
         self.assertIn('literature_provider = "auto"', source)
         self.assertIn('"--provider", literature_provider', source)
         self.assertIn('command.append("--discover-geo-files")', source)
         self.assertIn('command.append("--analyze-geo-files")', source)
-
-    def test_dashboard_passes_model_configuration_to_cli_only_when_supplied(self):
-        import inspect
-        import oracle.web as web
-        source = inspect.getsource(web.OracleDashboardHandler.do_POST)
-        self.assertIn("bool(model_url) != bool(model_name)", source)
-        self.assertIn("--local-model-url", source)
-        self.assertIn("--local-model-name", source)
 
     def test_dashboard_is_loopback_only_by_default(self):
         # The server entry point defaults to 127.0.0.1 and rejects public binds.
