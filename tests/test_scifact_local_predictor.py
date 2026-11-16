@@ -18,6 +18,16 @@ class LocalSciFactPredictionTests(unittest.TestCase):
             {"evidence": []},
         )
 
+    def test_accepts_single_terminal_period_after_json(self):
+        self.assertEqual(
+            parse_model_json('{"evidence": []}.'),
+            {"evidence": []},
+        )
+
+    def test_rejects_trailing_prose_after_json(self):
+        with self.assertRaisesRegex(ValueError, "Unexpected content"):
+            parse_model_json('{"evidence": []}. unsupported')
+
     def test_accepts_identical_duplicate_json_emission(self):
         self.assertEqual(
             parse_model_json('{"evidence": []}{"evidence": []}'),
