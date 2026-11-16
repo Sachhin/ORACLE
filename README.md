@@ -30,7 +30,7 @@ arts/culture and religion, plus an interdisciplinary fallback. Routing reports
 matched terms, confidence, secondary-domain signals and a separate research-intent
 classification (for example, comparison, data analysis, causal analysis, proof,
 hypothesis discovery or experiment design). The current automatic classifier is
-a transparent keyword heuristic, not an LLM or a semantic guarantee. With
+a transparent keyword heuristic, not a semantic model or a guarantee. With
 `--provider auto`, ORACLE selects only implemented adapters for the routed field
 (arXiv for relevant technical fields, PubChem for chemistry, Europe PMC/GEO for
 biology, and Crossref as the generic scholarly fallback). Profiles guide research
@@ -43,7 +43,7 @@ architecture, supported domains, command examples, and scientific-integrity limi
 
 ## Current build status
 
-The offline research foundation and dashboard agent workflow run without AI-provider credentials. Literature retrieval can optionally connect to public scholarly data services (such as Europe PMC and Crossref) without API keys. The dashboard and core research agents use the built-in deterministic workflow and do not call hosted AI-model APIs. The orchestrator measures unique research progress, suppresses repeated scaffold records, checks core graph invariants, and stops after repeated no-progress cycles. Review agents receive the current cycle's newly generated evidence and hypotheses; novelty and cross-domain agents are restricted to source-backed records; adaptive replanning receives the latest task/evidence state. This is safer, more coherent lifecycle control, not proof of autonomous scientific reasoning.
+The offline research foundation and dashboard run without any AI model, model server, model API, or model-provider credentials. Research planning, evidence retrieval, statistical analysis, hypothesis templates, and auditing are deterministic and source/data driven. Literature retrieval can optionally connect to public scholarly data services (such as Europe PMC and Crossref) without API keys. The dashboard and core research agents use only the built-in deterministic workflow. The orchestrator measures unique research progress, suppresses repeated scaffold records, checks core graph invariants, and stops after repeated no-progress cycles. Review agents receive the current cycle's newly generated evidence and hypotheses; novelty and cross-domain agents are restricted to source-backed records; adaptive replanning receives the latest task/evidence state. This is safer, more coherent lifecycle control, not proof of autonomous scientific reasoning.
 
 ## Quick start
 
@@ -270,7 +270,7 @@ Start a task, block it with a reason, retry it within the attempt budget, or com
     python -m oracle --task-action complete --task-run RUN_ID --task-id TASK_ID --task-evidence-ids EVIDENCE_ID --task-note "Checked the source and recorded the result."
     python -m oracle --task-action block --task-run RUN_ID --task-id TASK_ID --task-note "No accessible source found."
 
-Model inferences cannot satisfy the source-backed completion requirement. The default task retry budget is three attempts.
+Generated hypotheses and computational inferences cannot satisfy the source-backed completion requirement. The default task retry budget is three attempts.
 
 ### Experiment lifecycle
 
@@ -543,7 +543,7 @@ Use the actual extracted paths with `--merge-geo-counts`. Do not assume column p
 
 ## Local browser dashboard
 
-ORACLE includes a lightweight local browser dashboard with the same research engine and SQLite run history as the terminal CLI. It uses only the Python standard library and requires **no model API key**.
+ORACLE includes a lightweight local browser dashboard with the same research engine and SQLite run history as the terminal CLI. It uses only the Python standard library and requires no AI model or model API key.
 
 Install and start it:
 
@@ -552,7 +552,7 @@ python -m pip install -e .
 oracle-dashboard
 ```
 
-Open **http://127.0.0.1:8765** in your browser. Keep the terminal open while the dashboard runs. Browser missions use ORACLE's deterministic research workflow and public Europe PMC + Crossref literature search. No model API key or other model credential is needed. The deterministic workflow is a reproducible baseline, not LLM reasoning or autonomous scientific discovery. Hosted-model reasoning is not included. Runs are persisted in the same SQLite database as terminal commands (set ORACLE_DB to override the default path).
+Open **http://127.0.0.1:8765** in your browser. Keep the terminal open while the dashboard runs. Browser missions use ORACLE's deterministic research workflow and public Europe PMC + Crossref literature search. ORACLE does not load or call any AI model. The deterministic workflow is source- and data-driven; it is not a substitute for expert scientific judgment. Runs are persisted in the same SQLite database as terminal commands (set ORACLE_DB to override the default path).
 
 Terminal remains fully supported:
 
