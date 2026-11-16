@@ -113,8 +113,10 @@ def validate_mapping(path: str | Path) -> dict:
             errors.append(f"Line {line}: HIV row requires HAND or COGNITIVELY_NORMAL")
         if phenotype == "HERPES" and hand not in {"NA", "NOT_APPLICABLE"}:
             errors.append(f"Line {line}: HERPES row must use NA hand_status")
-        if relationship in {"TECHNICAL_REPLICATE", "REPEAT_BIOLOGICAL_SAMPLE"} and (use_hiv_herpes or use_hand):
-            errors.append(f"Line {line}: repeat/technical samples must not be counted as independent participants")
+        if relationship == "TECHNICAL_REPLICATE" and (use_hiv_herpes or use_hand):
+            errors.append(f"Line {line}: technical replicate must not be counted as an independent participant")
+        if relationship == "REPEAT_BIOLOGICAL_SAMPLE" and (use_hiv_herpes or use_hand):
+            errors.append(f"Line {line}: repeated biological sample must not be counted as an independent participant")
         if use_hiv_herpes and relationship != "PRIMARY":
             errors.append(f"Line {line}: only PRIMARY samples may enter HIV-versus-herpes comparison")
         if use_hand and phenotype != "HIV":
