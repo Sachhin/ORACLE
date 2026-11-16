@@ -58,3 +58,35 @@ public sample records remain incomplete, request the sample annotation
 manifest, its field definitions, and the mapping between CRA000515 aliases
 and the 2026 integrated expression matrix before treating the groups as
 validated.
+
+
+## Public BioSample fallback and current metadata limitation
+
+The fallback acquisition path queries the CNCB public BioSample API and
+human-readable BioSample record for each BioSample accession in the GSA run
+manifest. It preserves each raw response and SHA-256, and records source
+fields independently. This is a second metadata route in addition to the
+GSA project workbook and run CSV.
+
+Publicly indexed BioSample records for this project show the CHHA alias,
+BioSample accession, sex, tissue, submitter and project accession, but the
+age field is blank in representative records (for example SAMC016716 /
+CHHA3 and SAMC016887 / CHHA171). The public BioProject PRJCA000568 lists 171
+BioSamples and their CHHA aliases. This is useful for authenticating the
+alias-to-BioSample cross-reference and available sex/tissue fields, but it
+does not provide the missing age/cohort labels needed to reproduce the
+published centenarian/offspring/spouse groups.
+
+Accordingly, the fallback must not promote a retrieved BioSample record to
+a validated cohort label. The acquisition status remains
+`metadata_acquired_needs_manual_provenance_review` until the complete
+sample-level age and cohort annotation is authenticated from the submitter
+or original study records. The integrated Mendeley expression matrix is a
+potential numerical source, but the public dataset landing page alone does
+not expose a verifiable alias-to-phenotype manifest.
+
+References:
+- CNCB BioProject PRJCA000568: https://ngdc.cncb.ac.cn/bioproject/browse/PRJCA000568
+- Example BioSample record CHHA3 / SAMC016716: https://ngdc.cncb.ac.cn/biosample/browse/SAMC016716
+- Example BioSample record CHHA171 / SAMC016887: https://ngdc.cncb.ac.cn/biosample/browse/SAMC016887
+- Mendeley expression-matrix dataset: https://data.mendeley.com/datasets/fpf4y72kfz/1
