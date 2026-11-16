@@ -288,6 +288,22 @@
       "limitation": "The high-ribosome score is not the same as the nuclear-encoded 8-mRPG signature; the supercentenarian data reuse RIKEN SC2018 and are not a second independent cohort. GSE213516 contains the 17 healthy reference donors, not the supercentenarians.",
       "doi": "10.1126/sciadv.abq7599",
       "url": "https://pubmed.ncbi.nlm.nih.gov/37379396/"
+    },
+    {
+      "source_id": "RIKEN_SC2018_mRPG8_donor_pseudobulk_2026-11-16",
+      "year": 2026,
+      "design": "Independent reanalysis of 69,844 PBMC cells from 7 Japanese supercentenarians (SC1-SC7) and 5 controls (CT1-CT5), aggregated to 12 donor-level pseudobulk profiles from a checksum-verified RIKEN SC2018 H5AD mirror; edgeR TMM and exact donor-label permutation.",
+      "finding": "The pre-specified equal-weight 8-mRPG composite was lower in SC than CT in both all-batches analysis (difference -0.737 z units; exact two-sided permutation p=0.0101; 792 assignments) and common firstrun-only analysis (difference -0.691 z units; p=0.0316). All eight gene-wise edgeR logFC estimates were negative in the all-batches analysis, but none had FDR <0.05. In firstrun-only analysis, all genes except MRPS10 were negative; no gene had FDR <0.05.",
+      "relevance": "This is a distinct Japanese extreme-longevity cohort relative to Chinese CRA000515 and Leiden GSE16717. It does not reproduce the direction of the 2026 Chinese 8-mRPG youthful-expression association and strengthens the need to test tissue, cohort, age and immune-cell composition effects.",
+      "limitation": "Exploratory only: 7 SC versus 5 CT donors; no individual age or sex values; broad PBMC cell_type only, no leukocyte subtype labels; large age gap in the source paper; exact permutation assumes exchangeability and does not adjust confounders. The composite score is an ORACLE equal-weight z-score, not the original paper's published score. SC2018 is reused by the 2019, 2023 and 2025 papers and must count as one cohort.",
+      "data_accessions": {
+        "dataset": "RIKEN SC2018",
+        "mirror": "https://huggingface.co/datasets/longevity-db/riken2018",
+        "h5ad_sha256": "2b0ce324e3cf29363a68689ac8772f122221728a11db0a3e50314c2e0b06553a",
+        "metadata_sha256": "40884e40921bb32ecde184085bcb3240f10f790bab85a9a246302c0a3a842798"
+      },
+      "analysis_artifact": "oracle-riken2018-mrpg-independent-validation",
+      "workflow_run": 43900804667
     }
   ],
   "hypothesis_audit": [
@@ -295,8 +311,8 @@
       "id": "H1",
       "title": "Compartment-specific translation allocation in long-lived humans",
       "statement": "Long-lived individuals may preserve a selected mitochondrial ribosomal transcript program above age-expected levels while allowing broader cytosolic ribosome biogenesis to decline; this could help maintain mitochondrial protein synthesis without maintaining globally high translation.",
-      "status": "testable_candidate_not_novel_discovery",
-      "confidence": "low_to_moderate_association_only",
+      "status": "mixed_directional_nonreplication_in_RIKEN_SC2018",
+      "confidence": "low_to_moderate; Chinese bulk association not reproduced in one small Japanese PBMC cohort; gene-wise FDR none",
       "supporting_prior_art": [
         "doi:10.1016/j.xcrm.2026.102767",
         "doi:10.1126/sciadv.abf2017",
@@ -305,7 +321,8 @@
         "doi:10.1126/sciadv.abq7599"
       ],
       "opposing_or_qualifying_evidence": [
-        "doi:10.1038/nature12188"
+        "doi:10.1038/nature12188",
+        "RIKEN_SC2018_mRPG8_donor_pseudobulk_2026-11-16"
       ],
       "key_alternative": "Blood-cell composition, regional/batch effects, or survivor/health selection may explain part of the bulk-expression signature.",
       "falsifiable_tests": [
@@ -363,7 +380,8 @@
       "supporting_prior_art": [
         "doi:10.1016/j.xcrm.2026.102767",
         "doi:10.1016/j.ebiom.2025.105922",
-        "doi:10.1073/pnas.1907883116"
+        "doi:10.1073/pnas.1907883116",
+        "RIKEN_SC2018_mRPG8_donor_pseudobulk_2026-11-16"
       ],
       "opposing_or_qualifying_evidence": [],
       "falsifiable_tests": [
@@ -461,7 +479,8 @@
     "The 2018 autophagy-lysosome result uses the same 171-person Hainan/CRA000515 cohort; do not count it as independent cohort replication.",
     "GSE16717 is already used as a validation cohort by the 2026 paper; an ORACLE reanalysis is a reproducibility check, not a new independent cohort discovery.",
     "The 2025 three-cohort single-cell atlas supports immune-cell composition/state as a live bulk-blood confounder, but it does not directly validate the 8-mRPG signature; Rugao and Japan are reused cohorts, while Lingao is the additional cohort.",
-    "RIKEN SC2018 is a distinct Japanese supercentenarian cohort from the Chinese CRA000515 and Leiden GSE16717 cohorts, but the 2019, 2023 and 2025 papers reuse the same SC2018 donors; count the cohort once."
+    "RIKEN SC2018 is a distinct Japanese supercentenarian cohort from the Chinese CRA000515 and Leiden GSE16717 cohorts, but the 2019, 2023 and 2025 papers reuse the same SC2018 donors; count the cohort once.",
+    "RIKEN SC2018 donor-pseudobulk test is directionally lower in supercentenarians than controls in both all-batches and common-firstrun-only analyses; no individual mRPG gene reaches FDR<0.05. Treat as an exploratory non-replication, not a causal refutation."
   ],
   "gene_signatures": {
     "source_doi": "10.1016/j.xcrm.2026.102767",
