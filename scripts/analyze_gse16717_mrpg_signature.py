@@ -117,6 +117,23 @@ def parse_series_matrix(path: Path):
             yield yield_row, sample_ids, titles, characteristics
 
 
+def build_complete_panel_scores(z_values: dict[str, np.ndarray]):
+    """Only calculate a composite score when every pre-specified gene is present."""
+    scores = {}
+    status = {}
+    for panel_name, genes in (("mRPG_8", M_RPG), ("cRPG_7", C_RPG)):
+        missing = [gene for gene in genes if gene not in z_values]
+        status[panel_name] = {
+            "expected_genes": len(genes),
+            "present_genes": len(genes) - len(missing),
+            "missing_genes": missing,
+            "status": "COMPLETE" if not missing else "INCOMPLETE_NO_COMPOSITE_SCORE",
+        }
+        if not missing:
+            scores[panel_name] = np.nanmean(np.vstack([z_values[g] for g in genes]), axis=0)
+    return scores, status
+
+
 def bh_adjust(pvalues: list[float]) -> list[float]:
     if not pvalues:
         return []
@@ -235,11 +252,7 @@ def main() -> None:
         sd = float(np.nanstd(values, ddof=1))
         z_values[gene] = (values - mean) / sd if sd > 0 else np.full(len(sample_ids), np.nan)
 
-    scores = {}
-    for panel_name, genes in (("mRPG_8", M_RPG), ("cRPG_7", C_RPG)):
-        present = [g for g in genes if g in z_values]
-        if present:
-            scores[panel_name] = np.nanmean(np.vstack([z_values[g] for g in present]), axis=0)
+    scores, panel_status = build_complete_panel_scores(z_values)
 
     comparisons = []
     for group_a, group_b in (("long_lived_sibling", "control"), ("offspring", "control")):
@@ -306,6 +319,17 @@ def main() -> None:
         "retrieved_utc": datetime.now(timezone.utc).isoformat(),
         "sample_count": len(sample_ids),
         "group_counts": group_counts,
+        "group_age_sex_summary": {
+            group: {
+                "n": sum(x["group"] == group for x in sample_meta),
+                "mean_age_years": float(np.mean([x["age"] for x in sample_meta if x["group"] == group and x["age"] is not None])),
+                "sd_age_years": float(np.std([x["age"] for x in sample_meta if x["group"] == group and x["age"] is not None], ddof=1)),
+                "female_n": sum(x["group"] == group and x["sex"] == "female" for x in sample_meta),
+                "male_n": sum(x["group"] == group and x["sex"] == "male" for x in sample_meta),
+            }
+            for group in sorted(group_counts)
+        },
+        "panel_status": panel_status,
         "sample_age_metadata_count": sum(x["age"] is not None for x in sample_meta),
         "sample_sex_metadata_count": sum(bool(x["sex"]) for x in sample_meta),
         "probe_count_for_target_genes": {g: len(per_gene_probe_values.get(g, [])) for g in M_RPG + C_RPG},
@@ -317,9 +341,10 @@ def main() -> None:
         "analysis_method": "median across probes per gene; gene-wise z-score across all 150 samples; unweighted panel mean; Welch t-tests; BH FDR separately within each panel and group comparison",
         "limitations": [
             "This is a reanalysis of the same Leiden GSE16717 cohort already cited as validation in the 2026 paper, not a new independent cohort.",
-            "GEO metadata may contain only group labels and no individual ages; the summary reports the observed metadata coverage.",
+            "GEO sample metadata include individual age and sex for all 150 samples; reported age/sex summaries are descriptive.",
             "The analysis uses normalized microarray probe values and median probe aggregation; it is not a direct RNA-seq count replication.",
-            "Unadjusted Welch tests do not control family structure or covariates; they are descriptive and exploratory.",
+            "Unadjusted Welch tests do not control family structure or covariates; they are descriptive and exploratory. Long-lived siblings are substantially older than controls, so a simple group mean difference is not age-adjusted replication of the published age-trajectory method.",
+            "The cRPG-7 composite score is withheld if any published gene is missing from GPL2895; gene-level results for available genes remain descriptive.",
             "The analysis does not establish causality or a novel mechanism."
         ],
     }
