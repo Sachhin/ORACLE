@@ -57,6 +57,7 @@ jobs:
       - name: Run live R integration checks
         run: python -m unittest discover -s tests -p 'test_bioconductor_integration.py' -v
 
+  # Check the public RIKEN mirror against pinned checksums before any expression reanalysis.
   riken2018_metadata:
     name: RIKEN 2018 supercentenarian metadata provenance
     runs-on: ubuntu-latest
