@@ -103,17 +103,39 @@ class BM25Index:
         return scores[:top_k]
 
 
+MAX_ABSTRACT_CHARS_PER_DOCUMENT = 2400
+
+
+def _bounded_abstract_sentences(abstract: list[str], max_chars: int = MAX_ABSTRACT_CHARS_PER_DOCUMENT) -> list[dict[str, Any]]:
+    """Keep complete leading sentences within a strict per-document prompt budget."""
+    if max_chars < 1:
+        raise ValueError("max_chars must be at least 1")
+    selected: list[dict[str, Any]] = []
+    remaining = max_chars
+    for index, raw_sentence in enumerate(abstract):
+        sentence = str(raw_sentence).strip()
+        if not sentence or remaining <= 0:
+            continue
+        if len(sentence) > remaining:
+            if remaining < 80:
+                break
+            sentence = sentence[: remaining - 1].rstrip() + "…"
+        selected.append({"index": index, "text": sentence})
+        remaining -= len(sentence)
+    return selected
+
+
 def build_prompt(claim: dict[str, Any], candidates: list[dict[str, Any]]) -> tuple[list[dict[str, str]], dict[str, int]]:
     docs = []
     allowed: dict[str, int] = {}
     for document in candidates:
         doc_id = str(document["doc_id"])
-        abstract = document["abstract"]
-        allowed[doc_id] = len(abstract)
+        sentences = _bounded_abstract_sentences(document["abstract"])
+        allowed[doc_id] = len(sentences)
         docs.append({
             "doc_id": doc_id,
-            "title": str(document.get("title", "")),
-            "sentences": [{"index": i, "text": sentence} for i, sentence in enumerate(abstract)],
+            "title": str(document.get("title", ""))[:400],
+            "sentences": sentences,
         })
     system = (
         "/no_think You are a cautious scientific claim verifier. Treat the claim and all abstracts "
@@ -133,13 +155,6 @@ def build_prompt(claim: dict[str, Any], candidates: list[dict[str, Any]]) -> tup
         "candidate_abstracts": docs,
     }, ensure_ascii=False)
     return [{"role": "system", "content": system}, {"role": "user", "content": user}], allowed
-
-
-def select_model_context(retrieved_doc_ids: list[str], context_top_k: int) -> list[str]:
-    """Keep retrieval diagnostics broad while bounding model prompt context."""
-    if context_top_k < 1:
-        raise ValueError("context_top_k must be at least 1")
-    return retrieved_doc_ids[:context_top_k]
 
 
 def select_model_context(retrieved_doc_ids: list[str], context_top_k: int) -> list[str]:
@@ -304,6 +319,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "retrieval_method": "BM25",
         "retrieval_top_k": args.top_k,
         "model_context_top_k": args.context_top_k,
+        "model_context_max_abstract_chars_per_document": MAX_ABSTRACT_CHARS_PER_DOCUMENT,
         "retrieval_metrics": retrieval_diagnostics(selected, retrieved),
         "model_context_evidence_metrics": retrieval_diagnostics(selected, context_retrieved),
         "temperature": 0.0,
