@@ -15,7 +15,7 @@ Gemini, a hosted inference API, or an API key.
 - Inference: llama.cpp CPU server, loopback only
 - Retrieval: deterministic BM25 over the full 5,183-abstract SciFact corpus
 - Evaluation: all 300 labelled dev claims, no gold evidence supplied to retrieval or model prompts
-- Candidate abstracts per claim: top 20 by default
+- Candidate abstracts per claim: top 20 for retrieval diagnostics; top 4 in model context
 
 ## What is measured
 
