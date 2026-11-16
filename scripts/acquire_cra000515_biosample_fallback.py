@@ -136,7 +136,7 @@ class _TablePairParser(HTMLParser):
 
     def handle_endtag(self, tag: str) -> None:
         if tag.lower() in {"td", "th"} and self._in_cell:
-            value = re.sub(r"\\s+", " ", "".join(self._text)).strip()
+            value = re.sub(r"\s+", " ", "".join(self._text)).strip()
             self._cells.append(value)
             self._in_cell = False
         elif tag.lower() == "tr" and self._cells:
@@ -221,7 +221,7 @@ def _biosample_fields(accession: str, payload: bytes, source: str) -> dict[str, 
                 if any(candidate in label for candidate in candidates):
                     record[target] = value
                     break
-    alias_match = re.search(r"\\bCHHA\\d+\\b", record["sample_title"], re.I)
+    alias_match = re.search(r"\bCHHA\d+\b", record["sample_title"], re.I)
     if alias_match:
         record["sample_alias"] = alias_match.group(0).upper()
     return record
