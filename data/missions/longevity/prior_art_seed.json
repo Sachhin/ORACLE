@@ -46,5 +46,119 @@
       ],
       "collection_date": "2026-05-19"
     }
+  ],
+  "evidence_audit_updated_at": "2026-11-16",
+  "independent_evidence": [
+    {
+      "source_id": "doi:10.1038/nature12188",
+      "pmid": "23698443",
+      "year": 2013,
+      "design": "mouse genetics plus C. elegans RNAi and mammalian-cell experiments",
+      "finding": "MRPS5 and other mitochondrial ribosomal protein perturbations induced mitonuclear protein imbalance and UPRmt; MRPS5 knockdown extended C. elegans lifespan.",
+      "relevance": "Functional model-organism evidence that mitochondrial translation perturbation can influence lifespan.",
+      "limitation": "Direction differs from the higher-than-age-expected expression of selected mRPGs reported in long-lived humans; model-organism intervention is not proof of human causality.",
+      "doi": "10.1038/nature12188",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC3663447/"
+    },
+    {
+      "source_id": "doi:10.1080/15476286.2021.1875647",
+      "pmid": "33472542",
+      "year": 2021,
+      "design": "human skeletal-muscle ribosome profiling across middle-aged and older adults",
+      "finding": "Older age was associated with lower ribosome occupancy for multiple mitochondrial-genome-encoded oxidative-phosphorylation transcripts.",
+      "relevance": "Independent human tissue evidence that mitochondrial translation is age-sensitive.",
+      "limitation": "Does not measure the 8-mRPG signature or exceptional longevity; mitochondrial-genome-encoded OXPHOS translation is distinct from nuclear-encoded mitochondrial ribosomal-protein transcript abundance.",
+      "doi": "10.1080/15476286.2021.1875647",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC8583053/"
+    },
+    {
+      "source_id": "doi:10.1101/gr.275636.121",
+      "pmid": "35078808",
+      "year": 2022,
+      "design": "human Mendelian-randomization analysis of translation-machinery expression",
+      "finding": "Genetically proxied expression of Pol I/III machinery and ribosomal-protein genes was associated with human longevity; reduced expression in several tissues was reported as longevity-associated.",
+      "relevance": "Supports a possible global/cytosolic translation-reduction arm of healthy aging.",
+      "limitation": "Not specific to mitochondrial ribosomal proteins; MR depends on instrument validity and does not validate the 8-mRPG mechanism.",
+      "doi": "10.1101/gr.275636.121",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/35078808/"
+    },
+    {
+      "source_id": "doi:10.1126/sciadv.abf2017",
+      "pmid": "35476452",
+      "year": 2022,
+      "design": "two Chinese longevity cohorts plus cell perturbation assays",
+      "finding": "185 long-lived individuals and 86 offspring spouses showed downregulated cytosolic ribosome pathway; ETS1 was lower in long-lived individuals and ETS1 knockdown reduced cytosolic ribosomal-protein gene expression and cellular senescence in fibroblast models.",
+      "relevance": "Provides a plausible contrast between reduced cytosolic ribosome biogenesis and preserved selected mitochondrial ribosomal transcripts.",
+      "limitation": "Cytosolic ribosomal genes are not mitochondrial ribosomal genes; cell assays do not establish a whole-organism longevity mechanism.",
+      "doi": "10.1126/sciadv.abf2017",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/35476452/"
+    }
+  ],
+  "hypothesis_audit": [
+    {
+      "id": "H1",
+      "title": "Compartment-specific translation allocation in long-lived humans",
+      "statement": "Long-lived individuals may preserve a selected mitochondrial ribosomal transcript program above age-expected levels while allowing broader cytosolic ribosome biogenesis to decline; this could help maintain mitochondrial protein synthesis without maintaining globally high translation.",
+      "status": "testable_candidate_not_novel_discovery",
+      "confidence": "low_to_moderate_association_only",
+      "supporting_prior_art": [
+        "doi:10.1016/j.xcrm.2026.102767",
+        "doi:10.1126/sciadv.abf2017",
+        "doi:10.1101/gr.275636.121",
+        "doi:10.1080/15476286.2021.1875647"
+      ],
+      "opposing_or_qualifying_evidence": [
+        "doi:10.1038/nature12188"
+      ],
+      "key_alternative": "Blood-cell composition, regional/batch effects, or survivor/health selection may explain part of the bulk-expression signature.",
+      "falsifiable_tests": [
+        "Recompute the exact 8-mRPG score from frozen sample-level counts in independent cohorts with matched tissue and verified phenotype.",
+        "Test the score within sorted or single-cell-defined leukocyte populations and after cell-composition, sex, age, region and batch adjustment.",
+        "Test whether the score predicts mitochondrial translation, mitochondrial-encoded OXPHOS protein abundance, respiratory capacity or ATP production.",
+        "Use graded perturbation and rescue of the exact published 8 genes in relevant human cell models; measure mitochondrial translation, respiration, UPRmt and senescence."
+      ]
+    },
+    {
+      "id": "H2",
+      "title": "Dose- and tissue-dependent mitonuclear stress hormesis",
+      "statement": "Partial or transient mitochondrial translation disruption may activate mitonuclear protein imbalance and UPRmt, whereas preservation of a subset of mitochondrial ribosomal genes may be beneficial in selected human tissues or late-life states; effects may be dose-, tissue- and time-dependent.",
+      "status": "cross_species_mechanism_with_directional_tension",
+      "confidence": "moderate_in_model_organisms_low_in_humans",
+      "supporting_prior_art": [
+        "doi:10.1038/nature12188",
+        "doi:10.1016/j.xcrm.2026.102767"
+      ],
+      "opposing_or_qualifying_evidence": [
+        "doi:10.1080/15476286.2021.1875647"
+      ],
+      "falsifiable_tests": [
+        "Run graded rather than binary perturbations of candidate mRPGs and mitochondrial translation regulators.",
+        "Measure time-resolved mitonuclear protein stoichiometry, UPRmt, respiration and cell survival.",
+        "Determine whether transient versus chronic perturbation produces opposite effects."
+      ]
+    },
+    {
+      "id": "H3",
+      "title": "Bulk-blood cell-composition or health-status confounding",
+      "statement": "The 8-mRPG bulk-blood association may partly reflect differences in leukocyte subtype proportions, immune activation, medication, nutritional status or cohort selection rather than a cell-intrinsic longevity mechanism.",
+      "status": "live_alternative_explanation",
+      "confidence": "plausible_unresolved",
+      "supporting_prior_art": [
+        "doi:10.1016/j.xcrm.2026.102767"
+      ],
+      "opposing_or_qualifying_evidence": [],
+      "falsifiable_tests": [
+        "Repeat analysis with measured cell counts and cell-type deconvolution in every cohort.",
+        "Test within-cell-type expression using sorted cells or single-cell RNA-seq.",
+        "Adjust for medication, BMI, diet, chronic disease and sequencing/library protocol where available."
+      ]
+    }
+  ],
+  "gates": [
+    "The 2026 8-mRPG signature is prior art; ORACLE must not claim it as a new discovery.",
+    "The 2013 MRPS5/UPRmt intervention literature and 2026 human expression signature have different directions and biological contexts; reconcile rather than cherry-pick.",
+    "The 2021 human muscle translation study concerns mitochondrial-genome-encoded OXPHOS translation, not the same nuclear-encoded mRPG transcript signature.",
+    "The 2022 ETS1 and Mendelian-randomization findings concern broad/cytosolic translation machinery, not direct replication of the 8-mRPG signature.",
+    "No mechanism passes novelty or causality review until independent sample-level replication and functional perturbation/rescue are complete."
   ]
 }
