@@ -20,3 +20,21 @@ Europe PMC supplementaryFiles returned a ZIP archive containing two PDF suppleme
 The exact gene lists are now stored in data/missions/longevity/prior_art_seed.json. ORACLE also has a deterministic GSE16717 reanalysis workflow to reproduce the published Leiden validation cohort. That cohort was already used by the 2026 article, so this is a reproducibility check, not a new independent cohort.
 
 The Chinese discovery cohort's Mendeley page remains without visible file entries, and the public metadata API probe did not return downloadable file identifiers. The sample-level matrix and age/cohort manifest therefore remain an author-data blocker.
+
+
+## Cohort-count reconciliation from the published STAR Methods and data statement
+
+The initial count discrepancy can now be reconciled arithmetically from the article itself:
+
+- Recruited: 1,752 people = 811 LLIs + 941 YCs.
+- Previously published: 442 samples = 171 CRA000515 + 271 HRA000656.
+- One previously published sample had missing age and was excluded from analysis.
+- Analyzed previously published samples: 441.
+- Newly generated samples: 1,310.
+- Total analyzed: 441 + 1,310 = 1,751 = 811 LLIs + 940 YCs.
+
+Thus the abstract's 1,751 analyzed participants and the Methods' 1,752 recruited participants are numerically consistent with the stated one-sample missing-age exclusion. The 441 in the Data Availability statement is also consistent with 442 deposited previously published samples minus one excluded sample.
+
+**What remains unresolved:** the paper does not identify which exact sample was excluded for missing age, whether that sample is among CRA000515 or HRA000656, or its accession/alias. The 171 CRA000515 metadata still contains zero individual age values and zero individual CEN/F1/F1SP labels. Supplemental Table S1 reports only aggregate counts by data batch/library type (76 CEN, 54 F1, 41 F1SP across the 171-person Hainan cohort); Supplemental File S1 references `samples_information.csv` with the required row-level condition/read_type/library_type fields, but that CSV is not included in the public archive.
+
+This closes the arithmetic discrepancy but does not close the individual provenance crosswalk or enable sample-level reanalysis.
