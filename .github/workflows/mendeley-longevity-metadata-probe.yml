@@ -1,0 +1,29 @@
+name: ORACLE Mendeley longevity cohort metadata probe
+
+on:
+  pull_request:
+    paths:
+      - "scripts/probe_mendeley_longevity_dataset.py"
+      - ".github/workflows/mendeley-longevity-metadata-probe.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe-public-metadata:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Probe public Mendeley metadata endpoints
+        run: python scripts/probe_mendeley_longevity_dataset.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mendeley-longevity-metadata-probe
+          path: artifacts/mendeley/
+          if-no-files-found: error
+          retention-days: 30
