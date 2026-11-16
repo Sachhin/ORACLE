@@ -23,7 +23,7 @@
         "The study is observational and cross-sectional; it does not establish that mRPG expression causes longevity.",
         "The upstream regulatory processes maintaining mRPG expression remain unknown.",
         "The authors call for functional experiments and note residual confounding may remain.",
-        "The paper contains a sample-count discrepancy: 1,751 vs 1,752 total participants and 441 vs 442 previously reported samples (171 CRA000515 + 271 HRA000656); one missing-age exclusion is mentioned. Resolve against the source manifest before analysis."
+        "The counts reconcile arithmetically: 1,752 recruited (811 LLI + 941 YC); 442 previously published (171 CRA000515 + 271 HRA000656); one missing-age sample excluded, leaving 441 prior samples; plus 1,310 new samples = 1,751 analyzed (811 LLI + 940 YC). The identity/accession of the excluded sample remains unknown."
       ],
       "data_accessions": {
         "cra": "CRA000515 (171 samples)",
@@ -34,7 +34,7 @@
           "HRA015372"
         ],
         "mendeley_doi": "10.17632/fpf4y72kfz.1",
-        "note": "The paper's key-resource table lists 171 CRA000515 + 271 HRA000656 = 442 previously reported samples; Methods state one sample lacked age and was excluded, while the Data Availability Statement reports 441 deposited samples. This count discrepancy must be reconciled from sample-level metadata before analysis.",
+        "note": "Count reconciliation: 171 CRA000515 + 271 HRA000656 = 442 previously published; one previously published sample with missing age was excluded, leaving 441 analyzed prior samples. Adding 1,310 newly generated samples gives 1,751 analyzed participants. The excluded sample's accession/alias remains unidentified.",
         "mendeley_published": "2026-03-18"
       },
       "next_checks": [
