@@ -145,3 +145,70 @@ example has no age value. This update narrows the blocker from "no acquisition
 route known" to "cohort-wide enumeration, metadata validation and large-file
 acquisition not yet executed". GSE58137/GSE65219 remain age-association checks,
 not direct centenarian replication.
+
+
+## Independent longevity mission artifact audit (2026-11-16)
+
+The completed Actions artifact from run
+[42831918629](https://github.com/Sachhin/ORACLE/actions/runs/42831918629)
+was downloaded and inspected. ORACLE run `run_a19934cc2692` completed 3/3
+cycles and contains 256 sources, 51 evidence records, 435 claims, two
+hypotheses, and one proposed experiment. Both hypotheses are generic
+single-mechanism versus multi-mechanism framings with very-low confidence and
+zero supporting or opposing evidence IDs. No experiment was performed or
+simulated. The run contains zero differential-expression analyses, zero
+dataset analyses, and zero contradiction candidates.
+
+The artifact contains a downloaded GSE351605 normalized-count file, but
+GSE351605 is a ketogenic-diet intervention dataset, not a centenarian cohort;
+it was not parsed into a verified design or analysed. The separate GSE32493
+miRNA report is based on three centenarians and three controls with one
+group-summary column per arm. It reports descriptive CPM/log2 fold changes
+only and no inferential p-values or adjusted significance. These are
+exploratory signals, not novel mechanisms.
+
+See `docs/LONGEVITY_MISSION_AUDIT_2026-11-16.md` for artifact hashes,
+numerical details, and the independent interpretation. The longevity
+discovery gate remains INCOMPLETE.
+
+## PXD047528 source-manifest validation
+
+A strict validator is now available at
+`scripts/validate_pxd047528_clinical_manifest.py`. The preparation workflow's
+sample-map template now includes patient ID, phenotype, HAND status, raw DDA
+and DIA filenames, alias relationship, mapping rationale, source URL,
+source-document SHA-256, and provenance status. Run the validator before
+clinical outcome concordance. It requires exactly 15 aliases mapped to 13
+distinct patients, 8 HIV and 5 HERPES patients, and the documented HIV HAND
+split (3 MND, 2 HAD, 3 cognitively normal). It does not authenticate a source
+document by itself; the submitter/repository source must still be inspected.
+
+## Release verification
+
+`scripts/verify_v1_release.py` now checks the frozen CI, Qwen3, GEO,
+CRA000515, PXD047528, longevity-audit, and blinded-review artifacts. It
+returns BLOCKED rather than allowing missing external evidence to be marked
+PASS. The command and input schema are documented in
+`docs/ORACLE_V1_RELEASE_GATE.md`.
+
+
+## CRA000515 additional cross-study provenance source (2026-11-16)
+
+A 2026 Cell Reports Medicine paper, DOI
+`10.1016/j.xcrm.2026.102767`, explicitly lists 171 RNA-seq samples from
+CRA000515 and 271 from HRA000656, plus 1,310 newly generated samples in
+HRA000721, HRA015371, and HRA015372. Its public expression matrix is deposited
+as Mendeley Data DOI `10.17632/fpf4y72kfz.1`. The paper names Qing-Peng Kong
+(`kongqp@mail.kiz.ac.cn`) as lead contact and says additional reanalysis
+information is available on request.
+
+This strengthens the source chain and identifies the corresponding 2026
+cohort, but it does not itself publish a sample-level crosswalk for all 171
+CRA aliases. The public GSA project record lists 171 BioSamples and the study
+description's broad groups (centenarians, offspring, spouses), while the
+per-sample BioSample records inspected do not provide all required ages and
+cohort labels. The Mendeley page's text-accessible view identifies the dataset
+and download control but does not expose the file inventory; its documented
+API uses OAuth2 for dataset retrieval. Therefore no clinical group labels are
+inferred from the 2026 paper's aggregate counts. A submitter-provided or
+publicly downloadable sample annotation table is still required.

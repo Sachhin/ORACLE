@@ -170,9 +170,51 @@ The PEPerMINT article also describes a HeLa/E. coli mixture dataset
 downstream differential-abundance ground-truth check but is not a substitute
 for the real-missing-cell HIV benchmark.
 
+To validate the completed crosswalk before any outcome analysis, fill every
+provenance field in `sample_map_template.tsv` and run:
+
+```bash
+python scripts/validate_pxd047528_clinical_manifest.py \
+  --manifest validation/pxd047528/sample_map_template.tsv \
+  --report validation/pxd047528/clinical_crosswalk_audit.json
+```
+
+The validator requires exactly 15 aliases mapping to 13 distinct patient IDs,
+8 HIV and 5 HERPES patients, and the source-reported HIV HAND split (3 MND,
+2 HAD, 3 cognitively normal). Every row must cite raw DDA/DIA file identifiers,
+a source URL, a source-document SHA-256, a provenance status, and a rationale
+for the alias-to-patient relationship. Repeated aliases for one patient must
+identify one primary row and explicitly document the additional acquisition.
+A successful software check does not independently authenticate the source;
+a reviewer must inspect the submitter/repository record. Do not fill this
+template from filenames, sample order, inferred clinical similarity, or
+published aggregate counts.
+
 The evaluator does not download or infer labels. It rejects mismatched sample
 or feature identifiers and records SHA-256 hashes for every input. DIA is an
 orthogonal reference, not a perfect physical truth; outcome association is not
 causality. No benchmark is considered empirically complete until the public
 raw/processed data, sample pairing, biological labels, and provenance have
 been independently checked.
+
+
+## Latest real PXD047528 reconstruction run (2026-11-16)
+
+GitHub Actions run
+[43867538202](https://github.com/Sachhin/ORACLE/actions/runs/43867538202)
+prepared 15 samples and 2,170 shared peptide features. The paired DIA assay
+provided an orthogonal measurement for 8,859 genuine DDA-missing cells
+(67.92% of the 13,043 genuine DDA-missing cells). No synthetic masking was
+used.
+
+| Method | MAE | RMSE | Pearson r | Mean signed error |
+|---|---:|---:|---:|---:|
+| Row-median baseline | 1.1382 | 1.4675 | 0.2503 | +1.0669 |
+| Sample-neighbour KNN (5) | 1.0981 | 1.4259 | 0.2625 | +1.0201 |
+
+KNN improves the reconstruction metrics slightly, but correlation remains
+weak and the systematic positive bias remains substantial. This is a
+reconstruction benchmark only: the report status is
+`RECONSTRUCTION_ONLY_LABELS_PENDING`, and the outcome-label hash is null.
+The clinical alias-to-patient manifest remains unverified, so do not report
+HIV/HERPES or HAND outcome concordance yet.
