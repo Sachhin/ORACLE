@@ -9,7 +9,7 @@ class QualityAuditTests(unittest.TestCase):
         self.assertEqual(r["gates"]["human_expert_review"]["status"],"required")
     def test_human_evidence_and_concordant_dataset_screen(self):
         run={"sources":[{"source_id":"s1","title":"Human ageing","organism":"Homo sapiens","dataset_accession":"GSE1"},{"source_id":"s2","title":"Human longevity","organism":"human","dataset_accession":"GSE2"}],
-        "evidence":[{"source_id":"s1"},{"source_id":"s2"}],
+        "evidence":[{"evidence_id":"e1","source_id":"s1","kind":"literature"},{"evidence_id":"e2","source_id":"s2","kind":"literature"}],
         "differential_expression_analyses":[{"dataset_accession":"GSE1","results":[{"feature":"GENE1","log2_fold_change":1.2,"p_value_adjusted_bh":.01}]},{"dataset_accession":"GSE2","results":[{"feature":"GENE1","log2_fold_change":.8,"p_value_adjusted_bh":.02}]}],
         "hypotheses":[{"hypothesis_id":"h1","statement":"candidate","supporting_evidence_ids":["e1"]}]}
         r=audit_run({"run":run})
@@ -20,6 +20,28 @@ class QualityAuditTests(unittest.TestCase):
     def test_opposite_directions_flag_conflict(self):
         r=audit_run({"differential_expression_analyses":[{"dataset_accession":"GSE1","results":[{"feature":"X","log2_fold_change":1,"p_value_adjusted_bh":.01}]},{"dataset_accession":"GSE2","results":[{"feature":"X","log2_fold_change":-1,"p_value_adjusted_bh":.01}]}]})
         self.assertEqual(r["gates"]["statistical_support"]["replicated_feature_screens"][0]["classification"],"directional_conflict")
+    def test_hypothesis_without_source_backed_support_is_explicitly_unsupported(self):
+        payload = {"run": {
+            "hypotheses": [{"hypothesis_id": "h1", "statement": "candidate",
+                            "supporting_evidence_ids": [], "opposing_evidence_ids": []}],
+            "experiments": [{"experiment_id": "x1", "execution_kind": "proposed"}],
+        }}
+        report = audit_run(payload)
+        self.assertEqual(report["hypothesis_reviews"][0]["status"], "unsupported_no_source_backed_support")
+        self.assertEqual(report["gates"]["hypothesis_evidence"]["status"], "no_source_backed_hypothesis_support")
+        self.assertEqual(report["gates"]["experiment_execution"]["status"], "proposals_only_no_execution")
+
+    def test_inference_evidence_does_not_count_as_source_backed_support(self):
+        payload = {"run": {
+            "sources": [{"source_id": "s1", "title": "Paper"}],
+            "evidence": [{"evidence_id": "e1", "source_id": "s1", "kind": "inference"}],
+            "hypotheses": [{"hypothesis_id": "h1", "statement": "candidate",
+                            "supporting_evidence_ids": ["e1"]}],
+        }}
+        report = audit_run(payload)
+        self.assertEqual(report["hypothesis_reviews"][0]["source_backed_supporting_evidence_count"], 0)
+        self.assertEqual(report["hypothesis_reviews"][0]["status"], "unsupported_no_source_backed_support")
+
     def test_invalid_fdr_rejected(self):
         with self.assertRaises(ValueError): audit_run({},fdr_threshold=1)
     def test_markdown_scope(self):
