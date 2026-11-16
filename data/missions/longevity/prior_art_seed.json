@@ -23,7 +23,7 @@
         "The study is observational and cross-sectional; it does not establish that mRPG expression causes longevity.",
         "The upstream regulatory processes maintaining mRPG expression remain unknown.",
         "The authors call for functional experiments and note residual confounding may remain.",
-        "The paper contains a sample-count discrepancy: 1,751 vs 1,752 total participants and 441 vs 442 previously reported samples (171 CRA000515 + 271 HRA000656); one missing-age exclusion is mentioned. Resolve against the source manifest before analysis."
+        "The counts reconcile arithmetically: 1,752 recruited (811 LLI + 941 YC); 442 previously published (171 CRA000515 + 271 HRA000656); one missing-age sample excluded, leaving 441 prior samples; plus 1,310 new samples = 1,751 analyzed (811 LLI + 940 YC). The identity/accession of the excluded sample remains unknown."
       ],
       "data_accessions": {
         "cra": "CRA000515 (171 samples)",
@@ -34,7 +34,7 @@
           "HRA015372"
         ],
         "mendeley_doi": "10.17632/fpf4y72kfz.1",
-        "note": "The paper's key-resource table lists 171 CRA000515 + 271 HRA000656 = 442 previously reported samples; Methods state one sample lacked age and was excluded, while the Data Availability Statement reports 441 deposited samples. This count discrepancy must be reconciled from sample-level metadata before analysis.",
+        "note": "Count reconciliation: 171 CRA000515 + 271 HRA000656 = 442 previously published; one previously published sample with missing age was excluded, leaving 441 analyzed prior samples. Adding 1,310 newly generated samples gives 1,751 analyzed participants. The excluded sample's accession/alias remains unidentified.",
         "mendeley_published": "2026-03-18"
       },
       "next_checks": [
@@ -136,6 +136,59 @@
         "cra": "CRA000515 (171 records cross-referenced; individual age/group labels remain unavailable)"
       },
       "collection_date": "2018-10-23"
+    },
+    {
+      "source_id": "GSE16717",
+      "title": "Gene expression profiles in the Leiden Longevity Study",
+      "publication_year": 2011,
+      "platform": "GPL2895",
+      "sample_count": 150,
+      "groups": {
+        "long_lived_siblings": 50,
+        "offspring": 50,
+        "controls": 50
+      },
+      "mean_age_years": {
+        "long_lived_siblings": 93.4,
+        "offspring": 60.8,
+        "controls": 61.9
+      },
+      "doi": "10.1371/journal.pone.0027759",
+      "pmid": "22247756",
+      "url": "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE16717",
+      "role": "published_validation_cohort_for_2026_mRPG_signature",
+      "limitations": [
+        "The 2026 paper already cites GSE16717 as a validation cohort; ORACLE reanalysis is a reproducibility check, not a new independent cohort.",
+        "The GEO record reports 50 samples per group; individual age/sex metadata coverage must be checked before covariate-adjusted claims.",
+        "Normalized microarray expression is not directly comparable to RNA-seq counts."
+      ]
+    },
+    {
+      "source_id": "doi:10.1016/j.ebiom.2025.105922",
+      "title": "A comprehensive single-cell atlas of three centenarian cohorts unveils unique natural killer cell signatures and enhanced mutual interactions among peripheral immune cells",
+      "journal": "EBioMedicine",
+      "publication_date": "2025-09-12",
+      "doi": "10.1016/j.ebiom.2025.105922",
+      "pmid": "40945050",
+      "pmcid": "PMC12571583",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC12571583/",
+      "claims": [
+        "The study integrated PBMC single-cell RNA-seq from three reported centenarian cohorts: Lingao (17 CEN, 9 offspring, 14 controls), Rugao (7 CEN, 6 offspring, 9 controls) and Japan (7 CEN, 2 offspring, 3 controls); the paper reports a combined 31/17/26 cohort count.",
+        "Across cohorts, the authors reported fewer B cells and CD4 T cells and more NK cells in centenarians than controls; NK cells showed relatively young subset/receptor signatures and increased RUNX3/KLF4 activity.",
+        "In the new Lingao cohort, CyTOF and flow cytometry provided orthogonal validation of selected immune-cell composition and RUNX3 findings."
+      ],
+      "limitations": [
+        "This is evidence for immune-cell remodeling, not direct replication of the 8-mRPG or autophagy-lysosome gene signatures.",
+        "The 2025 atlas reuses the Rugao cohort HRA002867 from the 2022 Rugao study and a Japanese cohort from RIKEN SC2018; do not count these as new independent cohorts a second time. The Lingao cohort is the additional cohort.",
+        "The new Lingao raw data are deposited as HRA011570 and are controlled-access; HRA002867 is also controlled-access. Sample-level reanalysis requires authorized GSA-Human access and a source-authenticated manifest.",
+        "Bulk-blood expression differences may reflect immune-cell proportions or cell states; mRPG expression should be tested within cell types before inferring a cell-intrinsic mitochondrial mechanism."
+      ],
+      "data_accessions": {
+        "lingao": "HRA011570 (controlled access; PRJCA038980)",
+        "rugao": "HRA002867 (controlled access)",
+        "japan": "RIKEN SC2018 (public reuse)"
+      },
+      "collection_date": "2025-09-12"
     }
   ],
   "evidence_audit_updated_at": "2026-11-16",
@@ -194,6 +247,47 @@
       "limitation": "No causal human intervention; the 171-person cohort overlaps the CRA000515 cohort and cannot be counted as an independent replication.",
       "doi": "10.1101/gr.220780.117",
       "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC6211641/"
+    },
+    {
+      "source_id": "GSE16717",
+      "year": 2011,
+      "design": "CodeLink GPL2895 peripheral-blood microarray; 50 long-lived siblings, 50 offspring and 50 controls/offspring partners",
+      "finding": "Public expression profiles permit testing the published mRPG-8 and cRPG-7 panels in the Leiden cohort.",
+      "relevance": "Reproducibility check of the 2026 paper's published validation cohort.",
+      "limitation": "Not independent of the validation reported in the 2026 paper; microarray platform and possible age/sex covariate limitations."
+    },
+    {
+      "source_id": "doi:10.1016/j.ebiom.2025.105922",
+      "pmid": "40945050",
+      "year": 2025,
+      "design": "three-cohort PBMC single-cell atlas with mass cytometry and flow validation in Lingao",
+      "finding": "Across Lingao, Rugao and Japan cohorts, centenarians showed higher NK-cell proportions and lower B/CD4 T-cell proportions; NK cells had relatively young signatures with RUNX3/KLF4 activity and enhanced NK–T signalling.",
+      "relevance": "Independent cohort-level evidence that peripheral immune-cell composition and cell state are major features of exceptional longevity; supports testing cell composition as an alternative explanation for bulk mRPG signals.",
+      "limitation": "Does not test the 8-mRPG signature directly. Rugao and Japan are reused datasets; only Lingao adds a new cohort in this atlas. Lingao HRA011570 and Rugao HRA002867 are controlled-access.",
+      "doi": "10.1016/j.ebiom.2025.105922",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC12571583/"
+    },
+    {
+      "source_id": "doi:10.1073/pnas.1907883116",
+      "pmid": "31719197",
+      "year": 2019,
+      "design": "single-cell PBMC transcriptomics from seven supercentenarians and five controls; RIKEN SC2018",
+      "finding": "The study reported expansion of cytotoxic CD4 T cells in supercentenarians.",
+      "relevance": "An independent extreme-longevity immune-cell cohort that can help test whether bulk longevity-associated expression signals are cell-composition or cell-state dependent.",
+      "limitation": "This is the same RIKEN SC2018 cohort reused in the 2023 supercentenarian aging-clock study and the Japan arm of the 2025 three-cohort atlas; do not count these publications as separate cohorts. It does not directly test the 8-mRPG signature.",
+      "doi": "10.1073/pnas.1907883116",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/31719197/"
+    },
+    {
+      "source_id": "doi:10.1126/sciadv.abq7599",
+      "pmid": "37379396",
+      "year": 2023,
+      "design": "single-cell PBMC aging-clock analysis using seven supercentenarians from RIKEN SC2018 and a separate 17-donor healthy reference cohort (GSE213516)",
+      "finding": "The paper reported a high-ribosome/low-inflammation single-cell state in supercentenarians and tested ribosome/translation inhibition in monocytes.",
+      "relevance": "Supports a translation-versus-inflammation axis in extreme human longevity and motivates direct cell-level testing of the published mitochondrial ribosomal protein panel.",
+      "limitation": "The high-ribosome score is not the same as the nuclear-encoded 8-mRPG signature; the supercentenarian data reuse RIKEN SC2018 and are not a second independent cohort. GSE213516 contains the 17 healthy reference donors, not the supercentenarians.",
+      "doi": "10.1126/sciadv.abq7599",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/37379396/"
     }
   ],
   "hypothesis_audit": [
@@ -207,7 +301,8 @@
         "doi:10.1016/j.xcrm.2026.102767",
         "doi:10.1126/sciadv.abf2017",
         "doi:10.1101/gr.275636.121",
-        "doi:10.1080/15476286.2021.1875647"
+        "doi:10.1080/15476286.2021.1875647",
+        "doi:10.1126/sciadv.abq7599"
       ],
       "opposing_or_qualifying_evidence": [
         "doi:10.1038/nature12188"
@@ -218,7 +313,27 @@
         "Test the score within sorted or single-cell-defined leukocyte populations and after cell-composition, sex, age, region and batch adjustment.",
         "Test whether the score predicts mitochondrial translation, mitochondrial-encoded OXPHOS protein abundance, respiratory capacity or ATP production.",
         "Use graded perturbation and rescue of the exact published 8 genes in relevant human cell models; measure mitochondrial translation, respiration, UPRmt and senescence."
-      ]
+      ],
+      "mRPG_gene_signature": [
+        "MRPL3",
+        "MRPL32",
+        "MRPL42",
+        "MRPL45",
+        "MRPL50",
+        "MRPS10",
+        "MRPS33",
+        "MRPS35"
+      ],
+      "cRPG_comparator": [
+        "RPL10A",
+        "RPL22",
+        "RPL4",
+        "RPL5",
+        "RPS13",
+        "RPS23",
+        "RPS6"
+      ],
+      "signature_source": "Figure 4B, Xiao et al. 2026, DOI 10.1016/j.xcrm.2026.102767"
     },
     {
       "id": "H2",
@@ -246,7 +361,9 @@
       "status": "live_alternative_explanation",
       "confidence": "plausible_unresolved",
       "supporting_prior_art": [
-        "doi:10.1016/j.xcrm.2026.102767"
+        "doi:10.1016/j.xcrm.2026.102767",
+        "doi:10.1016/j.ebiom.2025.105922",
+        "doi:10.1073/pnas.1907883116"
       ],
       "opposing_or_qualifying_evidence": [],
       "falsifiable_tests": [
@@ -341,6 +458,34 @@
     "The 2021 human muscle translation study concerns mitochondrial-genome-encoded OXPHOS translation, not the same nuclear-encoded mRPG transcript signature.",
     "The 2022 ETS1 and Mendelian-randomization findings concern broad/cytosolic translation machinery, not direct replication of the 8-mRPG signature.",
     "No mechanism passes novelty or causality review until independent sample-level replication and functional perturbation/rescue are complete.",
-    "The 2018 autophagy-lysosome result uses the same 171-person Hainan/CRA000515 cohort; do not count it as independent cohort replication."
-  ]
+    "The 2018 autophagy-lysosome result uses the same 171-person Hainan/CRA000515 cohort; do not count it as independent cohort replication.",
+    "GSE16717 is already used as a validation cohort by the 2026 paper; an ORACLE reanalysis is a reproducibility check, not a new independent cohort discovery.",
+    "The 2025 three-cohort single-cell atlas supports immune-cell composition/state as a live bulk-blood confounder, but it does not directly validate the 8-mRPG signature; Rugao and Japan are reused cohorts, while Lingao is the additional cohort.",
+    "RIKEN SC2018 is a distinct Japanese supercentenarian cohort from the Chinese CRA000515 and Leiden GSE16717 cohorts, but the 2019, 2023 and 2025 papers reuse the same SC2018 donors; count the cohort once."
+  ],
+  "gene_signatures": {
+    "source_doi": "10.1016/j.xcrm.2026.102767",
+    "source_pmcid": "PMC13198318",
+    "source_figure": "Figure 4B",
+    "status": "published_prior_art",
+    "mRPG_8": [
+      "MRPL3",
+      "MRPL32",
+      "MRPL42",
+      "MRPL45",
+      "MRPL50",
+      "MRPS10",
+      "MRPS33",
+      "MRPS35"
+    ],
+    "cRPG_7": [
+      "RPL10A",
+      "RPL22",
+      "RPL4",
+      "RPL5",
+      "RPS13",
+      "RPS23",
+      "RPS6"
+    ]
+  }
 }

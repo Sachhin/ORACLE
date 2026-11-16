@@ -113,3 +113,53 @@ The full Europe PMC supplementary archive is now retrieved and checksummed. Supp
 Supplemental Table S7 reports age-expression correlations for 38 upregulated autophagy–lysosomal genes in the middle-aged F1/F1SP groups; none of the listed p-values is below 0.05. This does not negate the centenarian-versus-spouse group association, but it does not support a simple monotonic age trend across the middle-aged offspring/spouse subset.
 
 Crucially, Supplemental File S1 references a missing samples_information.csv containing the sample IDs/row names, condition (CEN/F1/F1SP), read_type and library_type. That CSV is not in the public supplement archive. Thus the exact 171-sample individual crosswalk remains unavailable even after the supplement retrieval.
+
+
+## Exact published gene signatures recovered from Figure 4B (2026 article)
+
+The full Europe PMC supplementary archive was retrieved (PMCID PMC13198318; DOI 10.1016/j.xcrm.2026.102767). Inspection of Figure 4B in the article PDF gives the exact published gene panels:
+
+- **8 mRPG signature:** MRPL3, MRPL32, MRPL42, MRPL45, MRPL50, MRPS10, MRPS33, MRPS35.
+- **7 cRPG comparator:** RPL10A, RPL22, RPL4, RPL5, RPS13, RPS23, RPS6.
+
+These are published prior-art signatures, not newly discovered ORACLE genes. The exact gene list removes one blocker for independent numerical replication in non-overlapping public expression cohorts. The Mendeley sample-level matrix and per-sample age/cohort annotations remain unavailable, so the 811-LLI/940-YC Chinese cohort cannot yet be independently reproduced from source data.
+
+
+## Independent multi-cohort immune-remodelling evidence (2025)
+
+Wang et al., *EBioMedicine* (2025), DOI [10.1016/j.ebiom.2025.105922](https://doi.org/10.1016/j.ebiom.2025.105922), assembled PBMC single-cell data from three centenarian cohorts:
+- Lingao, Hainan: 17 centenarians, 9 offspring, 14 controls (new cohort; GSA-Human HRA011570 / PRJCA038980)
+- Rugao: 7 centenarians, 6 offspring, 9 controls (reuse of HRA002867, the cohort already reported in the 2022 Rugao study)
+- Japan: 7 centenarians, 2 offspring, 3 controls (RIKEN SC2018 public reuse)
+
+The paper reports a combined 31/17/26 count. Across cohorts, it found higher NK-cell proportions and lower B-cell/CD4 T-cell proportions in centenarians; NK cells showed relatively young subset/receptor profiles, with increased RUNX3/KLF4 activity and enhanced NK–T signalling. CyTOF and flow cytometry provided orthogonal validation for selected Lingao findings.
+
+**Interpretation for ORACLE:** this is independent evidence that immune-cell composition and state are major correlates of exceptional longevity. It strengthens H3 (bulk-blood cell-composition/state confounding) and makes cell-type-aware testing essential before interpreting the 8-mRPG bulk signature as cell-intrinsic mitochondrial biology. The study does **not** directly test the 8-mRPG or cRPG gene panels.
+
+**Cohort independence rule:** the 2025 atlas reuses Rugao HRA002867 and Japan RIKEN SC2018; do not count those as new replications on top of their original studies. Lingao is the additional cohort. HRA011570 (Lingao) and HRA002867 (Rugao) are controlled-access; the article says data are available from the corresponding author/GSA-Human. GSA-Human controlled data require DAC authorization, so ORACLE has not downloaded or reanalysed these matrices.
+
+Sources: [Wang et al. 2025 full text](https://pmc.ncbi.nlm.nih.gov/articles/PMC12571583/); [PubMed record](https://pubmed.ncbi.nlm.nih.gov/40945050/); [GSA-Human access policy](https://ngdc.cncb.ac.cn/gsa-human/document/GSA-Human_Request_Guide_for_Users_us.pdf).
+
+
+## Independent Japanese supercentenarian single-cell cohort (RIKEN SC2018)
+
+Two publications analyze the same distinct Japanese RIKEN SC2018 PBMC cohort:
+- Hashimoto et al., *PNAS* (2019), DOI [10.1073/pnas.1907883116](https://doi.org/10.1073/pnas.1907883116), reported expansion of cytotoxic CD4 T cells in seven supercentenarians versus five controls.
+- Zhu et al., *Science Advances* (2023), DOI [10.1126/sciadv.abq7599](https://doi.org/10.1126/sciadv.abq7599), used the same seven supercentenarians plus a separate 17-donor healthy reference cohort (GSE213516) to develop a single-cell aging clock. It reported a high-ribosome/low-inflammation state in supercentenarians and performed ribosome/translation inhibition experiments in monocytes.
+
+**Why this matters:** RIKEN SC2018 is a different population from the Chinese Hainan/CRA000515 cohort and Leiden GSE16717, making it a candidate independent test set for the 8-mRPG panel. The 2023 high-ribosome finding is directionally relevant to translation biology, but it is not a direct measurement of the 8 nuclear-encoded mitochondrial ribosomal genes. The 2019, 2023 and 2025 atlas papers reuse the same SC2018 donors; count SC2018 only once.
+
+### Public metadata provenance probe
+
+ORACLE downloaded the public Hugging Face community mirror's `sample_metadata.parquet` and verified its SHA-256 against the mirror's published pointer metadata:
+- SHA-256: `40884e40921bb32ecde184085bcb3240f10f790bab85a9a246302c0a3a842798`
+- 69,844 cell-level metadata rows
+- 12 donor IDs: SC1–SC7 and CT1–CT5
+- `centenarian_status`: SC / CT
+- `batch`: firstrun / SC1_2 / SC2_2
+- `assay_simple`: 10x_3_prime
+- `cell_type`: PBMC
+
+The parquet contains no individual age or sex columns. A 751-MB processed H5AD file is listed by the mirror, but its observation metadata and gene-symbol mapping have not yet been reconciled against this parquet. Therefore, no RIKEN mRPG expression or differential-expression result is claimed yet. The next required step is to verify H5AD checksums, confirm donor-level metadata alignment, inspect gene symbol/Ensembl annotation, and then calculate per-donor pseudobulk counts before testing the 8-mRPG score.
+
+Sources: [Hashimoto et al. 2019](https://pubmed.ncbi.nlm.nih.gov/31719197/); [Zhu et al. 2023](https://pubmed.ncbi.nlm.nih.gov/37379396/); [GSE213516 healthy reference cohort](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE213516); [RIKEN SC2018 data mirror and license](https://huggingface.co/datasets/longevity-db/riken2018).
