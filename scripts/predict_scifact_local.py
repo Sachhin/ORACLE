@@ -41,6 +41,10 @@ def parse_model_json(raw: str) -> dict[str, Any]:
     decoder = json.JSONDecoder()
     payload, end = decoder.raw_decode(text, start)
     trailing = text[end:].strip()
+    # Qwen3 occasionally emits one terminal sentence period after otherwise
+    # valid JSON. Accept that single punctuation mark, but never arbitrary prose.
+    if trailing == ".":
+        trailing = ""
     # Small local models occasionally emit the same completed JSON object twice.
     # Accept only exact duplicate objects; conflicting second answers or prose
     # remain invalid so no ambiguous prediction is silently selected.
