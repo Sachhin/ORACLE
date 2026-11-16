@@ -1,44 +1,34 @@
-# ORACLE hybrid autonomous AI Scientist
+# ORACLE model-free autonomous research engine
 
 ## Product decision
-ORACLE is a hybrid system with a model-independent scientific core and an optional language-reasoning layer.
 
-- **Native core:** research orchestration, public-source retrieval, evidence extraction/provenance, knowledge graph, statistical analysis, computational experiments, skeptic/auditor checks, checkpoints, and decisions.
-- **Language layer:** an open-weight LLM running on a computer/server controlled by the operator. The phone is the control device; no model weights or inference runtime need to be installed on the Pixel.
-- **No Gemini integration:** no Gemini SDK, Gemini API key, paid hosted inference service, vendor endpoint, or automatic provider fallback.
-- **Self-hosted connection:** the initial adapter speaks the common OpenAI-compatible HTTP protocol to an explicitly configured self-hosted runtime such as llama.cpp, Ollama, or vLLM. This is a network connection to the operator's own server, not a commercial hosted-model API. The user must provide and control the compute host; ORACLE does not provision free compute.
-- **Graceful degradation:** if the model is not configured or unavailable, the native scientific core remains usable and clearly reports that language-assisted reasoning is unavailable.
+ORACLE is a deterministic, model-independent scientific research system. It has no AI-model integration and no optional model layer.
 
-## Trust boundary
-The LLM proposes interpretations, plans, summaries, and candidate hypotheses. It is not a source of scientific evidence. Model output must be tied back to retrieved evidence, remain labelled as a proposal, and pass deterministic validation. It cannot directly mark a claim as established, mark an experiment as performed, or execute arbitrary code/tools. Store model identity and non-secret settings for reproducibility; never store credentials in run logs.
+- No hosted or local LLM runtime, model weights, model downloads, inference server, or model SDK.
+- No API keys, model-provider endpoints, quotas, automatic fallback, prompts, or context-window dependencies.
+- Public literature and dataset services are ordinary research-data connectors, not AI-model providers.
+- Core work uses deterministic task planning, source retrieval, evidence/provenance management, reproducible statistics, dataset validation, hypothesis templates, skeptic/auditor rules, and experiment-protocol templates.
 
-## Current implementation slice
-`oracle/language_model.py` provides a small optional client for an explicitly configured self-hosted OpenAI-compatible chat-completion endpoint. It has no vendor SDK, no API-key field, no automatic endpoint, and no dependency beyond Python's standard library. It validates message shape, enforces request bounds, and reports connection failures without affecting the native core.
+## Scientific capability boundary
 
-This adapter is wired through an optional structured `LanguageReasoningAgent` into the research cycle. It receives only source-backed evidence, accepts strict JSON proposals, and records language-generated hypotheses as very-low-confidence candidates. Malformed output or model unavailability degrades to the deterministic workflow. It does not install, download, or host a model.
+ORACLE can retrieve published sources, preserve their provenance, compare data, run reproducible statistical workflows, identify evidence gaps, and generate explicitly provisional hypotheses from deterministic templates.
 
-## Runtime options
-Self-hosted inference servers commonly expose compatible HTTP endpoints:
-- llama.cpp server
-- Ollama OpenAI-compatible endpoint
-- vLLM server
+It is not an open-ended creative AI scientist. Template-generated hypotheses are not equivalent to human scientific reasoning. ORACLE must not claim novelty, causal mechanism discovery, clinical validation, or experimental success unless the corresponding independent evidence exists.
 
-Choose the runtime according to the actual host hardware. vLLM is designed around GPU-backed serving; llama.cpp supports CPU and GPU inference; Ollama offers a simpler model-management experience. ORACLE does not assume a particular runtime or model.
+## Current architecture
 
-## Implementation sequence
-1. Finalize the hybrid architecture and trust boundary.
-2. Add the optional self-hosted model adapter and tests (no Gemini or paid provider).
-3. Add typed model task contracts and structured response validation (initial strict-JSON language agent added).
-4. Extend optional language reasoning into Planner, Explorer, Hypothesis, and synthesis roles while preserving deterministic fallback (initial cycle-level hypothesis/direction integration added).
-5. Add adversarial tests: malformed output, hallucinated citations, unavailable model, prompt injection in retrieved papers, and attempted tool escalation.
-6. Add evaluation against deterministic baselines and human-reviewed research tasks.
-7. Only then select and benchmark a suitable open-weight model against the actual compute host.
+1. Planner: bounded deterministic task decomposition and domain routing.
+2. Researcher: literature, registry, and public dataset retrieval.
+3. Evidence ledger: source-backed claims, citations, evidence links, uncertainty, and contradiction tracking.
+4. Explorer: deterministic evidence-gap and alternative-explanation generation.
+5. Hypothesis ledger: provisional, traceable candidate mechanisms; no automatic promotion to facts.
+6. Skeptic/Auditor: provenance, data-quality, missingness, statistical, and alternative-explanation checks.
+7. Experiment planner: falsifiable computational or laboratory protocol templates. Physical experiments remain proposed until an external execution record proves they were performed.
 
-## Acceptance gates
-- A fresh install runs the native scientific pipeline without any model setup.
-- No Gemini dependency, paid hosted inference, API key, or model weights on the phone.
-- The language layer connects only to an explicitly configured operator-controlled server.
-- The adapter is optional, bounded, and fails closed without disabling native research.
-- Model proposals cannot bypass evidence provenance, statistical validation, skeptic review, or auditor checks.
-- All outputs distinguish source evidence, deterministic analysis, and model-generated proposals.
-- Real scientific claims and benchmarks remain pending until executed and independently validated.
+## Acceptance guarantees
+
+- A fresh install and research run require no model setup or model credentials.
+- All scientific data operations record source URLs, hashes, methods, and software versions where applicable.
+- Missing or unauthenticated sample metadata stays unresolved; aliases and aggregate counts are never used to guess clinical labels.
+- Deterministic candidate hypotheses remain provisional and visibly distinct from source evidence.
+- A CI pass demonstrates software checks only; it does not establish scientific novelty or biological validity.
