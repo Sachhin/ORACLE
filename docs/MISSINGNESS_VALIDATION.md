@@ -196,3 +196,25 @@ orthogonal reference, not a perfect physical truth; outcome association is not
 causality. No benchmark is considered empirically complete until the public
 raw/processed data, sample pairing, biological labels, and provenance have
 been independently checked.
+
+
+## Latest real PXD047528 reconstruction run (2026-11-16)
+
+GitHub Actions run
+[43867538202](https://github.com/Sachhin/ORACLE/actions/runs/43867538202)
+prepared 15 samples and 2,170 shared peptide features. The paired DIA assay
+provided an orthogonal measurement for 8,859 genuine DDA-missing cells
+(67.92% of the 13,043 genuine DDA-missing cells). No synthetic masking was
+used.
+
+| Method | MAE | RMSE | Pearson r | Mean signed error |
+|---|---:|---:|---:|---:|
+| Row-median baseline | 1.1382 | 1.4675 | 0.2503 | +1.0669 |
+| Sample-neighbour KNN (5) | 1.0981 | 1.4259 | 0.2625 | +1.0201 |
+
+KNN improves the reconstruction metrics slightly, but correlation remains
+weak and the systematic positive bias remains substantial. This is a
+reconstruction benchmark only: the report status is
+`RECONSTRUCTION_ONLY_LABELS_PENDING`, and the outcome-label hash is null.
+The clinical alias-to-patient manifest remains unverified, so do not report
+HIV/HERPES or HAND outcome concordance yet.
