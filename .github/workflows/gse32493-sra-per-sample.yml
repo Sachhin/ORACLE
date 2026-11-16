@@ -48,6 +48,15 @@ jobs:
           ls -lh fastq
           python scripts/inspect_gse32493_fastq.py
 
+      - name: Upload raw FASTQ adapter and quality preview
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oracle-gse32493-fastq-preview
+          path: artifacts/gse32493-sra/fastq_preview.json
+          if-no-files-found: ignore
+          retention-days: 90
+
       - name: Download and freeze the human mature-miRNA reference
         run: |
           set -euo pipefail
