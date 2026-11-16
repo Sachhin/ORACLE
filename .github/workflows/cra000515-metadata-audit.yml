@@ -6,6 +6,7 @@ on:
     paths:
       - ".github/workflows/cra000515-metadata-audit.yml"
       - "scripts/acquire_cra000515_metadata.py"
+      - "scripts/acquire_cra000515_biosample_fallback.py"
       - "tests/test_cra000515_metadata.py"
   workflow_dispatch:
     inputs:
