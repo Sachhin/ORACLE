@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 RUNS = ["SRR350239", "SRR350240", "SRR350241", "SRR350242", "SRR350243", "SRR350244"]
-FIELDS = "run_accession,fastq_ftp,fastq_md5,fastq_bytes,library_layout"
+FIELDS = "run_accession,fastq_ftp,fastq_md5,fastq_bytes"
 
 
 def digest(path: Path, algorithm: str) -> str:
