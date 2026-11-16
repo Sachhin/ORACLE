@@ -218,7 +218,27 @@
         "Test the score within sorted or single-cell-defined leukocyte populations and after cell-composition, sex, age, region and batch adjustment.",
         "Test whether the score predicts mitochondrial translation, mitochondrial-encoded OXPHOS protein abundance, respiratory capacity or ATP production.",
         "Use graded perturbation and rescue of the exact published 8 genes in relevant human cell models; measure mitochondrial translation, respiration, UPRmt and senescence."
-      ]
+      ],
+      "mRPG_gene_signature": [
+        "MRPL3",
+        "MRPL32",
+        "MRPL42",
+        "MRPL45",
+        "MRPL50",
+        "MRPS10",
+        "MRPS33",
+        "MRPS35"
+      ],
+      "cRPG_comparator": [
+        "RPL10A",
+        "RPL22",
+        "RPL4",
+        "RPL5",
+        "RPS13",
+        "RPS23",
+        "RPS6"
+      ],
+      "signature_source": "Figure 4B, Xiao et al. 2026, DOI 10.1016/j.xcrm.2026.102767"
     },
     {
       "id": "H2",
@@ -342,5 +362,30 @@
     "The 2022 ETS1 and Mendelian-randomization findings concern broad/cytosolic translation machinery, not direct replication of the 8-mRPG signature.",
     "No mechanism passes novelty or causality review until independent sample-level replication and functional perturbation/rescue are complete.",
     "The 2018 autophagy-lysosome result uses the same 171-person Hainan/CRA000515 cohort; do not count it as independent cohort replication."
-  ]
+  ],
+  "gene_signatures": {
+    "source_doi": "10.1016/j.xcrm.2026.102767",
+    "source_pmcid": "PMC13198318",
+    "source_figure": "Figure 4B",
+    "status": "published_prior_art",
+    "mRPG_8": [
+      "MRPL3",
+      "MRPL32",
+      "MRPL42",
+      "MRPL45",
+      "MRPL50",
+      "MRPS10",
+      "MRPS33",
+      "MRPS35"
+    ],
+    "cRPG_7": [
+      "RPL10A",
+      "RPL22",
+      "RPL4",
+      "RPL5",
+      "RPS13",
+      "RPS23",
+      "RPS6"
+    ]
+  }
 }
