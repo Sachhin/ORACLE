@@ -145,9 +145,15 @@ def prepare_pxd047528(
     _write_matrix(imputed_path, samples, imputed)
     with labels_template.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.writer(handle, delimiter="\t", lineterminator="\n")
-        writer.writerow(["sample_id", "patient_id", "phenotype", "include_in_hiv_vs_herpes", "include_in_hand_vs_cognitively_normal"])
+        writer.writerow([
+            "sample_id", "patient_id", "phenotype", "hand_status",
+            "raw_dda_files", "raw_dia_files", "relationship_to_patient",
+            "mapping_rationale", "source_url", "source_document_sha256",
+            "provenance_status", "include_in_hiv_vs_herpes",
+            "include_in_hand_vs_cognitively_normal",
+        ])
         for sample in samples:
-            writer.writerow([sample, "", "", "", ""])
+            writer.writerow([sample] + [""] * 12)
 
     missing_dda = sum(observed[f][s] is None for f in observed for s in samples)
     scored_missing = sum(observed[f][s] is None and orthogonal[f][s] is not None
