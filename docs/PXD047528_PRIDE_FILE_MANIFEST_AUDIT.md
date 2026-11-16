@@ -26,7 +26,9 @@ The sole SEARCH file was downloaded without downloading any of the 30 multi-GB r
 - Size: 113,569 bytes
 - SHA-256: 632c074117c15b48567c6b041b80f2281774097bc22959257fae9bb6dfce366b
 
-Its header contains 15 protein-group quantity columns labeled HIVPCA1 through HIVPCA15 (the column order is not numeric). These are a second set of sample-like labels in a May 2020 DIA-NN search report. The report does not provide a source-authenticated mapping between these labels, the 15 processed Slot1 aliases, the 15 raw DDA/DIA suffix pairs, or the 13 clinical participants.
+Its header contains 15 protein-group quantity columns labeled HIVPCA1 through HIVPCA15 (the column order is not numeric). Each same column header also contains a `Slot1-N` token. Thus the report itself directly records these report-internal label pairs (HIVPCA → Slot1 token): HIVPCA8→12, HIVPCA15→19, HIVPCA5→9, HIVPCA4→8, HIVPCA7→11, HIVPCA10→14, HIVPCA3→7, HIVPCA11→15, HIVPCA14→18, HIVPCA12→16, HIVPCA1→5, HIVPCA2→6, HIVPCA13→17, HIVPCA6→10, HIVPCA9→13. The column order is not numeric.
+
+This is a stronger source-grounded technical bridge than the label count alone: each DIA-NN quantity column explicitly names both the HIVPCA label and a Slot1-N token. However, the processed benchmark's aliases are written as `1_Slot1` through `15_Slot1`, while the report headers encode `Slot1-5` through `Slot1-19`. Without the original export/sample sheet, the equivalence between those naming schemes is not yet authenticated. The report also does not map these DIA search columns to the 15 opaque DDA/DIA raw suffix pairs or to the 13 clinical participants.
 
 The report therefore supplies a useful additional technical inventory but does not resolve the clinical mapping. The string HIVPCA is not treated as sufficient evidence for clinical participant identity, HAND status, or an authenticated phenotype label.
 
@@ -42,6 +44,8 @@ The report therefore supplies a useful additional technical inventory but does n
 - Public PRIDE file inventory: **PASS**
 - Fifteen DDA/DIA technical acquisition pairs: **PASS**
 - Additional 15-column SEARCH report retrieved: **PASS**
+- Mapping HIVPCA labels to Slot1-N tokens within the SEARCH report: **PASS**
+- Equivalence of SEARCH Slot1-N tokens to processed `1_Slot1..15_Slot1` aliases: **NOT ESTABLISHED**
 - Mapping processed Slot1 aliases to raw acquisition suffixes: **NOT ESTABLISHED**
 - Mapping to 13 clinical participants and HIV/herpes/HAND labels: **BLOCKED**
 
