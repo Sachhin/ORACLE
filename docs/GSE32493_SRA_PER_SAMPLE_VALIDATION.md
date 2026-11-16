@@ -33,7 +33,7 @@ Sources:
 4. Align with Bowtie 1, allowing up to one mismatch and retaining all best-stratum alignments.
 5. Count a read only when it has exactly one distinct best human mature-miRNA target; exclude multi-mapping reads rather than assigning them arbitrarily.
 6. Run edgeR's negative-binomial exact test for control versus centenarian with three biological samples per group.
-7. Preserve SRA run accessions, trimmed FASTQ checksums, reference FASTA and release-README checksums, fastp QC, SAM checksums, count matrix, edgeR results, and R session information in the workflow artifact.
+7. Preserve SRA run accessions, trimmed FASTQ checksums, the complete miRBase 23.1 mature FASTA checksum and the verified 74,463-record count, fastp QC, SAM checksums, count matrix, edgeR results, and R session information in the workflow artifact.
 
 ## Interpretation constraints
 
