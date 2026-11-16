@@ -2,12 +2,13 @@
 suppressPackageStartupMessages(library(edgeR))
 
 args <- commandArgs(trailingOnly = TRUE)
-if (length(args) != 3) {
-  stop("Usage: edgeR_riken2018_mrpg.R <pseudobulk_counts.tsv> <donor_metadata.tsv> <output_dir>")
+if (length(args) < 3 || length(args) > 4) {
+  stop("Usage: edgeR_riken2018_mrpg.R <pseudobulk_counts.tsv> <donor_metadata.tsv> <output_dir> [label]")
 }
 counts_path <- args[[1]]
 metadata_path <- args[[2]]
 outdir <- args[[3]]
+label <- if (length(args) == 4) args[[4]] else "all_batches"
 dir.create(outdir, recursive = TRUE, showWarnings = FALSE)
 
 counts_df <- read.delim(counts_path, check.names = FALSE, stringsAsFactors = FALSE)
