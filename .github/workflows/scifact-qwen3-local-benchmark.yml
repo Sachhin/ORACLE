@@ -203,7 +203,7 @@ jobs:
                   f"- Abstract evidence F1: {report.get('abstract_level_evidence', {}).get('f1')}",
                   f"- Sentence evidence F1: {report.get('sentence_level_evidence', {}).get('f1')}",
                   f"- Open retrieval document recall (top-k): {run.get('retrieval_metrics', {}).get('document_recall')}",
-        f"- Model-context evidence recall (context top-k): {run.get('model_context_evidence_metrics', {}).get('document_recall')}",
+                  f"- Model-context evidence recall (context top-k): {run.get('model_context_evidence_metrics', {}).get('document_recall')}",
                   f"- Gold evidence exposed to model: {run.get('gold_evidence_exposed_to_model')}",
                   f"- Invalid model responses: {run.get('invalid_model_response_count')}",
                   f"- Recovered malformed responses (retry attempts): {run.get('model_retry_count')}",
