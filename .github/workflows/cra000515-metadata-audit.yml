@@ -40,7 +40,7 @@ jobs:
       - name: Run offline acquisition unit tests
         run: python -m unittest discover -s tests -p 'test_cra000515_metadata.py' -v
       - name: Acquire GSA metadata only (no BAM downloads)
-        if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
+        if: github.event_name == 'workflow_dispatch' || github.event_name == 'push' || github.event_name == 'pull_request'
         run: |
           python scripts/acquire_cra000515_biosample_fallback.py \
             --accession "CRA000515" \
