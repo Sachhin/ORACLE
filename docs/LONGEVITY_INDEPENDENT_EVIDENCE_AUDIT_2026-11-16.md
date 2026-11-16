@@ -190,3 +190,12 @@ The common-batch sensitivity is important because SC1 and SC2 have additional `S
 **Updated H1 status:** mixed and not independently replicated in this cohort. ORACLE must not claim a universal or causal human longevity mRPG mechanism. H3 (cell-composition/state confounding) remains a live alternative.
 
 The result artifact `oracle-riken2018-mrpg-independent-validation` includes donor metadata, full pseudobulk count matrices, all-gene edgeR outputs, eight-gene results, donor panel scores and R session information. Workflow run: 43900804667.
+
+
+### RIKEN SC2018 donor-influence sensitivity
+
+The reproducible leave-one-donor-out exact permutation outputs were added to the workflow artifact:
+- Common `firstrun` only: the SC-minus-CT composite direction remained negative after removing each of the 12 donors; effect differences ranged from −0.327 to −0.861. Exact p-values ranged from 0.0182 to 0.1061. Removing CT1 gave p=0.1061; only 6/12 deletions remained nominally p<0.05.
+- All batches: the direction also remained negative after every donor deletion; exact p-values ranged from 0.0030 to 0.0364.
+
+This means the **direction** of the RIKEN PBMC result is stable, but its nominal significance in the common-batch analysis is sensitive to individual donors. Together with no gene-wise FDR-significant mRPG gene, this remains an exploratory directional non-replication—not robust confirmation or definitive refutation of the Chinese cohort result.
