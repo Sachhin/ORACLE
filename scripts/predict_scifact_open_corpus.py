@@ -223,6 +223,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         timeout_seconds=args.timeout, max_tokens=args.max_tokens,
     ))
     retrieved: dict[str, list[str]] = {}
+    context_retrieved: dict[str, list[str]] = {}
     invalid_responses: list[dict[str, Any]] = []
     model_retry_count = 0
     with output.open("a" if args.resume else "w", encoding="utf-8") as handle:
@@ -231,9 +232,11 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             ranked = index.search(str(claim.get("claim", "")), top_k=args.top_k)
             candidate_ids = [doc_id for doc_id, _ in ranked]
             retrieved[cid] = candidate_ids
+            context_ids = candidate_ids[:args.context_top_k]
+            context_retrieved[cid] = context_ids
             if cid in completed:
                 continue
-            candidates = [index.documents[doc_id] for doc_id in candidate_ids]
+            candidates = [index.documents[doc_id] for doc_id in context_ids]
             if not candidates:
                 evidence = {}
             else:
@@ -283,10 +286,12 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "inference": "explicit user-controlled self-hosted model",
         "model": args.model,
         "base_url": args.base_url,
-        "retrieval_setting": "open-corpus BM25 over title and abstract; no cited_doc_ids or gold evidence supplied",
+        "retrieval_setting": "open-corpus BM25 over title and abstract; top retrieval set is measured separately from the smaller model context; no cited_doc_ids or gold evidence supplied",
         "retrieval_method": "BM25",
         "retrieval_top_k": args.top_k,
+        "model_context_top_k": args.context_top_k,
         "retrieval_metrics": retrieval_diagnostics(selected, retrieved),
+        "model_context_evidence_metrics": retrieval_diagnostics(selected, context_retrieved),
         "temperature": 0.0,
         "max_tokens": args.max_tokens,
         "timeout_seconds": args.timeout,
@@ -315,7 +320,8 @@ def main() -> None:
     parser.add_argument("--report", default="", help="Report JSON path (default: OUTPUT.report.json)")
     parser.add_argument("--base-url", required=True, help="Explicit local OpenAI-compatible model endpoint")
     parser.add_argument("--model", required=True, help="Model name served by the local endpoint")
-    parser.add_argument("--top-k", type=int, default=20, help="BM25 candidate documents per claim")
+    parser.add_argument("--top-k", type=int, default=20, help="BM25 retrieval documents per claim for recall diagnostics")
+    parser.add_argument("--context-top-k", type=int, default=4, help="Top-ranked documents actually shown to the model")
     parser.add_argument("--timeout", type=float, default=120.0)
     parser.add_argument("--max-tokens", type=int, default=512)
     parser.add_argument("--max-claims", type=int, default=0, help="Optional pilot limit; 0 means all claims")
@@ -325,6 +331,8 @@ def main() -> None:
     args = parser.parse_args()
     if args.top_k < 1:
         parser.error("--top-k must be at least 1")
+    if args.context_top_k < 1 or args.context_top_k > args.top_k:
+        parser.error("--context-top-k must be between 1 and --top-k")
     if args.max_claims < 0:
         parser.error("--max-claims must be zero or positive")
     if args.max_invalid_responses < 0:
@@ -340,6 +348,7 @@ def main() -> None:
         "abstract_level_evidence": report["abstract_level_evidence"],
         "sentence_level_evidence": report["sentence_level_evidence"],
         "retrieval_metrics": report["prediction_run"]["retrieval_metrics"],
+        "model_context_evidence_metrics": report["prediction_run"]["model_context_evidence_metrics"],
         "report": args.report or (args.output + ".report.json"),
     }, indent=2))
 
