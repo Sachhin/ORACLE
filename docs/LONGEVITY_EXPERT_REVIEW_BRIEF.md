@@ -48,6 +48,8 @@ A stronger autophagy–lysosomal expression program may contribute to cellular m
 
 The review should assess whether autophagy is a separate mechanistic arm, an upstream/downstream correlate of the mRPG signal, or a shared consequence of cell composition and health status. Human causal evidence remains absent.
 
+The 2018 supplementary tables now provide a 38-gene autophagy–lysosomal panel (Table S5) and 11 potential regulators (Table S6). Table S7 reports no nominal p<0.05 age-expression correlation for those 38 genes in the middle-aged F1/F1SP subset. Reviewers should distinguish the centenarian-versus-spouse group association from a monotonic age trajectory, and should note that the sample-level samples_information.csv used in the DESeq2 design is missing from the public supplement.
+
 ## Questions for each reviewer
 
 1. Is each hypothesis clearly distinguished from published prior art? Identify any claim that is not novel.
