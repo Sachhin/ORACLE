@@ -69,10 +69,10 @@ jobs:
                   self.parts = []
               def handle_starttag(self, tag, attrs):
                   if tag in {"br", "p", "div", "li"}:
-                      self.parts.append("\\n")
+                      self.parts.append("\n")
               def handle_endtag(self, tag):
                   if tag in {"p", "div", "li"}:
-                      self.parts.append("\\n")
+                      self.parts.append("\n")
               def handle_data(self, data):
                   self.parts.append(data)
 
