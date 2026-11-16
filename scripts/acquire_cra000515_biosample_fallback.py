@@ -226,7 +226,14 @@ def _fetch_biosample_record(accession: str, client: Any, out: Path, headers: dic
     errors = []
     for source, url in (("cncb_biosample_api", api_url), ("cncb_biosample_page", page_url)):
         try:
-            payload = _request(client, "GET", url, headers=headers)
+            if source.endswith("_api"):
+                payload = _request(client, "GET", url, headers=headers)
+            else:
+                response = client.request("GET", url, headers=headers, timeout=(20, 60))
+                response.raise_for_status()
+                payload = response.content
+                if not payload:
+                    raise RuntimeError("Empty BioSample page response")
             fields = _biosample_fields(accession, payload, source)
             # If the API returns an empty shell, try the human-readable source page.
             if source.endswith("_api") and not any(fields.get(k) for k in ("sample_title", "age", "sex", "tissue")):
@@ -270,6 +277,7 @@ def acquire_metadata(
         raise ValueError("Only a CRA accession such as CRA000515 is accepted.")
     out = Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)
+    session_injected = session is not None
     if session is None:
         import requests
         session = requests.Session()
@@ -342,7 +350,7 @@ def acquire_metadata(
     biosample_records: dict[str, dict[str, Any]] = {}
     if enrich_biosamples:
         unique_samples = sorted(set(sample_ids))
-        if session is None:
+        if not session_injected:
             import requests
             def fetch_one(sample_id: str) -> tuple[str, dict[str, Any]]:
                 with requests.Session() as worker:
