@@ -56,7 +56,7 @@ jobs:
               if not path.is_file():
                   raise SystemExit(f"Missing leave-one-donor-out output: {path}")
               with path.open(newline="") as handle:
-                  rows = list(csv.DictReader(handle, delimiter="\\t"))
+                  rows = list(csv.DictReader(handle, delimiter="\t"))
               if len(rows) != 12:
                   raise SystemExit(f"{path}: expected 12 donor-deletion rows, found {len(rows)}")
               if len({row["dropped_patient"] for row in rows}) != 12:
