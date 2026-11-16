@@ -63,7 +63,7 @@ class LongevityPriorArtSeedTests(unittest.TestCase):
         orchestrator._ingest_longevity_prior_art_seed(run)
         self.assertEqual(
             [query[0] for query in client.queries],
-            ["EXT_ID:23698443", "EXT_ID:33472542", "EXT_ID:35078808", "EXT_ID:35476452", "EXT_ID:30348926", "EXT_ID:22247756"],
+            ["EXT_ID:23698443", "EXT_ID:33472542", "EXT_ID:35078808", "EXT_ID:35476452", "EXT_ID:30348926", "EXT_ID:22247756", "EXT_ID:40945050"],
         )
         self.assertTrue(any("already present" in item for item in run.findings))
 
