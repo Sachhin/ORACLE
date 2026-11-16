@@ -31,3 +31,13 @@ The initial script also computed a cRPG-7 composite from only six mapped genes. 
 ## Interpretation
 
 Current status: `REPRODUCIBILITY_CHECK_INCOMPLETE`. The initial unadjusted comparison does not reproduce a higher mRPG-8 score in long-lived siblings. No causal mechanism or novel discovery is validated. This analysis is from normalized microarray expression, not RNA-seq counts.
+
+
+## Age-overlap audit
+
+The observed age ranges are non-overlapping:
+- Long-lived siblings: 89.27–102.19 years
+- Controls: 43.71–78.76 years
+- Offspring: 42.79–74.83 years
+
+There is therefore no common age support between the long-lived-sibling group and the two comparison groups. A regression-adjusted group effect would require extrapolating the mid-life age-expression trend into the 89–102-year range. ORACLE must not present such an extrapolation as a well-identified age-adjusted replication. The current unadjusted result is a valid descriptive contrast only; age-trajectory validation needs an explicit model with uncertainty and transparent extrapolation diagnostics, or a dataset with overlapping age ranges.
