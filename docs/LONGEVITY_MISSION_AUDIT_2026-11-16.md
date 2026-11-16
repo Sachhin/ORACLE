@@ -129,3 +129,41 @@ missing age was excluded. This may explain the one-sample difference, but the
 raw manifest and exclusion record must be checked before treating the counts
 as reconciled. ORACLE must preserve this discrepancy in the audit rather than
 silently choosing one total.
+
+
+## Independent evidence audit: mitochondrial translation and ribosome allocation (2026-11-16)
+
+### Evidence reviewed
+
+1. **Human long-lived cohorts (Xiao et al., 2026; DOI 10.1016/j.xcrm.2026.102767).** The study reports 811 long-lived individuals and 940 younger controls, eight mitochondrial ribosomal-protein genes deviating upward from age-related decline, seven cytosolic ribosomal-protein genes continuing to decline, and replication of the 8-mRPG score pattern in the Leiden Longevity Study. The score is associated with transcriptomic aging and senescence measures. This is human observational evidence, not proof of causality. The authors state that upstream regulation remains unclear and functional experiments are needed.
+
+2. **Cross-species functional evidence (Houtkooper et al., 2013; DOI 10.1038/nature12188).** Mouse genetics and C. elegans RNAi experiments implicated MRPS5 and other mitochondrial ribosomal proteins in lifespan regulation. MRP knockdown induced mitonuclear protein imbalance and UPRmt, and extended worm lifespan. This is functional model-organism evidence, but its intervention direction (reduced MRP function) is not the same as the higher-than-age-expected expression of selected mRPGs in long-lived humans.
+
+3. **Human tissue translation evidence (2021; DOI 10.1080/15476286.2021.1875647).** Ribosome profiling in human skeletal muscle found lower translation/occupancy of several mitochondrial-genome-encoded oxidative-phosphorylation transcripts with older age. This supports the broader idea that mitochondrial translation is age-sensitive, but it does not measure the nuclear-encoded 8-mRPG signature or exceptional longevity.
+
+4. **Human translation-machinery genetics (2022; DOI 10.1101/gr.275636.121).** A Mendelian-randomization study reported associations between genetically proxied expression of Pol I/III and ribosomal-protein machinery and human longevity, with reduced translation-machinery expression implicated in several tissues. This is not specific to mitochondrial ribosomal proteins and depends on MR instrument assumptions.
+
+5. **Cytosolic ribosome regulation in long-lived people (2022; DOI 10.1126/sciadv.abf2017).** Transcriptomes from 185 long-lived individuals and 86 offspring spouses in two Chinese cohorts showed downregulation of the cytosolic ribosome pathway. ETS1 was lower in long-lived individuals; ETS1 knockdown reduced cytosolic ribosomal-protein expression and cellular senescence in fibroblast assays. These results concern cytosolic ribosome biogenesis, not the mitochondrial 8-mRPG signature.
+
+### Synthesis: a testable direction, not a discovery claim
+
+The most coherent candidate model is **compartment-specific translation allocation**: selected mitochondrial ribosomal transcripts may be preserved above their age-expected trajectory in long-lived humans while broader cytosolic ribosome biogenesis declines. This could reconcile the 2026 human signature with evidence that reduced global/cytosolic translation and mitochondrial stress responses can promote longevity in other contexts. The evidence does not yet show that the same upstream regulator causes both patterns.
+
+A second possibility is **dose-, tissue- and time-dependent mitonuclear stress hormesis**. Partial/transient mitochondrial translation perturbation can activate UPRmt in model organisms, while preserving selected mRPGs may be associated with late-life mitochondrial function in humans. These are not necessarily mutually exclusive, but the dose-response and tissue-specific mechanism remain untested.
+
+A live alternative is **bulk-blood composition or health-status confounding**. Differences in leukocyte subtype proportions, medication, nutrition, chronic disease, region, and library protocol may explain some of the signature. The 2026 study uses cell-composition estimates in parts of its age-related modelling, but this does not replace independent within-cell-type replication and functional testing of the exact signature.
+
+### ORACLE evidence status
+
+- Published 8-mRPG signature: **KNOWN PRIOR ART**.
+- Human independent-cohort association: **reported by the 2026 study (including Leiden)**; ORACLE has not independently reproduced the exact signature from frozen raw sample-level inputs.
+- GSE58137/GSE65219 audit: the current exploratory panel tests autophagy/lysosomal and inflammatory candidate genes, not the 8-mRPG signature. GSE58137 had no FDR-significant candidate genes on either platform; GSE65219 had 14/18 panel genes at FDR < 0.05. These results do not validate the 8-mRPG hypothesis.
+- Causal mechanism in humans: **NOT ESTABLISHED**.
+- Functional perturbation/rescue: **NOT DONE**.
+- Novel ORACLE discovery: **NONE VALIDATED**.
+
+The machine-readable source and hypothesis map is
+`data/missions/longevity/prior_art_seed.json`. It records source IDs, evidence
+type, limitations, alternative explanations and falsifiable tests. All three
+candidate hypotheses remain proposed and must not be represented as discovered
+mechanisms.
