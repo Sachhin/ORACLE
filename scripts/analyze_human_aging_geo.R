@@ -45,13 +45,20 @@ extract_age <- function(pd) {
       if (is.na(raw) || !nzchar(raw)) next
       if (column %in% direct_cols) {
         numeric_value <- suppressWarnings(as.numeric(raw))
-        if (is.finite(numeric_value)) values <- c(values, numeric_value)
+        if (is.finite(numeric_value) && numeric_value >= 0 && numeric_value <= 120) {
+          values <- c(values, numeric_value)
+        }
       }
       match <- regexec(pattern, raw, perl = TRUE)
       parts <- regmatches(raw, match)[[1]]
-      if (length(parts) >= 2) values <- c(values, as.numeric(parts[[2]]))
+      if (length(parts) >= 2) {
+        age_value <- as.numeric(parts[[2]])
+        if (is.finite(age_value) && age_value >= 0 && age_value <= 120) {
+          values <- c(values, age_value)
+        }
+      }
     }
-    values <- unique(values[is.finite(values)])
+    values <- unique(values[is.finite(values) & values >= 0 & values <= 120])
     if (length(values) == 1) values[[1]] else NA_real_
   }, numeric(1))
 }
@@ -80,14 +87,34 @@ get_geo_with_retry <- function(accession, attempts = 3) {
 extract_age_group <- function(txt) {
   vapply(txt, function(value) {
     lower <- tolower(value)
-    if (grepl("nonagenarian|centenarian|older adult|elderly|old control", lower)) {
-      "older"
-    } else if (grepl("young control|young adult|younger", lower)) {
+    # Specific participant labels take precedence over broad cohort descriptors.
+    # A young control may inherit "nonagenarian cohort" in another metadata field.
+    if (grepl("young control|young adult|younger", lower)) {
       "younger"
+    } else if (grepl("nonagenarian|centenarian|older adult|elderly|old control", lower)) {
+      "older"
     } else {
       NA_character_
     }
   }, character(1))
+}
+
+# Regression guards for the two metadata edge cases found in legacy GEO fixes.
+.age_parser_regression <- extract_age(data.frame(
+  age = c("90", "811", "23"),
+  characteristics_ch1 = c("age: 90", "age: 811", "age: 23"),
+  stringsAsFactors = FALSE
+))
+if (!identical(unname(.age_parser_regression), c(90, NA_real_, 23))) {
+  stop("GEO age parser must reject impossible ages and retain explicit valid ages.")
+}
+.age_group_parser_regression <- extract_age_group(c(
+  "young control; nonagenarian cohort",
+  "nonagenarian age: 92",
+  "young adult age: 25"
+))
+if (!identical(unname(.age_group_parser_regression), c("younger", "older", "younger"))) {
+  stop("GEO age-group parser must prioritize specific young labels.")
 }
 
 extract_sex <- function(txt) {
