@@ -8,7 +8,7 @@
       "source_id": "doi:10.1016/j.xcrm.2026.102767",
       "title": "Preserved mitochondrial ribosomal protein gene expression marks a youthful transcriptional state in Chinese nonagenarians and centenarians",
       "journal": "Cell Reports Medicine",
-      "publication_date": "2026-05-19",
+      "publication_date": "2026-04-23",
       "doi": "10.1016/j.xcrm.2026.102767",
       "pmid": "42030936",
       "pmcid": "PMC13198318",
@@ -34,7 +34,8 @@
           "HRA015372"
         ],
         "mendeley_doi": "10.17632/fpf4y72kfz.1",
-        "note": "The paper's key-resource table lists 171 CRA000515 + 271 HRA000656 = 442 previously reported samples; Methods state one sample lacked age and was excluded, while the Data Availability Statement reports 441 deposited samples. This count discrepancy must be reconciled from sample-level metadata before analysis."
+        "note": "The paper's key-resource table lists 171 CRA000515 + 271 HRA000656 = 442 previously reported samples; Methods state one sample lacked age and was excluded, while the Data Availability Statement reports 441 deposited samples. This count discrepancy must be reconciled from sample-level metadata before analysis.",
+        "mendeley_published": "2026-03-18"
       },
       "next_checks": [
         "Obtain sample-level metadata and mapping for CRA000515 aliases.",
@@ -42,7 +43,8 @@
         "Reproduce the 8-mRPG signature with the published code and exact cohort splits.",
         "Test robustness to leukocyte composition, sex, region, sequencing batch, and age.",
         "Generate and experimentally test upstream-regulator hypotheses; do not infer causality from expression associations."
-      ]
+      ],
+      "collection_date": "2026-05-19"
     }
   ]
 }
