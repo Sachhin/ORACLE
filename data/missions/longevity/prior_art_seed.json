@@ -293,9 +293,9 @@
       "source_id": "RIKEN_SC2018_mRPG8_donor_pseudobulk_2026-11-16",
       "year": 2026,
       "design": "Independent reanalysis of 69,844 PBMC cells from 7 Japanese supercentenarians (SC1-SC7) and 5 controls (CT1-CT5), aggregated to 12 donor-level pseudobulk profiles from a checksum-verified RIKEN SC2018 H5AD mirror; edgeR TMM and exact donor-label permutation.",
-      "finding": "The pre-specified equal-weight 8-mRPG composite was lower in SC than CT in both all-batches analysis (difference -0.737 z units; exact two-sided permutation p=0.0101; 792 assignments) and common firstrun-only analysis (difference -0.691 z units; p=0.0316). All eight gene-wise edgeR logFC estimates were negative in the all-batches analysis, but none had FDR <0.05. In firstrun-only analysis, all genes except MRPS10 were negative; no gene had FDR <0.05.",
+      "finding": "The pre-specified equal-weight 8-mRPG composite was lower in SC than CT in both all-batches analysis (difference -0.737 z units; exact two-sided permutation p=0.0101; 792 assignments) and common firstrun-only analysis (difference -0.691 z units; p=0.0316). All eight gene-wise edgeR logFC estimates were negative in the all-batches analysis, but none had FDR <0.05. In firstrun-only analysis, all genes except MRPS10 were negative; no gene had FDR <0.05. In the common-firstrun leave-one-donor-out sensitivity, the panel-score direction stayed negative after every donor removal, but exact p-values ranged 0.0182–0.1061; removing control CT1 gave p=0.1061. Only 6 of 12 leave-one-out comparisons remained nominally p<0.05. All-batches leave-one-out p-values remained 0.0030–0.0364.",
       "relevance": "This is a distinct Japanese extreme-longevity cohort relative to Chinese CRA000515 and Leiden GSE16717. It does not reproduce the direction of the 2026 Chinese 8-mRPG youthful-expression association and strengthens the need to test tissue, cohort, age and immune-cell composition effects.",
-      "limitation": "Exploratory only: 7 SC versus 5 CT donors; no individual age or sex values; broad PBMC cell_type only, no leukocyte subtype labels; large age gap in the source paper; exact permutation assumes exchangeability and does not adjust confounders. The composite score is an ORACLE equal-weight z-score, not the original paper's published score. SC2018 is reused by the 2019, 2023 and 2025 papers and must count as one cohort.",
+      "limitation": "Exploratory only: 7 SC versus 5 CT donors; no individual age or sex values; broad PBMC cell_type only, no leukocyte subtype labels; large age gap in the source paper; exact permutation assumes exchangeability and does not adjust confounders. The composite score is an ORACLE equal-weight z-score, not the original paper's published score. SC2018 is reused by the 2019, 2023 and 2025 papers and must count as one cohort. The common-batch panel p-value is not robust to leave-one-donor-out: dropping CT1 yields p=0.1061, and several other donor deletions also lose nominal significance. The negative direction is more stable than the significance.",
       "data_accessions": {
         "dataset": "RIKEN SC2018",
         "mirror": "https://huggingface.co/datasets/longevity-db/riken2018",
@@ -311,8 +311,8 @@
       "id": "H1",
       "title": "Compartment-specific translation allocation in long-lived humans",
       "statement": "Long-lived individuals may preserve a selected mitochondrial ribosomal transcript program above age-expected levels while allowing broader cytosolic ribosome biogenesis to decline; this could help maintain mitochondrial protein synthesis without maintaining globally high translation.",
-      "status": "mixed_directional_nonreplication_in_RIKEN_SC2018",
-      "confidence": "low_to_moderate; Chinese bulk association not reproduced in one small Japanese PBMC cohort; gene-wise FDR none",
+      "status": "mixed_directional_nonreplication_in_RIKEN_SC2018_LOO_sensitive",
+      "confidence": "low; negative direction persists in common-batch leave-one-out, but panel p-value is sensitive to individual donors and no gene reaches FDR<0.05",
       "supporting_prior_art": [
         "doi:10.1016/j.xcrm.2026.102767",
         "doi:10.1126/sciadv.abf2017",
@@ -480,7 +480,8 @@
     "GSE16717 is already used as a validation cohort by the 2026 paper; an ORACLE reanalysis is a reproducibility check, not a new independent cohort discovery.",
     "The 2025 three-cohort single-cell atlas supports immune-cell composition/state as a live bulk-blood confounder, but it does not directly validate the 8-mRPG signature; Rugao and Japan are reused cohorts, while Lingao is the additional cohort.",
     "RIKEN SC2018 is a distinct Japanese supercentenarian cohort from the Chinese CRA000515 and Leiden GSE16717 cohorts, but the 2019, 2023 and 2025 papers reuse the same SC2018 donors; count the cohort once.",
-    "RIKEN SC2018 donor-pseudobulk test is directionally lower in supercentenarians than controls in both all-batches and common-firstrun-only analyses; no individual mRPG gene reaches FDR<0.05. Treat as an exploratory non-replication, not a causal refutation."
+    "RIKEN SC2018 donor-pseudobulk test is directionally lower in supercentenarians than controls in both all-batches and common-firstrun-only analyses; no individual mRPG gene reaches FDR<0.05. Treat as an exploratory non-replication, not a causal refutation.",
+    "RIKEN common-firstrun mRPG8 leave-one-donor-out sensitivity: direction remains negative after every donor removal, but p ranges 0.0182–0.1061; dropping CT1 gives p=0.1061, and only 6/12 deletions remain nominally significant. Do not claim robust independent replication."
   ],
   "gene_signatures": {
     "source_doi": "10.1016/j.xcrm.2026.102767",
