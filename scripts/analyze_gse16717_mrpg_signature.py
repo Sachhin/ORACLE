@@ -338,7 +338,7 @@ def main() -> None:
         "cRPG_7": C_RPG,
         "matrix_sha256": sha256(matrix_path),
         "platform_annotation_sha256": sha256(platform_path),
-        "analysis_method": "median across probes per gene; gene-wise z-score across all 150 samples; unweighted panel mean; Welch t-tests; BH FDR separately within each panel and group comparison",
+        "analysis_method": "median across probes per gene; gene-wise z-score across all 150 samples; complete-panel-only unweighted mean; Welch t-tests; BH FDR separately within each panel and group comparison; cRPG-7 composite withheld because RPS6 is absent from GPL2895",
         "limitations": [
             "This is a reanalysis of the same Leiden GSE16717 cohort already cited as validation in the 2026 paper, not a new independent cohort.",
             "GEO sample metadata include individual age and sex for all 150 samples; reported age/sex summaries are descriptive.",
