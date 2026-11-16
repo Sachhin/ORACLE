@@ -176,7 +176,7 @@ def main() -> None:
         },
         "adapter_and_length_processing": {
             "tool": "fastp",
-            "adapter_detection": "explicit Illumina SRA 3-prime adapter TCGTATGCCGTCTTCTGCTTG; minimum overlap 10 nt",
+            "adapter_detection": "explicit Illumina SRA 3-prime adapter TCGTATGCCGTCTTCTGCTTG; fastp single-end matching; no manually set overlap threshold",
             "quality_filtering": "disabled because archived FASTQ preview carries Q0-Q10 scores; raw quality retained as a limitation",
             "minimum_length": 18,
             "maximum_length": 30,
