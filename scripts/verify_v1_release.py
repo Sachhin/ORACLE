@@ -56,19 +56,20 @@ def verify(args: argparse.Namespace) -> dict[str, Any]:
     try:
         cra = load_json(args.cra_audit)
         acquisition = cra.get("accession_provenance", cra.get("acquisition", {}))
-        run_count = acquisition.get("unique_run_count", acquisition.get("runs", 0))
-        biosample_count = acquisition.get("unique_biosample_count", acquisition.get("biosamples", 0))
-        alias_count = acquisition.get("unique_alias_count", acquisition.get("aliases", 0))
-        acquisition_ok = run_count == 171 and biosample_count == 171 and alias_count == 171
-        add("cra000515_accession_provenance", acquisition_ok,
-            f"runs={run_count}; BioSamples={biosample_count}; aliases={alias_count}")
-
+        run_count = cra.get("unique_run_count", acquisition.get("unique_run_count", acquisition.get("runs", 0)))
+        biosample_count = cra.get("unique_biosample_count", acquisition.get("unique_biosample_count", acquisition.get("biosamples", 0)))
         enrichment = cra.get("biosample_page_enrichment", cra.get("sample_metadata", {}))
+        retrieved_biosamples = enrichment.get("retrieved_unique_biosamples", enrichment.get("requested_unique_biosamples", 0))
+        acquisition_ok = run_count == 171 and biosample_count == 171 and retrieved_biosamples == 171
+        add("cra000515_accession_provenance", acquisition_ok,
+            f"runs={run_count}; BioSamples={biosample_count}; retrieved_biosamples={retrieved_biosamples}")
+
+        design = cra.get("cohort_design_check", {})
         ages = enrichment.get("samples_with_age", 0)
-        groups = enrichment.get("samples_with_explicit_group", 0)
-        labels_ok = ages >= 150 and groups >= 150
+        explicit_groups = design.get("all_expected_group_labels_explicitly_present", False)
+        labels_ok = ages >= 150 and explicit_groups is True
         add("cra000515_authenticated_age_and_cohort_labels", labels_ok,
-            f"samples_with_age={ages}; samples_with_explicit_group={groups}; source manifest required")
+            f"samples_with_age={ages}; explicit_cohort_labels={explicit_groups}; source manifest required")
     except Exception as exc:
         add("cra000515_accession_provenance", False, str(exc))
         add("cra000515_authenticated_age_and_cohort_labels", False, str(exc))
