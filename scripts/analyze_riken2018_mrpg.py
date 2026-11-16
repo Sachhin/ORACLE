@@ -95,6 +95,8 @@ def main() -> None:
 
         donor_rows = []
         donor_counts = []
+        donor_rows_firstrun = []
+        donor_counts_firstrun = []
         for patient in patient_categories:
             rows = np.flatnonzero(np.asarray(patients) == patient)
             if len(rows) == 0:
@@ -115,19 +117,42 @@ def main() -> None:
                 "library_size": int(total.sum()),
             })
 
+            common_rows = rows[np.asarray(batches)[rows] == "firstrun"]
+            if len(common_rows) == 0:
+                raise RuntimeError(f"Donor {patient} has no cells in the common firstrun batch")
+            common_total = np.asarray(matrix[common_rows].sum(axis=0)).ravel().astype(np.int64)
+            donor_counts_firstrun.append(common_total)
+            donor_rows_firstrun.append({
+                "patient": patient,
+                "group": donor_groups[0],
+                "cells": int(len(common_rows)),
+                "batch": "firstrun",
+                "assay": ";".join(sorted(set(assays[i] for i in common_rows))),
+                "cell_type": ";".join(sorted(set(cell_types[i] for i in common_rows))),
+                "library_size": int(common_total.sum()),
+            })
+
     donor_meta = pd.DataFrame(donor_rows)
-    if set(donor_meta["group"]) != {"SC", "CT"}:
-        raise RuntimeError(f"Unexpected RIKEN groups: {sorted(set(donor_meta['group']))}")
-    if int((donor_meta.group == "SC").sum()) != 7 or int((donor_meta.group == "CT").sum()) != 5:
-        raise RuntimeError(f"Expected 7 SC and 5 CT donors, found {donor_meta.group.value_counts().to_dict()}")
+    donor_meta_firstrun = pd.DataFrame(donor_rows_firstrun)
+    for label, frame in (("all batches", donor_meta), ("firstrun only", donor_meta_firstrun)):
+        if set(frame["group"]) != {"SC", "CT"}:
+            raise RuntimeError(f"Unexpected RIKEN groups in {label}: {sorted(set(frame['group']))}")
+        if int((frame.group == "SC").sum()) != 7 or int((frame.group == "CT").sum()) != 5:
+            raise RuntimeError(f"Expected 7 SC and 5 CT donors in {label}, found {frame.group.value_counts().to_dict()}")
     if len(set(gene_names)) != len(gene_names):
         raise RuntimeError("Duplicate gene symbols in var index; resolve annotation before pseudobulk")
 
     counts = np.vstack(donor_counts).T
     counts_df = pd.DataFrame(counts, index=gene_names, columns=donor_meta["patient"].tolist())
     counts_df.index.name = "gene_symbol"
-    counts_df.to_csv(out / "pseudobulk_counts.tsv", sep="\t")
-    donor_meta.to_csv(out / "donor_metadata.tsv", sep="\t", index=False)
+    counts_df.to_csv(out / "pseudobulk_counts.tsv", sep="\\t")
+    donor_meta.to_csv(out / "donor_metadata.tsv", sep="\\t", index=False)
+
+    counts_firstrun = np.vstack(donor_counts_firstrun).T
+    counts_firstrun_df = pd.DataFrame(counts_firstrun, index=gene_names, columns=donor_meta_firstrun["patient"].tolist())
+    counts_firstrun_df.index.name = "gene_symbol"
+    counts_firstrun_df.to_csv(out / "pseudobulk_counts_firstrun.tsv", sep="\\t")
+    donor_meta_firstrun.to_csv(out / "donor_metadata_firstrun.tsv", sep="\\t", index=False)
 
     report = {
         "status": "PSEUDOBULK_COUNTS_BUILT",
@@ -145,6 +170,9 @@ def main() -> None:
         "gene_symbols_directly_in_var_index": True,
         "donors": donor_rows,
         "donor_counts": donor_meta.group.value_counts().to_dict(),
+        "firstrun_only_donors": donor_rows_firstrun,
+        "firstrun_only_donor_counts": donor_meta_firstrun.group.value_counts().to_dict(),
+        "batch_sensitivity": "Primary comparison uses only firstrun cells shared by all 12 donors; all-batches aggregation is a secondary sensitivity analysis.",
         "mRPG8_genes": ["MRPL3", "MRPL32", "MRPL42", "MRPL45", "MRPL50", "MRPS10", "MRPS33", "MRPS35"],
         "mRPG8_genes_present": [
             gene for gene in ["MRPL3", "MRPL32", "MRPL42", "MRPL45", "MRPL50", "MRPS10", "MRPS33", "MRPS35"]
@@ -167,6 +195,8 @@ def main() -> None:
         ],
         "pseudobulk_counts_file": "pseudobulk_counts.tsv",
         "donor_metadata_file": "donor_metadata.tsv",
+        "firstrun_pseudobulk_counts_file": "pseudobulk_counts_firstrun.tsv",
+        "firstrun_donor_metadata_file": "donor_metadata_firstrun.tsv",
     }
     if report["mRPG8_genes_missing"]:
         raise RuntimeError(f"Missing mRPG genes in RIKEN var index: {report['mRPG8_genes_missing']}")
