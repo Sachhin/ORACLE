@@ -41,7 +41,7 @@ class LongevityPriorArtSeedTests(unittest.TestCase):
         run = ResearchRun(question="Can we identify unknown mechanisms in human longevity?")
         orchestrator._ingest_longevity_prior_art_seed(run)
         self.assertEqual(client.queries[0][0], "EXT_ID:42030936")
-        self.assertEqual(client.ingested, 7)
+        self.assertEqual(client.ingested, 8)
         self.assertTrue(any("known prior art" in item for item in run.findings))
 
     def test_non_longevity_mission_does_not_ingest_longevity_seed(self):
