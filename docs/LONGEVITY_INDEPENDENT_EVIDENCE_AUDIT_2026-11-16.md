@@ -113,3 +113,13 @@ The full Europe PMC supplementary archive is now retrieved and checksummed. Supp
 Supplemental Table S7 reports age-expression correlations for 38 upregulated autophagy–lysosomal genes in the middle-aged F1/F1SP groups; none of the listed p-values is below 0.05. This does not negate the centenarian-versus-spouse group association, but it does not support a simple monotonic age trend across the middle-aged offspring/spouse subset.
 
 Crucially, Supplemental File S1 references a missing samples_information.csv containing the sample IDs/row names, condition (CEN/F1/F1SP), read_type and library_type. That CSV is not in the public supplement archive. Thus the exact 171-sample individual crosswalk remains unavailable even after the supplement retrieval.
+
+
+## Exact published gene signatures recovered from Figure 4B (2026 article)
+
+The full Europe PMC supplementary archive was retrieved (PMCID PMC13198318; DOI 10.1016/j.xcrm.2026.102767). Inspection of Figure 4B in the article PDF gives the exact published gene panels:
+
+- **8 mRPG signature:** MRPL3, MRPL32, MRPL42, MRPL45, MRPL50, MRPS10, MRPS33, MRPS35.
+- **7 cRPG comparator:** RPL10A, RPL22, RPL4, RPL5, RPS13, RPS23, RPS6.
+
+These are published prior-art signatures, not newly discovered ORACLE genes. The exact gene list removes one blocker for independent numerical replication in non-overlapping public expression cohorts. The Mendeley sample-level matrix and per-sample age/cohort annotations remain unavailable, so the 811-LLI/940-YC Chinese cohort cannot yet be independently reproduced from source data.
