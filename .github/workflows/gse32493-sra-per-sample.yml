@@ -53,11 +53,16 @@ jobs:
           set -euo pipefail
           mkdir -p reference
           curl --fail --location --retry 4 --connect-timeout 20 --max-time 300 \
+            https://www.mirbase.org/download/CURRENT/README \
+            -o reference/README
+          grep -m 1 'Release 23.1' reference/README
+          curl --fail --location --retry 4 --connect-timeout 20 --max-time 300 \
             https://www.mirbase.org/download/CURRENT/mature.fa \
             -o reference/mature.fa
           grep -m 3 '^>hsa' reference/mature.fa
-          awk '/^>hsa/{print; if(getline) print}' reference/mature.fa > reference/hsa_mature.fa
-          human_count=$(grep -c '^>hsa' reference/mature.fa || true)
+          awk '/^>hsa/{print; if(getline) print}' reference/mature.fa > reference/hsa_mature.rna.fa
+          sed '/^>/!s/U/T/g' reference/hsa_mature.rna.fa > reference/hsa_mature.fa
+          human_count=$(grep -c '^>hsa' reference/hsa_mature.fa || true)
           echo "Human mature-miRNA reference entries: $human_count"
           test "$human_count" -gt 100
           sha256sum reference/mature.fa reference/hsa_mature.fa
