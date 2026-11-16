@@ -135,6 +135,13 @@ def build_prompt(claim: dict[str, Any], candidates: list[dict[str, Any]]) -> tup
     return [{"role": "system", "content": system}, {"role": "user", "content": user}], allowed
 
 
+def select_model_context(retrieved_doc_ids: list[str], context_top_k: int) -> list[str]:
+    """Keep retrieval diagnostics broad while bounding model prompt context."""
+    if context_top_k < 1:
+        raise ValueError("context_top_k must be at least 1")
+    return retrieved_doc_ids[:context_top_k]
+
+
 def retrieval_diagnostics(claims: list[dict[str, Any]], retrieved: dict[str, list[str]]) -> dict[str, Any]:
     relevant_claims = 0
     hit_claims = 0
@@ -232,7 +239,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             ranked = index.search(str(claim.get("claim", "")), top_k=args.top_k)
             candidate_ids = [doc_id for doc_id, _ in ranked]
             retrieved[cid] = candidate_ids
-            context_ids = candidate_ids[:args.context_top_k]
+            context_ids = select_model_context(candidate_ids, args.context_top_k)
             context_retrieved[cid] = context_ids
             if cid in completed:
                 continue
