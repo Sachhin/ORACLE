@@ -41,10 +41,10 @@ jobs:
                   self.parts = []
               def handle_starttag(self, tag, attrs):
                   if tag in {"br", "p", "div", "li"}:
-                      self.parts.append("\\n")
+                      self.parts.append("\n")
               def handle_endtag(self, tag):
                   if tag in {"p", "div", "li"}:
-                      self.parts.append("\\n")
+                      self.parts.append("\n")
               def handle_data(self, data):
                   self.parts.append(data)
 
@@ -68,7 +68,7 @@ jobs:
           if len(records) != 74463:
               raise SystemExit(f"Expected exactly 74,463 miRBase 23.1 mature records; parsed {len(records)}")
           Path("reference/mature.fa").write_text(
-              "".join(f"{h}\\n{s}\\n" for h, s in records), encoding="utf-8"
+              "".join(f"{h}\n{s}\n" for h, s in records), encoding="utf-8"
           )
           print(f"Verified miRBase 23.1: {len(records)} mature records")
           PY
