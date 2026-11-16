@@ -55,3 +55,9 @@ A source-authenticated submitter manifest remains required. No clinical labels a
 ## Independent file-index count discrepancy
 
 The OmicsDI PXD047528 page currently displays 1–5 of 32 file entries, while the live PRIDE Archive v3 files/all endpoint returned 31 records (30 RAW + 1 SEARCH) on 2026-11-16. This is a one-record discrepancy between an external index and the live PRIDE API. The PRIDE audit workflow now also queries the paginated PRIDE endpoint to compare both API representations. Until that cross-check is complete, 31 is the observed files/all API count, not a claim that every historical mirror has exactly 31 entries. The older phrase “32 raw files” is unsupported: the external index shows 32 total entries, not 32 raw files.
+
+## SEARCH-report technical alias relationship
+
+The PRIDE SEARCH report header contains the 15 DIA-NN columns `HIVPCA1_Slot1-5`, `HIVPCA2_Slot1-6`, …, `HIVPCA15_Slot1-19` (not in numerical order in the header). The PEPerMINT loader independently defines the processed sample names as `1_Slot1` through `15_Slot1`. This supports the candidate numeric technical relationship `n_Slot1 ↔ HIVPCA n ↔ Slot1-(n+4)`.
+
+However, the report's 2020 DIA-NN run identifiers are not the same strings as the 2019 PRIDE raw-file suffixes, and neither source provides the missing clinical alias-to-patient manifest. Treat this only as a candidate technical alias bridge; it does not establish which of the 15 aliases are 13 clinical participants, technical repeats, or additional samples.
