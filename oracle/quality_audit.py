@@ -24,9 +24,42 @@ def audit_run(payload: dict[str, Any], *, fdr_threshold: float = 0.05) -> dict[s
     if not isinstance(run, dict): raise ValueError("Input must contain a run object")
     sources, evidence = _items(run.get("sources")), _items(run.get("evidence"))
     hypotheses, claims = _items(run.get("hypotheses")), _items(run.get("claims"))
+    experiments = _items(run.get("experiments"))
     contradictions = _items(run.get("contradiction_candidates"))
     de_analyses, dataset_analyses = _items(run.get("differential_expression_analyses")), _items(run.get("dataset_analyses"))
     by_id = {_s(x.get("source_id")): x for x in sources if _s(x.get("source_id"))}
+    evidence_by_id = {_s(x.get("evidence_id")): x for x in evidence if _s(x.get("evidence_id"))}
+    def source_backed(item):
+        source_id = _s(item.get("source_id"))
+        return bool(source_id and source_id in by_id and _s(item.get("kind")).casefold() != "inference")
+    hypothesis_reviews = []
+    invalid_hypothesis_refs = 0
+    source_backed_hypotheses = 0
+    for hypothesis in hypotheses:
+        supporting = [_s(x) for x in (hypothesis.get("supporting_evidence_ids") or []) if _s(x)]
+        opposing = [_s(x) for x in (hypothesis.get("opposing_evidence_ids") or []) if _s(x)]
+        all_refs = supporting + opposing
+        invalid_refs = [ref for ref in all_refs if ref not in evidence_by_id]
+        linked_support = [evidence_by_id[ref] for ref in supporting if ref in evidence_by_id]
+        linked_opposing = [evidence_by_id[ref] for ref in opposing if ref in evidence_by_id]
+        backed_support = [item for item in linked_support if source_backed(item)]
+        backed_opposing = [item for item in linked_opposing if source_backed(item)]
+        invalid_hypothesis_refs += len(invalid_refs)
+        source_backed_hypotheses += int(bool(backed_support))
+        hypothesis_reviews.append({
+            "hypothesis_id": _s(hypothesis.get("hypothesis_id")),
+            "statement": _s(hypothesis.get("statement")),
+            "supporting_evidence_count": len(supporting),
+            "opposing_evidence_count": len(opposing),
+            "resolved_supporting_evidence_count": len(linked_support),
+            "resolved_opposing_evidence_count": len(linked_opposing),
+            "source_backed_supporting_evidence_count": len(backed_support),
+            "source_backed_opposing_evidence_count": len(backed_opposing),
+            "invalid_evidence_reference_count": len(invalid_refs),
+            "status": "unsupported_no_source_backed_support" if not backed_support else "unverified_candidate",
+            "novelty_status": "not_established",
+            "warning": "Linked evidence is not proof of causality or novelty; inspect the source, cohort, methods, and counterevidence."
+        })
     human = [x for x in sources if any(term in (_s(x.get("organism"))+" "+_s(x.get("dataset_summary"))+" "+_s(x.get("title"))).casefold() for term in ("human","homo sapiens"))]
     evidence_groups = set()
     for item in evidence:
@@ -55,12 +88,14 @@ def audit_run(payload: dict[str, Any], *, fdr_threshold: float = 0.05) -> dict[s
       "independent_evidence":{"status":"multiple_source_groups" if len(evidence_groups)>=2 else "insufficient_independence","independent_evidence_groups":len(evidence_groups),"evidence_records":len(evidence),"reason":"Provenance groups are proxies, not proof that cohorts or participants are independent."},
       "statistical_support":{"status":"DE_results_present" if de_analyses else "not_run","DE_analysis_count":len(de_analyses),"FDR_threshold":fdr_threshold,"replicated_feature_screens":replication,"reason":"Check design, covariates, sample overlap, effect sizes, and multiple-testing universe."},
       "biological_replication":{"status":"potential_replication_screen" if replication else "not_demonstrated","replicated_feature_count":len(replication),"reason":"Distinct accession IDs do not prove independent cohorts or comparable phenotypes."},
+      "hypothesis_evidence":{"status":"source_backed_links_present_but_unverified" if source_backed_hypotheses else "no_source_backed_hypothesis_support","hypothesis_count":len(hypotheses),"hypotheses_with_source_backed_support":source_backed_hypotheses,"invalid_evidence_references":invalid_hypothesis_refs,"reason":"A generated hypothesis with no linked source-backed supporting evidence remains an unsupported proposal."},
+      "experiment_execution":{"status":"performed_or_simulated" if any(_s(x.get("execution_kind")).casefold() in {"performed","executed","simulated"} or _s(x.get("status")).casefold() in {"performed","executed","simulated"} for x in experiments) else "proposals_only_no_execution","experiment_count":len(experiments),"performed_or_simulated_count":sum(_s(x.get("execution_kind")).casefold() in {"performed","executed","simulated"} or _s(x.get("status")).casefold() in {"performed","executed","simulated"} for x in experiments),"reason":"A proposed protocol is not an executed or evaluated experiment."},
       "contradiction_review":{"status":"candidates_present" if contradictions else "none_recorded","candidate_count":len(contradictions),"unresolved_count":sum(_s(x.get("status")).casefold() not in {"resolved","rejected","closed"} for x in contradictions)},
       "dataset_interpretation":{"status":"descriptive_only" if dataset_analyses else "no_dataset_analysis","analysis_count":len(dataset_analyses),"reason":"Descriptive parsing is not differential expression, causal inference, or validated biological evidence."},
       "human_expert_review":{"status":"required","reason":"Automated checks cannot replace blinded independent domain-expert review."}}
     return {"audit_version":"1.0","run_id":_s(run.get("run_id")),"question":_s(run.get("question")),"run_status":_s(run.get("status")),
-      "counts":{"sources":len(sources),"evidence":len(evidence),"claims":len(claims),"hypotheses":len(hypotheses),"human_sources":len(human),"DE_analyses":len(de_analyses),"dataset_analyses":len(dataset_analyses)},
-      "gates":gates,"hypothesis_reviews":[{"hypothesis_id":_s(h.get("hypothesis_id")),"statement":_s(h.get("statement")),"supporting_evidence_count":len(h.get("supporting_evidence_ids") or []),"opposing_evidence_count":len(h.get("opposing_evidence_ids") or []),"status":"unverified_candidate","warning":"Inspect linked evidence and alternatives; audit does not upgrade hypothesis status."} for h in hypotheses],
+      "counts":{"sources":len(sources),"evidence":len(evidence),"claims":len(claims),"hypotheses":len(hypotheses),"experiments":len(experiments),"human_sources":len(human),"DE_analyses":len(de_analyses),"dataset_analyses":len(dataset_analyses)},
+      "gates":gates,"hypothesis_reviews":hypothesis_reviews,
       "overall_assessment":"screening_only_no_validated_discovery",
       "limitations":["Deterministic screening only; not exhaustive literature review or peer review.","Absence of evidence in this run does not prove a mechanism false.","Novelty, causality, and clinical relevance are not established by association or generated hypotheses.","A discovery requires independent, well-designed replication and expert review."]}
 
