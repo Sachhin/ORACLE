@@ -303,7 +303,9 @@
         "metadata_sha256": "40884e40921bb32ecde184085bcb3240f10f790bab85a9a246302c0a3a842798"
       },
       "analysis_artifact": "oracle-riken2018-mrpg-independent-validation",
-      "workflow_run": 43900804667
+      "workflow_run": 43911857872,
+      "artifact_id": 14248282108,
+      "artifact_verification": "success; includes both all-batches and common-firstrun leave-one-donor-out TSVs (12 unique deletions each)"
     }
   ],
   "hypothesis_audit": [
