@@ -44,6 +44,30 @@ jobs:
             artifacts/riken2018-mrpg/pseudobulk_counts_firstrun.tsv \
             artifacts/riken2018-mrpg/donor_metadata_firstrun.tsv \
             artifacts/riken2018-mrpg firstrun_only
+      - name: Verify donor-level leave-one-out sensitivity outputs
+        run: |
+          python - <<'PY'
+          import csv
+          from pathlib import Path
+
+          root = Path("artifacts/riken2018-mrpg")
+          for label in ("all_batches", "firstrun_only"):
+              path = root / f"mRPG8_panel_leave_one_out_{label}.tsv"
+              if not path.is_file():
+                  raise SystemExit(f"Missing leave-one-donor-out output: {path}")
+              with path.open(newline="") as handle:
+                  rows = list(csv.DictReader(handle, delimiter="\\t"))
+              if len(rows) != 12:
+                  raise SystemExit(f"{path}: expected 12 donor-deletion rows, found {len(rows)}")
+              if len({row["dropped_patient"] for row in rows}) != 12:
+                  raise SystemExit(f"{path}: donor deletion IDs are not unique")
+              for row in rows:
+                  difference = float(row["score_difference_SC_minus_CT"])
+                  p_value = float(row["exact_two_sided_permutation_p"])
+                  if not (-1.0 <= difference <= 1.0 and 0.0 <= p_value <= 1.0):
+                      raise SystemExit(f"{path}: invalid sensitivity statistic: {row}")
+              print(f"{label}: verified {len(rows)} unique donor-deletion tests")
+          PY
       - name: Upload donor-level analysis and provenance
         uses: actions/upload-artifact@v4
         with:
