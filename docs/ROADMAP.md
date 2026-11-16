@@ -71,18 +71,15 @@ Status reflects code currently present on the main branch. Checked items are imp
 - [x] Machine-validated benchmark ingestion requirements for frozen source packets, two independent reviewers, adjudication, and paired baseline/candidate scores
 - [ ] Curated expert-scored scientific answer benchmark set with multiple reviewers and adjudicated labels (rubric, starter questions, and adjudication protocol exist; real labels remain pending)
 - [x] Evidence benchmark requires two named human annotations per case, records reviewer agreement, and validates adjudication on disagreement
-- [x] Historical 20-claim SciFact model-assisted pilot archived (20/300 dev claims; coverage 6.67%; pilot-only stance accuracy 0.85, abstract evidence F1 0.833, sentence evidence F1 0.579; frozen predictions and subset-scoped rescore artifact run 42332689562). The hosted-model prediction integration and its live workflow have since been removed.
-- [x] Local-model SciFact prediction runner added for the explicitly configured self-hosted model; it excludes gold labels/rationales from prompts, validates document/sentence IDs, supports resumable frozen predictions, and records hashes/model provenance. This uses oracle-cited-document candidates, not open-corpus retrieval. [ ] Run the pilot and full labelled dev benchmark on the user's local Qwen3 runtime and inspect the frozen report.
+- [x] Historical model-assisted SciFact pilot archived as a legacy benchmark record only; no model inference code or runtime is part of the current product. The pilot is not evidence that the deterministic engine performs model-level reasoning.
 - [ ] Empirical evidence attribution, entailment, contradiction, and hallucination benchmark results (frozen ORACLE predictions and expert adjudication remain pending)
 - [x] Reproducibility and regression suite across Python 3.10–3.14 CI matrix
 - [x] High-impact claim review requires independent source groups, reviewer identity, and rationale
 - [x] Performed-experiment execution provenance requires independent human acceptance before evaluation
-- [x] Paired model evaluator requires per-reviewer scores for both systems and bootstraps paired cases rather than treating reviewer ratings as independent samples
-- [x] Blinded A/B review packet generation with reviewer-specific randomization, separate private unblinding keys, frozen source/model/prompt provenance, and strict score unblinding validation
 - [ ] Empirical validation that model outputs improve scientific reasoning over deterministic baselines (populated blinded evaluations and independent scoring remain pending)
 
 ## Explicit non-goals until validated
-- No automatic promotion of model-generated candidates to facts.
+- Deterministic template-generated hypotheses remain provisional and are never automatically promoted to facts.
 - No simulated or proposed experiment is represented as performed.
 - No novelty or scientific-priority guarantee.
 - No calibrated probability is inferred from the evidence-balance indicator.
