@@ -136,6 +136,32 @@
         "cra": "CRA000515 (171 records cross-referenced; individual age/group labels remain unavailable)"
       },
       "collection_date": "2018-10-23"
+    },
+    {
+      "source_id": "GSE16717",
+      "title": "Gene expression profiles in the Leiden Longevity Study",
+      "publication_year": 2011,
+      "platform": "GPL2895",
+      "sample_count": 150,
+      "groups": {
+        "long_lived_siblings": 50,
+        "offspring": 50,
+        "controls": 50
+      },
+      "mean_age_years": {
+        "long_lived_siblings": 93.4,
+        "offspring": 60.8,
+        "controls": 61.9
+      },
+      "doi": "10.1371/journal.pone.0027759",
+      "pmid": "22247756",
+      "url": "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE16717",
+      "role": "published_validation_cohort_for_2026_mRPG_signature",
+      "limitations": [
+        "The 2026 paper already cites GSE16717 as a validation cohort; ORACLE reanalysis is a reproducibility check, not a new independent cohort.",
+        "The GEO record reports 50 samples per group; individual age/sex metadata coverage must be checked before covariate-adjusted claims.",
+        "Normalized microarray expression is not directly comparable to RNA-seq counts."
+      ]
     }
   ],
   "evidence_audit_updated_at": "2026-11-16",
@@ -194,6 +220,14 @@
       "limitation": "No causal human intervention; the 171-person cohort overlaps the CRA000515 cohort and cannot be counted as an independent replication.",
       "doi": "10.1101/gr.220780.117",
       "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC6211641/"
+    },
+    {
+      "source_id": "GSE16717",
+      "year": 2011,
+      "design": "CodeLink GPL2895 peripheral-blood microarray; 50 long-lived siblings, 50 offspring and 50 controls/offspring partners",
+      "finding": "Public expression profiles permit testing the published mRPG-8 and cRPG-7 panels in the Leiden cohort.",
+      "relevance": "Reproducibility check of the 2026 paper's published validation cohort.",
+      "limitation": "Not independent of the validation reported in the 2026 paper; microarray platform and possible age/sex covariate limitations."
     }
   ],
   "hypothesis_audit": [
@@ -361,7 +395,8 @@
     "The 2021 human muscle translation study concerns mitochondrial-genome-encoded OXPHOS translation, not the same nuclear-encoded mRPG transcript signature.",
     "The 2022 ETS1 and Mendelian-randomization findings concern broad/cytosolic translation machinery, not direct replication of the 8-mRPG signature.",
     "No mechanism passes novelty or causality review until independent sample-level replication and functional perturbation/rescue are complete.",
-    "The 2018 autophagy-lysosome result uses the same 171-person Hainan/CRA000515 cohort; do not count it as independent cohort replication."
+    "The 2018 autophagy-lysosome result uses the same 171-person Hainan/CRA000515 cohort; do not count it as independent cohort replication.",
+    "GSE16717 is already used as a validation cohort by the 2026 paper; an ORACLE reanalysis is a reproducibility check, not a new independent cohort discovery."
   ],
   "gene_signatures": {
     "source_doi": "10.1016/j.xcrm.2026.102767",
