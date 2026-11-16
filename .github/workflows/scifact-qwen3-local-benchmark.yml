@@ -136,7 +136,7 @@ jobs:
             --model "$MODEL_ALIAS" \
             --top-k "$TOP_K" \
             --context-top-k "$CONTEXT_TOP_K" \
-            --max-tokens 256 \
+            --max-tokens 192 \
             --timeout 180 \
             --max-claims 5 \
             --max-invalid-responses 30 \
@@ -178,7 +178,7 @@ jobs:
             --model "$MODEL_ALIAS" \
             --top-k "$TOP_K" \
             --context-top-k "$CONTEXT_TOP_K" \
-            --max-tokens 256 \
+            --max-tokens 192 \
             --timeout 180 \
             --max-invalid-responses 30 \
             --max-model-attempts 3
