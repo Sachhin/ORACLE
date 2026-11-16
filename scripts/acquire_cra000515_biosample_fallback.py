@@ -170,7 +170,15 @@ def _biosample_fields(accession: str, payload: bytes, source: str) -> dict[str, 
         attrs = obj.get("sampleAttribute") or obj.get("sample_attribute") or {}
         if not isinstance(attrs, dict):
             attrs = {}
-        record["sample_title"] = str(obj.get("name") or obj.get("title") or "")
+        sample = attrs.get("sample") or obj.get("sample") or {}
+        if not isinstance(sample, dict):
+            sample = {}
+        record["sample_title"] = str(
+            obj.get("name") or obj.get("title") or sample.get("title") or sample.get("name") or ""
+        )
+        record["sample_alias"] = str(
+            obj.get("alias") or sample.get("alias") or attrs.get("sampleAlias") or ""
+        )
         key_map = {
             "age": ("age",), "age_unit": ("ageUnit", "age_unit"),
             "sex": ("sex",), "tissue": ("tissue",),
@@ -186,7 +194,6 @@ def _biosample_fields(accession: str, payload: bytes, source: str) -> dict[str, 
         submitter = obj.get("submitter") or obj.get("submitterInfo") or {}
         if isinstance(submitter, dict):
             record["submitter"] = str(submitter.get("name") or submitter.get("submitterName") or "")
-        sample = attrs.get("sample") or {}
         if isinstance(sample, dict):
             record["project_accession"] = str(sample.get("prjAccession") or "")
     else:
