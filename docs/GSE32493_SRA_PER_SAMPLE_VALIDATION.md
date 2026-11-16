@@ -27,13 +27,13 @@ Sources:
 
 ## Analysis implementation
 
-1. Download the six SRA runs with NCBI SRA Toolkit (`prefetch`, `fasterq-dump`).
+1. Query the ENA run-file report for each SRA run, download its single-end FASTQ, and verify the archive-provided MD5 and byte count before analysis.
 2. Run fastp single-end automatic adapter detection and retain 18–30 nt reads.
 3. Download the miRBase 23.1 current mature reference and extract human (`hsa-`) entries.
 4. Align with Bowtie 1, allowing up to one mismatch and retaining all best-stratum alignments.
 5. Count a read only when it has exactly one distinct best human mature-miRNA target; exclude multi-mapping reads rather than assigning them arbitrarily.
 6. Run edgeR's negative-binomial exact test for control versus centenarian with three biological samples per group.
-7. Preserve raw FASTQ checksums, trimmed FASTQ checksums, reference checksum, fastp QC, SAM checksums, count matrix, edgeR results, and R session information in the workflow artifact.
+7. Preserve ENA source URLs and MD5/SHA-256 checksums, raw FASTQ byte counts, trimmed FASTQ checksums, reference archive checksum, fastp QC, SAM checksums, count matrix, edgeR results, and R session information in the workflow artifact.
 
 ## Interpretation constraints
 
