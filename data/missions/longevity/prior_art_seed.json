@@ -8,13 +8,13 @@
       "source_id": "doi:10.1016/j.xcrm.2026.102767",
       "title": "Preserved mitochondrial ribosomal protein gene expression marks a youthful transcriptional state in Chinese nonagenarians and centenarians",
       "journal": "Cell Reports Medicine",
-      "publication_date": "2026-05-19",
+      "publication_date": "2026-04-23",
       "doi": "10.1016/j.xcrm.2026.102767",
       "pmid": "42030936",
       "pmcid": "PMC13198318",
       "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC13198318/",
       "claims": [
-        "The study analyzed 1,751 individuals: 811 long-lived individuals aged 90-113 and 940 younger controls aged 10-89.",
+        "The abstract reports 1,751 analyzed individuals (811 LLIs and 940 younger controls); the Methods section reports 1,752 recruited individuals (811 LLIs and 941 younger controls), with one previously published sample excluded for missing age.",
         "Eight mitochondrial ribosomal protein genes showed upward deviation from the typical age-related decline trajectory in long-lived individuals.",
         "The 8-mRPG expression score was associated with lower transcriptomic aging and senescence-related scores.",
         "The authors report replication of the signature pattern in additional longevity cohorts, including the Leiden Longevity Study."
@@ -22,7 +22,8 @@
       "limitations": [
         "The study is observational and cross-sectional; it does not establish that mRPG expression causes longevity.",
         "The upstream regulatory processes maintaining mRPG expression remain unknown.",
-        "The authors call for functional experiments and note residual confounding may remain."
+        "The authors call for functional experiments and note residual confounding may remain.",
+        "The paper contains a sample-count discrepancy: 1,751 vs 1,752 total participants and 441 vs 442 previously reported samples (171 CRA000515 + 271 HRA000656); one missing-age exclusion is mentioned. Resolve against the source manifest before analysis."
       ],
       "data_accessions": {
         "cra": "CRA000515 (171 samples)",
@@ -32,7 +33,9 @@
           "HRA015371",
           "HRA015372"
         ],
-        "mendeley_doi": "10.17632/fpf4y72kfz.1"
+        "mendeley_doi": "10.17632/fpf4y72kfz.1",
+        "note": "The paper's key-resource table lists 171 CRA000515 + 271 HRA000656 = 442 previously reported samples; Methods state one sample lacked age and was excluded, while the Data Availability Statement reports 441 deposited samples. This count discrepancy must be reconciled from sample-level metadata before analysis.",
+        "mendeley_published": "2026-03-18"
       },
       "next_checks": [
         "Obtain sample-level metadata and mapping for CRA000515 aliases.",
@@ -40,7 +43,8 @@
         "Reproduce the 8-mRPG signature with the published code and exact cohort splits.",
         "Test robustness to leukocyte composition, sex, region, sequencing batch, and age.",
         "Generate and experimentally test upstream-regulator hypotheses; do not infer causality from expression associations."
-      ]
+      ],
+      "collection_date": "2026-05-19"
     }
   ]
 }

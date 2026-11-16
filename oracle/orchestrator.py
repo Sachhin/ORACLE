@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 from copy import deepcopy
+import json
+from pathlib import Path
 
 from .agents import (
     AgentContext, AuditorAgent, ExperimentDesignerAgent, ExplorerAgent,
@@ -253,6 +255,61 @@ class OracleOrchestrator:
             query, limit=limit, resources=self.literature_providers,
         )
 
+    def _ingest_longevity_prior_art_seed(self, run: ResearchRun) -> None:
+        """Retrieve curated, versioned prior-art seeds for longevity missions."""
+        question = run.question.casefold()
+        if not any(term in question for term in
+                   ("longevity", "lifespan", "healthspan", "centenarian", "ageing", "aging")):
+            return
+        seed_path = Path(__file__).resolve().parents[1] / "data" / "missions" / "longevity" / "prior_art_seed.json"
+        if not seed_path.is_file():
+            run.findings.append("Longevity prior-art seed file is unavailable; targeted seed retrieval was skipped.")
+            return
+        try:
+            seed = json.loads(seed_path.read_text(encoding="utf-8"))
+            entries = seed.get("sources", [])
+            if not isinstance(entries, list):
+                raise ValueError("prior-art seed sources must be a list")
+            from .literature import LiteratureClient
+            client = self._literature_client or LiteratureClient(mailto=self.literature_mailto)
+            self._literature_client = client
+            for item in entries:
+                doi = str(item.get("doi") or "").strip().casefold()
+                pmid = str(item.get("pmid") or "").strip()
+                if not doi and not pmid:
+                    run.findings.append("Skipped prior-art seed without DOI or PMID.")
+                    continue
+                if any((doi and str(source.doi or "").casefold() == doi)
+                       or (pmid and str(source.pmid or "") == pmid)
+                       for source in run.sources):
+                    run.findings.append(
+                        "Prior-art seed already present in literature results: " +
+                        (doi or pmid)
+                    )
+                    continue
+                query = f"EXT_ID:{pmid}" if pmid else f"DOI:{doi}"
+                report = client.search(query, limit=1, providers=("europepmc",))
+                if not report.records and doi:
+                    report = client.search(f"DOI:{doi}", limit=1, providers=("europepmc",))
+                if report.records:
+                    client.ingest(run, report)
+                    run.findings.append(
+                        f"Curated prior-art seed retrieved: {item.get('title', doi or pmid)}. "
+                        "This is known prior art, not an ORACLE discovery."
+                    )
+                    self._event(run, "prior_art_seed_ingested", {
+                        "doi": doi, "pmid": pmid, "title": item.get("title", ""),
+                        "provider": "Europe PMC", "seed_path": str(seed_path),
+                        "retrieved": report.retrieved, "warnings": report.warnings,
+                    })
+                else:
+                    run.findings.append(
+                        f"Prior-art seed retrieval returned no record for {doi or pmid}; "
+                        "the source remains a required manual review item."
+                    )
+        except Exception as exc:
+            run.findings.append(f"Longevity prior-art seed retrieval warning: {type(exc).__name__}: {exc}")
+
     def _prepare_literature(self, run: ResearchRun) -> None:
         """Optionally retrieve source-backed literature before the reasoning cycle."""
         if (not self.literature_enabled and not self.full_text_enabled and not self.geo_files_enabled
@@ -274,6 +331,8 @@ class OracleOrchestrator:
                 "providers": report.providers,
                 "warnings": report.warnings,
             })
+        if self.literature_enabled:
+            self._ingest_longevity_prior_art_seed(run)
         if self.full_text_enabled:
             from .fulltext import OpenAccessFullTextClient
             full_text = OpenAccessFullTextClient().ingest(run)
