@@ -131,7 +131,7 @@ def main():
     raw_pairs = {}
     for record in files:
         name = record.get("fileName") or ""
-        match = re.search(r"_(DDA|DIA)_([A-Za-z0-9]+)\\.raw$", name, flags=re.I)
+        match = re.search(r"_(DDA|DIA)_([A-Za-z0-9]+)\.raw$", name, flags=re.I)
         if match:
             method, code = match.group(1).upper(), match.group(2)
             raw_pairs.setdefault(code, {})[method] = name
@@ -140,7 +140,7 @@ def main():
     for item in downloaded_search_files:
         search_path = out / item["local_path"]
         with search_path.open("rt", encoding="utf-8", errors="replace") as handle:
-            header = handle.readline().rstrip("\\r\\n").split("\\t")
+            header = handle.readline().rstrip("\r\n").split("\t")
         for column in header[3:]:
             if ".PG.Quantity" in column:
                 sample_match = re.search(r"HIVPCA([0-9]+)", column)
