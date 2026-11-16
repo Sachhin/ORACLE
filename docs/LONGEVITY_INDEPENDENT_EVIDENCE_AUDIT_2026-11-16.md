@@ -163,3 +163,30 @@ ORACLE downloaded the public Hugging Face community mirror's `sample_metadata.pa
 The parquet contains no individual age or sex columns. A 751-MB processed H5AD file is listed by the mirror, but its observation metadata and gene-symbol mapping have not yet been reconciled against this parquet. Therefore, no RIKEN mRPG expression or differential-expression result is claimed yet. The next required step is to verify H5AD checksums, confirm donor-level metadata alignment, inspect gene symbol/Ensembl annotation, and then calculate per-donor pseudobulk counts before testing the 8-mRPG score.
 
 Sources: [Hashimoto et al. 2019](https://pubmed.ncbi.nlm.nih.gov/31719197/); [Zhu et al. 2023](https://pubmed.ncbi.nlm.nih.gov/37379396/); [GSE213516 healthy reference cohort](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE213516); [RIKEN SC2018 data mirror and license](https://huggingface.co/datasets/longevity-db/riken2018).
+
+
+## RIKEN SC2018 independent 8-mRPG donor-pseudobulk result (2026-11-16)
+
+ORACLE completed a source-checksummed reanalysis of the public RIKEN SC2018 processed H5AD mirror:
+- 69,844 PBMC cells; 33,694 genes
+- 12 biological donors: 7 supercentenarians (SC1–SC7), 5 controls (CT1–CT5)
+- H5AD and sample-metadata parquet checksums verified; metadata rows matched H5AD observations row-by-row for patient, group, batch, assay and cell type
+- The H5AD matrix was verified as non-negative integer-valued UMI counts; gene symbols were directly present in `var/_index`
+- All eight published mRPG genes were present
+- Cells were aggregated to donor-level pseudobulk; donors, not cells, were the statistical replicates
+- edgeR TMM normalization, robust dispersion and exactTest; panel score used equal-weight mean of gene-wise z-scored TMM logCPM values; exact permutation over all 792 assignments of 7 SC labels among 12 donors
+
+| Analysis | SC mean panel score | CT mean panel score | SC − CT | Exact two-sided permutation p |
+|---|---:|---:|---:|---:|
+| All batches | −0.307 | 0.430 | −0.737 | 0.0101 |
+| Common `firstrun` batch only | −0.288 | 0.403 | −0.691 | 0.0316 |
+
+The common-batch sensitivity is important because SC1 and SC2 have additional `SC1_2` and `SC2_2` batches. Restricting all 12 donors to the shared `firstrun` batch preserves the negative direction and the nominal panel-level permutation result.
+
+**Gene-level result:** in the all-batches edgeR analysis, all eight mRPG logFC estimates were negative, but none reached BH FDR <0.05 (the smallest FDR was 0.3606). In the firstrun-only analysis, seven genes had negative logFC and MRPS10 was approximately zero; again, none reached FDR <0.05 (smallest FDR 0.1442).
+
+**Interpretation:** this is a directionally opposite result to the 2026 Chinese Hainan bulk-blood mRPG association, but it is not a definitive refutation. The RIKEN cohort is small (7 versus 5), has no individual age/sex metadata, and has only a broad PBMC cell-type label. The source paper reports a very large group age difference, and prior RIKEN studies report cytotoxic CD4 T-cell expansion. The 2025 three-cohort atlas also reports shifts in NK, B and CD4 T-cell proportions. Thus, the observed bulk-PBMC pseudobulk difference could reflect age, immune-cell composition or cohort-specific biology rather than a cell-intrinsic mRPG program.
+
+**Updated H1 status:** mixed and not independently replicated in this cohort. ORACLE must not claim a universal or causal human longevity mRPG mechanism. H3 (cell-composition/state confounding) remains a live alternative.
+
+The result artifact `oracle-riken2018-mrpg-independent-validation` includes donor metadata, full pseudobulk count matrices, all-gene edgeR outputs, eight-gene results, donor panel scores and R session information. Workflow run: 43900804667.
