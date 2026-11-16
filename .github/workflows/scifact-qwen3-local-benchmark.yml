@@ -40,7 +40,7 @@ jobs:
     env:
       MODEL_ALIAS: Qwen3-1.7B
       TOP_K: ${{ github.event_name == 'workflow_dispatch' && inputs.top_k || '20' }}
-      HF_REPO: Qwen/Qwen3-1.7B-GGUF
+      HF_REPO: ggml-org/Qwen3-1.7B-GGUF
       HF_REVISION: daeb8e2d528a760970442092f6bf1e55c3b659eb
       HF_FILE: Qwen3-1.7B-Q4_K_M.gguf
       MODEL_SHA256: d2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5
