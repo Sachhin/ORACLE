@@ -104,9 +104,18 @@ def main() -> None:
 
         run([
             "fastp", "-i", str(raw), "-o", str(trimmed),
+            "--adapter_sequence", "TCGTATGCCGTCTTCTGCTTG",
+            "--overlap_len_require", "10",
+            "--disable_quality_filtering",
             "--length_required", "18", "--length_limit", "30",
             "--thread", "2", "--json", str(fastp_json), "--html", str(fastp_html),
         ])
+        fastp = json.loads(fastp_json.read_text(encoding="utf-8"))
+        after = fastp.get("summary", {}).get("after_filtering", {})
+        if int(after.get("total_reads") or 0) == 0 or not trimmed.exists() or trimmed.stat().st_size == 0:
+            raise RuntimeError(
+                f"fastp retained zero reads for {run_id}; inspect raw adapter and quality metadata before mapping"
+            )
         run([
             "bowtie", "-v", "1", "-a", "--best", "--strata", "-S", "-p", "2",
             str(index_prefix), str(trimmed), str(sam),
@@ -168,7 +177,8 @@ def main() -> None:
         },
         "adapter_and_length_processing": {
             "tool": "fastp",
-            "adapter_detection": "fastp single-end automatic adapter detection",
+            "adapter_detection": "explicit Illumina SRA 3-prime adapter TCGTATGCCGTCTTCTGCTTG; minimum overlap 10 nt",
+            "quality_filtering": "disabled because archived FASTQ preview carries Q0-Q10 scores; raw quality retained as a limitation",
             "minimum_length": 18,
             "maximum_length": 30,
         },
