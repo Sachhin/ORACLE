@@ -82,6 +82,12 @@ def validate_prediction(payload: dict[str, Any], allowed_docs: dict[str, int]) -
                        or i < 0 or i >= allowed_docs[doc_id] for i in sentences)
                 or len(set(sentences)) != len(sentences)):
             raise ValueError(f"Invalid sentence indices for document {doc_id}")
+        if not sentences:
+            raise ValueError(f"Evidence document {doc_id} must cite at least one sentence")
+        if len(sentences) > 3:
+            raise ValueError(f"Evidence document {doc_id} may cite at most three sentences")
+        if len(result) >= 2:
+            raise ValueError("Prediction may cite at most two evidence documents")
         if doc_id in result:
             raise ValueError(f"Duplicate document prediction: {doc_id}")
         result[doc_id] = {"label": label, "sentences": sentences}
