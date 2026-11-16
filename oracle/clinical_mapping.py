@@ -85,6 +85,8 @@ def validate_mapping(path: str | Path) -> dict:
 
         if relationship not in {"PRIMARY", "TECHNICAL_REPLICATE", "QC", "EXCLUDED", "UNRESOLVED"}:
             errors.append(f"Line {line}: invalid relationship_to_patient {relationship!r}")
+        if provenance not in {"SOURCE_AUTHENTICATED", "TECHNICAL_ONLY", "UNRESOLVED"}:
+            errors.append(f"Line {line}: invalid provenance_status {provenance!r}")
         if use_hiv_herpes is None or use_hand is None:
             errors.append(f"Line {line}: inclusion fields must be explicit TRUE/FALSE")
 
@@ -113,6 +115,12 @@ def validate_mapping(path: str | Path) -> dict:
             errors.append(f"Line {line}: HERPES row must use NA hand_status")
         if relationship == "TECHNICAL_REPLICATE" and (use_hiv_herpes or use_hand):
             errors.append(f"Line {line}: technical replicate must not be counted as an independent participant")
+        if use_hiv_herpes and relationship != "PRIMARY":
+            errors.append(f"Line {line}: only PRIMARY samples may enter HIV-versus-herpes comparison")
+        if use_hand and phenotype != "HIV":
+            errors.append(f"Line {line}: only HIV samples may enter HAND-versus-cognitively-normal comparison")
+        if use_hand and not use_hiv_herpes:
+            errors.append(f"Line {line}: HAND comparison samples must also be included in HIV-versus-herpes cohort")
 
         if row["patient_id"]:
             patient_labels[row["patient_id"]].add((phenotype, hand))
@@ -134,8 +142,8 @@ def validate_mapping(path: str | Path) -> dict:
     hand_by_patient: dict[str, set[str]] = defaultdict(set)
     for row in included_hiv_herpes:
         phenotype_by_patient[row["patient_id"]].add(row["phenotype"].upper())
-        if row["phenotype"].upper() == "HIV":
-            hand_by_patient[row["patient_id"]].add(row["hand_status"].upper())
+    for row in included_hand:
+        hand_by_patient[row["patient_id"]].add(row["hand_status"].upper())
 
     patient_phenotypes = {
         patient: next(iter(labels)) for patient, labels in phenotype_by_patient.items() if len(labels) == 1
@@ -151,14 +159,20 @@ def validate_mapping(path: str | Path) -> dict:
         elif len(labels) > 1:
             errors.append(f"Patient {patient} has conflicting HAND labels in included rows")
 
+    if len(included_hiv_herpes) != 13:
+        errors.append(f"Expected 13 PRIMARY sample aliases in HIV/herpes comparison; found {len(included_hiv_herpes)}")
     if len(primary_patients) != 13:
         errors.append(f"Expected 13 distinct clinical patients in HIV/herpes comparison; found {len(primary_patients)}")
+    if len(included_hiv_herpes) != len(primary_patients):
+        errors.append("Each included clinical patient must have exactly one PRIMARY sample alias; technical repeats must be excluded from participant counts")
     if dict(phenotype_counts) != {"HIV": 8, "HERPES": 5}:
         errors.append(f"Expected 8 HIV and 5 HERPES patients; found {dict(phenotype_counts)}")
     if dict(hand_patient_counts) != {"HAND": 5, "COGNITIVELY_NORMAL": 3}:
         errors.append(f"Expected 5 HAND and 3 cognitively-normal HIV patients; found {dict(hand_patient_counts)}")
     if len(included_hand) != 8:
-        errors.append(f"Expected 8 unique HIV patients in HAND comparison; found {len(included_hand)}")
+        errors.append(f"Expected 8 HIV sample aliases in HAND comparison; found {len(included_hand)}")
+    if len({r["patient_id"] for r in included_hand}) != 8:
+        errors.append("HAND comparison must contain exactly one primary sample per HIV patient")
 
     if len(by_sample) == 15 and len(primary_patients) == 13:
         warnings.append("15 processed aliases resolve to 13 clinical patients; non-primary aliases require explicit technical/QC/exclusion provenance.")
