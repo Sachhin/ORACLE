@@ -27,9 +27,9 @@ jobs:
       - name: Install deterministic small-RNA analysis tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y sra-toolkit bowtie fastp r-base-core r-bioc-edger
+          sudo apt-get install -y bowtie fastp r-base-core r-bioc-edger
           python --version
-          fasterq-dump --version
+          Rscript -e 'library(edgeR); packageVersion("edgeR")'
           bowtie --version
           fastp --version
           Rscript -e 'library(edgeR); packageVersion("edgeR")'
@@ -37,15 +37,11 @@ jobs:
       - name: Run offline parser tests
         run: python -m unittest discover -s tests -p 'test_gse32493_sra_counts.py' -v
 
-      - name: Download the six source-authenticated SRA runs
+      - name: Download the six source-authenticated ENA FASTQ files
         run: |
-          set -euo pipefail
-          mkdir -p sra fastq tmp
-          for run in SRR350239 SRR350240 SRR350241 SRR350242 SRR350243 SRR350244; do
-            prefetch --max-size 2G --output-directory sra "$run"
-            fasterq-dump "sra/$run/$run.sra" --threads 4 --outdir fastq --temp tmp
-            gzip -f "fastq/$run.fastq"
-          done
+          python scripts/download_gse32493_ena_fastq.py \
+            --outdir fastq \
+            --manifest artifacts/gse32493-sra/ena_download_manifest.json
           ls -lh fastq
 
       - name: Download and freeze the human mature-miRNA reference
