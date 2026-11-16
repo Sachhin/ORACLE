@@ -20,7 +20,7 @@ from pathlib import Path
 import numpy as np
 from scipy.stats import ttest_ind
 
-GSE_URL = "https://ftp.ncbi.nlm.nih.gov/geo/series/GSE16nnn/GSE16717/matrix/GSE16717-GPL2895_series_matrix.txt.gz"
+GSE_URL = "https://ftp.ncbi.nlm.nih.gov/geo/series/GSE16nnn/GSE16717/matrix/GSE16717_series_matrix.txt.gz"
 GPL_URL = "https://ftp.ncbi.nlm.nih.gov/geo/platforms/GPL2nnn/GPL2895/annot/GPL2895.annot.gz"
 M_RPG = ["MRPL3", "MRPL32", "MRPL42", "MRPL45", "MRPL50", "MRPS10", "MRPS33", "MRPS35"]
 C_RPG = ["RPL10A", "RPL22", "RPL4", "RPL5", "RPS13", "RPS23", "RPS6"]
