@@ -40,7 +40,7 @@ jobs:
       - name: Acquire GSA metadata only (no BAM downloads)
         if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
         run: |
-          python scripts/acquire_cra000515_metadata.py \
+          python scripts/acquire_cra000515_biosample_fallback.py \
             --accession "CRA000515" \
             --output-dir artifacts/cra000515
       - name: Upload source metadata, joined manifest, audit and checksums
