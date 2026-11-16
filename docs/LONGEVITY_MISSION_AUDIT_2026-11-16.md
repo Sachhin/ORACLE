@@ -116,3 +116,16 @@ Mendeley Data DOI `10.17632/fpf4y72kfz.1`. The integrated matrix is a promising
 route for reproducible analysis, but its sample annotation and mapping to the
 public CRA aliases must be verified before using the cohorts as independent
 replication.
+
+
+### Published cohort-count discrepancy to reconcile
+
+The paper's abstract reports 1,751 analyzed participants (811 LLIs + 940 YCs),
+but the Methods section reports 1,752 recruited participants (811 LLIs + 941
+YCs). The key-resources table lists 171 CRA000515 + 271 HRA000656 = 442
+previously reported samples, while the Data Availability Statement says 441
+samples; the Methods explain that one previously published sample with
+missing age was excluded. This may explain the one-sample difference, but the
+raw manifest and exclusion record must be checked before treating the counts
+as reconciled. ORACLE must preserve this discrepancy in the audit rather than
+silently choosing one total.
