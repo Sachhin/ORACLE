@@ -39,7 +39,11 @@ jobs:
           Rscript scripts/edgeR_riken2018_mrpg.R \
             artifacts/riken2018-mrpg/pseudobulk_counts.tsv \
             artifacts/riken2018-mrpg/donor_metadata.tsv \
-            artifacts/riken2018-mrpg
+            artifacts/riken2018-mrpg all_batches
+          Rscript scripts/edgeR_riken2018_mrpg.R \
+            artifacts/riken2018-mrpg/pseudobulk_counts_firstrun.tsv \
+            artifacts/riken2018-mrpg/donor_metadata_firstrun.tsv \
+            artifacts/riken2018-mrpg firstrun_only
       - name: Upload donor-level analysis and provenance
         uses: actions/upload-artifact@v4
         with:
