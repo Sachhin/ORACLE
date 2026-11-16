@@ -15,12 +15,12 @@ permissions:
 
 concurrency:
   group: oracle-gse32493-sra-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   per-sample-raw-read-analysis:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
 
