@@ -31,6 +31,8 @@ The public GSA run CSV and per-BioSample CNCB API/page fallback produced a 171-r
 
 Every retrieved BioSample record identifies peripheral blood. The raw API sex attribute has two values: code `1` for 70 records and code `2` for 101 records. We independently parsed the corresponding 171 BioSample HTML pages and cross-checked every code against the page's explicit sex label: **all 70 code-1 records are male and all 101 code-2 records are female (171/171 concordant; zero mismatches)**. The manifest retains the raw API code and the source HTML so this decoding is reproducible.
 
+The aggregate sex totals also reconcile exactly with the original 2018 cohort paper: it reports 58 female + 18 male centenarians, 3 female + 51 male F1 offspring, and 40 female + 1 male F1 spouses (101 female and 70 male overall). The 171 BioSample pages independently yield 101 female and 70 male. This is a useful cohort-level consistency check, but it still does not reveal which individual CHHA alias belongs to CEN, F1 or F1SP.
+
 The GSA workbook download is non-empty as an XLSX container but its Sample, Experiment and Run sheets contain headers only. The fallback therefore enriches the 171 CRR-to-SAMC records with 171 unique CHHA aliases, submitter, project, tissue and raw sex code, but cannot perform the intended sample-sheet join.
 
 ## Source checksums
@@ -49,3 +51,14 @@ It is **not complete for cohort validation**. No age values or centenarian/offsp
 The next required source is the sample-level annotation manifest and codebook from the study submitter. The 2026 article identifies Qing-Peng Kong as lead contact (`kongqp@mail.kiz.ac.cn`); the retrieved BioSample records identify Fu-Hui Xiao (`xiaofuhui@mail.kiz.ac.cn`) as submitter. The existing request in `docs/CRA000515_METADATA_ACQUISITION.md` should request the 171-row alias-to-age/cohort crosswalk and sex-code definitions.
 
 **Status:** `metadata_acquired_needs_manual_provenance_review`. This is a reproducible acquisition result, not a biological validation or centenarian replication.
+
+
+## Cross-source aggregate check
+
+The original cohort publication reports 76 CEN (58 female, 18 male), 54 F1
+(3 female, 51 male), and 41 F1SP (40 female, 1 male), for aggregate totals of
+101 female and 70 male. The independent BioSample page parsing yields exactly
+101 female and 70 male across the same 171 BioSamples. This validates the
+aggregate sex totals across sources but does not authenticate individual
+cohort labels. Source: Xiao et al., *Genome Research* (2018),
+DOI: https://doi.org/10.1101/gr.220780.117
