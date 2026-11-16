@@ -72,6 +72,7 @@ class PXD047528ManifestTests(unittest.TestCase):
     def test_rejects_wrong_patient_count_and_missing_provenance(self):
         rows = valid_rows()
         rows[0]["patient_id"] = "HIV2"
+        rows[13]["patient_id"] = "HIV2"
         rows[0]["source_document_sha256"] = ""
         tmp, path = self.write_manifest(rows)
         try:
