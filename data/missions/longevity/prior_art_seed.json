@@ -162,6 +162,33 @@
         "The GEO record reports 50 samples per group; individual age/sex metadata coverage must be checked before covariate-adjusted claims.",
         "Normalized microarray expression is not directly comparable to RNA-seq counts."
       ]
+    },
+    {
+      "source_id": "doi:10.1016/j.ebiom.2025.105922",
+      "title": "A comprehensive single-cell atlas of three centenarian cohorts unveils unique natural killer cell signatures and enhanced mutual interactions among peripheral immune cells",
+      "journal": "EBioMedicine",
+      "publication_date": "2025-09-12",
+      "doi": "10.1016/j.ebiom.2025.105922",
+      "pmid": "40945050",
+      "pmcid": "PMC12571583",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC12571583/",
+      "claims": [
+        "The study integrated PBMC single-cell RNA-seq from three reported centenarian cohorts: Lingao (17 CEN, 9 offspring, 14 controls), Rugao (7 CEN, 6 offspring, 9 controls) and Japan (7 CEN, 2 offspring, 3 controls); the paper reports a combined 31/17/26 cohort count.",
+        "Across cohorts, the authors reported fewer B cells and CD4 T cells and more NK cells in centenarians than controls; NK cells showed relatively young subset/receptor signatures and increased RUNX3/KLF4 activity.",
+        "In the new Lingao cohort, CyTOF and flow cytometry provided orthogonal validation of selected immune-cell composition and RUNX3 findings."
+      ],
+      "limitations": [
+        "This is evidence for immune-cell remodeling, not direct replication of the 8-mRPG or autophagy-lysosome gene signatures.",
+        "The 2025 atlas reuses the Rugao cohort HRA002867 from the 2022 Rugao study and a Japanese cohort from RIKEN SC2018; do not count these as new independent cohorts a second time. The Lingao cohort is the additional cohort.",
+        "The new Lingao raw data are deposited as HRA011570 and are controlled-access; HRA002867 is also controlled-access. Sample-level reanalysis requires authorized GSA-Human access and a source-authenticated manifest.",
+        "Bulk-blood expression differences may reflect immune-cell proportions or cell states; mRPG expression should be tested within cell types before inferring a cell-intrinsic mitochondrial mechanism."
+      ],
+      "data_accessions": {
+        "lingao": "HRA011570 (controlled access; PRJCA038980)",
+        "rugao": "HRA002867 (controlled access)",
+        "japan": "RIKEN SC2018 (public reuse)"
+      },
+      "collection_date": "2025-09-12"
     }
   ],
   "evidence_audit_updated_at": "2026-11-16",
@@ -228,6 +255,17 @@
       "finding": "Public expression profiles permit testing the published mRPG-8 and cRPG-7 panels in the Leiden cohort.",
       "relevance": "Reproducibility check of the 2026 paper's published validation cohort.",
       "limitation": "Not independent of the validation reported in the 2026 paper; microarray platform and possible age/sex covariate limitations."
+    },
+    {
+      "source_id": "doi:10.1016/j.ebiom.2025.105922",
+      "pmid": "40945050",
+      "year": 2025,
+      "design": "three-cohort PBMC single-cell atlas with mass cytometry and flow validation in Lingao",
+      "finding": "Across Lingao, Rugao and Japan cohorts, centenarians showed higher NK-cell proportions and lower B/CD4 T-cell proportions; NK cells had relatively young signatures with RUNX3/KLF4 activity and enhanced NK–T signalling.",
+      "relevance": "Independent cohort-level evidence that peripheral immune-cell composition and cell state are major features of exceptional longevity; supports testing cell composition as an alternative explanation for bulk mRPG signals.",
+      "limitation": "Does not test the 8-mRPG signature directly. Rugao and Japan are reused datasets; only Lingao adds a new cohort in this atlas. Lingao HRA011570 and Rugao HRA002867 are controlled-access.",
+      "doi": "10.1016/j.ebiom.2025.105922",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC12571583/"
     }
   ],
   "hypothesis_audit": [
@@ -300,7 +338,8 @@
       "status": "live_alternative_explanation",
       "confidence": "plausible_unresolved",
       "supporting_prior_art": [
-        "doi:10.1016/j.xcrm.2026.102767"
+        "doi:10.1016/j.xcrm.2026.102767",
+        "doi:10.1016/j.ebiom.2025.105922"
       ],
       "opposing_or_qualifying_evidence": [],
       "falsifiable_tests": [
@@ -396,7 +435,8 @@
     "The 2022 ETS1 and Mendelian-randomization findings concern broad/cytosolic translation machinery, not direct replication of the 8-mRPG signature.",
     "No mechanism passes novelty or causality review until independent sample-level replication and functional perturbation/rescue are complete.",
     "The 2018 autophagy-lysosome result uses the same 171-person Hainan/CRA000515 cohort; do not count it as independent cohort replication.",
-    "GSE16717 is already used as a validation cohort by the 2026 paper; an ORACLE reanalysis is a reproducibility check, not a new independent cohort discovery."
+    "GSE16717 is already used as a validation cohort by the 2026 paper; an ORACLE reanalysis is a reproducibility check, not a new independent cohort discovery.",
+    "The 2025 three-cohort single-cell atlas supports immune-cell composition/state as a live bulk-blood confounder, but it does not directly validate the 8-mRPG signature; Rugao and Japan are reused cohorts, while Lingao is the additional cohort."
   ],
   "gene_signatures": {
     "source_doi": "10.1016/j.xcrm.2026.102767",
