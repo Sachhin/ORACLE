@@ -5,7 +5,7 @@ Scope: source-level review of the leading ORACLE longevity directions. This is a
 
 ## Executive verdict
 
-**No previously unknown human longevity mechanism has been validated by ORACLE.** The most coherent direction in the current evidence is a compartment-specific translation pattern: selected mitochondrial ribosomal protein genes (mRPGs) remain above their age-expected expression trajectory in long-lived individuals, while many cytosolic ribosomal protein genes (cRPGs) continue to decline. This pattern is already published prior art, not an ORACLE discovery.
+**No previously unknown human longevity mechanism has been validated by ORACLE.** The main published candidate is a compartment-specific translation pattern: selected mitochondrial ribosomal protein genes (mRPGs) remain above their age-expected expression trajectory in some long-lived cohorts, while many cytosolic ribosomal protein genes (cRPGs) continue to decline. This is published prior art, not an ORACLE discovery, and ORACLE's numerical checks are mixed rather than a universal replication.
 
 The important open question is now narrower: **what upstream regulation and functional mitochondrial phenotype maintain the selected mRPG program in long-lived people, and does that program causally improve late-life mitochondrial function?**
 
@@ -85,7 +85,7 @@ Source: [full article](https://pmc.ncbi.nlm.nih.gov/articles/PMC8583053/).
 **Scientific discovery gate: NOT PASSED.**  
 **Prior-art audit: UPDATED.**  
 **Human observational association: REPORTED IN PUBLISHED LITERATURE.**  
-**ORACLE independent numerical replication of exact 8-mRPG signature: NOT DONE.**  
+**ORACLE numerical audit of the 8-mRPG signature: PARTIAL.** GSE16717 (Leiden) and RIKEN SC2018 donor-pseudobulk reanalyses are complete, but neither provides a robust positive independent replication. The exact 2026 age-trajectory model has not been reproduced.  
 **Causal human mechanism: NOT ESTABLISHED.**  
 **Functional validation: NOT DONE.**  
 **Expert review: PENDING.**
@@ -160,7 +160,7 @@ ORACLE downloaded the public Hugging Face community mirror's `sample_metadata.pa
 - `assay_simple`: 10x_3_prime
 - `cell_type`: PBMC
 
-The parquet contains no individual age or sex columns. A 751-MB processed H5AD file is listed by the mirror, but its observation metadata and gene-symbol mapping have not yet been reconciled against this parquet. Therefore, no RIKEN mRPG expression or differential-expression result is claimed yet. The next required step is to verify H5AD checksums, confirm donor-level metadata alignment, inspect gene symbol/Ensembl annotation, and then calculate per-donor pseudobulk counts before testing the 8-mRPG score.
+This was the pre-analysis status. It is superseded by the completed RIKEN SC2018 donor-pseudobulk analysis below. The limitations remain: individual age/sex and PBMC subtype labels are not available in the processed matrix.
 
 Sources: [Hashimoto et al. 2019](https://pubmed.ncbi.nlm.nih.gov/31719197/); [Zhu et al. 2023](https://pubmed.ncbi.nlm.nih.gov/37379396/); [GSE213516 healthy reference cohort](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE213516); [RIKEN SC2018 data mirror and license](https://huggingface.co/datasets/longevity-db/riken2018).
 
@@ -199,3 +199,24 @@ The reproducible leave-one-donor-out exact permutation outputs were added to the
 - All batches: the direction also remained negative after every donor deletion; exact p-values ranged from 0.0030 to 0.0364.
 
 This means the **direction** of the RIKEN PBMC result is stable, but its nominal significance in the common-batch analysis is sensitive to individual donors. Together with no gene-wise FDR-significant mRPG gene, this remains an exploratory directional non-replication—not robust confirmation or definitive refutation of the Chinese cohort result.
+
+
+## Leiden GSE16717 numerical audit (2026-11-16)
+
+The GEO workflow completed a source-level reanalysis of all 150 GPL2895 samples:
+- 50 long-lived siblings (mean age 93.40 years; 24 female, 26 male)
+- 50 controls (mean age 61.95 years; 26 female, 24 male)
+- 50 offspring (mean age 60.79 years; 25 female, 25 male)
+- Individual age and sex metadata were recovered for all 150 samples.
+- The 8-mRPG panel was complete. The 7-cRPG panel was incomplete because RPS6 is absent from GPL2895; therefore no cRPG-7 composite score was calculated.
+
+| Comparison | Panel | Mean difference | Welch p | BH FDR |
+|---|---|---:|---:|---:|
+| Long-lived siblings vs controls | mRPG-8 composite | −0.163 | 0.316 | 0.667 |
+| Offspring vs controls | mRPG-8 composite | −0.072 | 0.677 | 0.795 |
+
+No individual mRPG gene reached BH FDR <0.05. In the six available cRPG genes, RPL10A, RPL5 and RPS23 reached BH FDR <0.05 in long-lived siblings versus controls; this is not a complete cRPG-7 panel result.
+
+**Interpretation:** this is the same Leiden cohort already cited as validation in the 2026 paper, not a new independent cohort. The ORACLE check used an unadjusted group comparison and does not reproduce the paper's age-trajectory model. Long-lived siblings are substantially older than controls, and family structure/covariates are not adjusted. Thus the non-significant mRPG group comparison is a useful numerical audit, not an exact refutation of the published age-trajectory analysis.
+
+The GSE16717 artifact contains all sample metadata, target-gene expression, group comparisons and source files. Workflow run: 43902349245.
