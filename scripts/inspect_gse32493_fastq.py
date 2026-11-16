@@ -26,8 +26,10 @@ def main() -> None:
                 "quality_ascii_min": min(map(ord, lines[3])) if lines[3] else None,
                 "quality_ascii_max": max(map(ord, lines[3])) if lines[3] else None,
                 "quality_string": lines[3],
-                "contains_truseq_small_rna_3prime_adapter": "TGGAATTCTCGGGTGCCAAGG" in lines[1],
-                "contains_truseq_adapter_prefix": "TGGAATTCTCGGGTG" in lines[1],
+                "contains_illumina_sra_3prime_adapter": "TCGTATGCCGTCTTCTGCTTG" in lines[1],
+                "contains_illumina_sra_adapter_suffix": "GTATGCCGTCTTCTGCTT" in lines[1],
+                "quality_phred_min": min(map(ord, lines[3])) - 33 if lines[3] else None,
+                "quality_phred_max": max(map(ord, lines[3])) - 33 if lines[3] else None,
             })
     report = {"run": "SRR350239", "preview_records": len(records), "records": records}
     Path("artifacts/gse32493-sra").mkdir(parents=True, exist_ok=True)
