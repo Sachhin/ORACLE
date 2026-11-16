@@ -252,9 +252,9 @@
       "source_id": "GSE16717",
       "year": 2011,
       "design": "CodeLink GPL2895 peripheral-blood microarray; 50 long-lived siblings, 50 offspring and 50 controls/offspring partners",
-      "finding": "Public expression profiles permit testing the published mRPG-8 and cRPG-7 panels in the Leiden cohort.",
+      "finding": "A model-free numerical reanalysis of all 150 GPL2895 samples (50 long-lived siblings, 50 controls, 50 offspring) recovered individual age and sex for every sample. The exact 8-mRPG panel was complete, but its equal-weight composite was not significant in long-lived siblings versus controls (difference -0.163, Welch p=0.316, BH FDR=0.667) or offspring versus controls (difference -0.072, p=0.677, FDR=0.795); no individual mRPG gene reached FDR<0.05. The 7-cRPG panel could not be scored because RPS6 is absent from GPL2895; among the six available cRPG genes, RPL10A, RPL5 and RPS23 were FDR-significant in long-lived siblings versus controls.",
       "relevance": "Reproducibility check of the 2026 paper's published validation cohort.",
-      "limitation": "Not independent of the validation reported in the 2026 paper; microarray platform and possible age/sex covariate limitations."
+      "limitation": "This is the same Leiden cohort cited as validation in the 2026 paper, not a new independent cohort. The reanalysis uses a simple unadjusted group comparison, not the paper's age-trajectory model; long-lived siblings are much older than controls, and family structure/covariates are not adjusted. The incomplete cRPG panel prevents a full comparator score. This does not reproduce a significant mRPG group difference, but it is not an exact refutation of the published age-trajectory result."
     },
     {
       "source_id": "doi:10.1016/j.ebiom.2025.105922",
@@ -481,7 +481,8 @@
     "The 2025 three-cohort single-cell atlas supports immune-cell composition/state as a live bulk-blood confounder, but it does not directly validate the 8-mRPG signature; Rugao and Japan are reused cohorts, while Lingao is the additional cohort.",
     "RIKEN SC2018 is a distinct Japanese supercentenarian cohort from the Chinese CRA000515 and Leiden GSE16717 cohorts, but the 2019, 2023 and 2025 papers reuse the same SC2018 donors; count the cohort once.",
     "RIKEN SC2018 donor-pseudobulk test is directionally lower in supercentenarians than controls in both all-batches and common-firstrun-only analyses; no individual mRPG gene reaches FDR<0.05. Treat as an exploratory non-replication, not a causal refutation.",
-    "RIKEN common-firstrun mRPG8 leave-one-donor-out sensitivity: direction remains negative after every donor removal, but p ranges 0.0182–0.1061; dropping CT1 gives p=0.1061, and only 6/12 deletions remain nominally significant. Do not claim robust independent replication."
+    "RIKEN common-firstrun mRPG8 leave-one-donor-out sensitivity: direction remains negative after every donor removal, but p ranges 0.0182–0.1061; dropping CT1 gives p=0.1061, and only 6/12 deletions remain nominally significant. Do not claim robust independent replication.",
+    "GSE16717 simple-group numerical check: mRPG8 composite is not significant for long-lived siblings versus controls (difference -0.163, p=0.316, FDR=0.667) or offspring versus controls (difference -0.072, p=0.677, FDR=0.795); cRPG7 composite withheld because RPS6 is absent. This is a reanalysis of the Leiden cohort already cited by the 2026 paper, not an independent cohort or exact replication of its age-trajectory model."
   ],
   "gene_signatures": {
     "source_doi": "10.1016/j.xcrm.2026.102767",
