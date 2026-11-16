@@ -1,0 +1,33 @@
+name: ORACLE GSE16717 published mRPG signature replication
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/gse16717-mrpg-validation.yml"
+      - "scripts/analyze_gse16717_mrpg_signature.py"
+      - "data/missions/longevity/prior_art_seed.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  replicate-signature:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install numerical analysis packages
+        run: python -m pip install --upgrade numpy scipy
+      - name: Reproduce published 8-mRPG and 7-cRPG signatures in GSE16717
+        run: python scripts/analyze_gse16717_mrpg_signature.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: oracle-gse16717-mrpg-signature-validation
+          path: artifacts/gse16717-mrpg-validation/
+          if-no-files-found: error
+          retention-days: 90
