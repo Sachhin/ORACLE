@@ -112,6 +112,30 @@
       "limitations": [
         "The reported pathway is cytosolic ribosome biogenesis, not the mitochondrial 8-mRPG signature; fibroblast assays do not establish organismal lifespan causality."
       ]
+    },
+    {
+      "source_id": "doi:10.1101/gr.220780.117",
+      "title": "Transcriptome evidence reveals enhanced autophagy-lysosomal function in centenarians",
+      "journal": "Genome Research",
+      "publication_year": 2018,
+      "doi": "10.1101/gr.220780.117",
+      "pmid": "30348926",
+      "pmcid": "PMC6211641",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC6211641/",
+      "claims": [
+        "The study analyzed peripheral-white-blood-cell transcriptomes from 76 centenarians, 54 centenarian offspring and 41 offspring spouses from Hainan.",
+        "Autophagy-lysosomal pathway expression was increased in centenarians; CTSB, ATP6V0C, ATG4D and WIPI1 overexpression promoted autophagy and delayed senescence in IMR-90 cells.",
+        "Overexpression of the Drosophila WIPI1 homolog Atg18a extended fly lifespan."
+      ],
+      "limitations": [
+        "The human evidence is observational and cross-sectional; cell and fly perturbations do not establish human longevity causality.",
+        "The cohort was female-heavy among centenarians and the authors noted this limits generalization.",
+        "This 171-person cohort is the same Hainan cohort represented by the 171 CRA000515 records; it is not an independent cohort replication."
+      ],
+      "data_accessions": {
+        "cra": "CRA000515 (171 records cross-referenced; individual age/group labels remain unavailable)"
+      },
+      "collection_date": "2018-10-23"
     }
   ],
   "evidence_audit_updated_at": "2026-11-16",
@@ -159,6 +183,17 @@
       "limitation": "Cytosolic ribosomal genes are not mitochondrial ribosomal genes; cell assays do not establish a whole-organism longevity mechanism.",
       "doi": "10.1126/sciadv.abf2017",
       "url": "https://pubmed.ncbi.nlm.nih.gov/35476452/"
+    },
+    {
+      "source_id": "doi:10.1101/gr.220780.117",
+      "pmid": "30348926",
+      "year": 2018,
+      "design": "171-person Hainan cohort transcriptomics plus IMR-90 cell and Drosophila perturbation experiments",
+      "finding": "Autophagy-lysosomal pathway expression was upregulated in centenarians; selected genes promoted autophagy and delayed cell senescence, while Drosophila Atg18a overexpression extended lifespan.",
+      "relevance": "Published human longevity-associated pathway with functional support in cell and fly models.",
+      "limitation": "No causal human intervention; the 171-person cohort overlaps the CRA000515 cohort and cannot be counted as an independent replication.",
+      "doi": "10.1101/gr.220780.117",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC6211641/"
     }
   ],
   "hypothesis_audit": [
@@ -219,6 +254,26 @@
         "Test within-cell-type expression using sorted cells or single-cell RNA-seq.",
         "Adjust for medication, BMI, diet, chronic disease and sequencing/library protocol where available."
       ]
+    },
+    {
+      "id": "H4",
+      "title": "Autophagy-lysosome maintenance in long-lived humans",
+      "statement": "A stronger autophagy-lysosomal maintenance program may contribute to cellular maintenance in some long-lived populations, potentially interacting with mitochondrial quality control and ribosome/translation regulation.",
+      "status": "published_prior_art_candidate_not_novel",
+      "confidence": "human_observational_plus_cell_fly_functional_support",
+      "supporting_prior_art": [
+        "doi:10.1101/gr.220780.117"
+      ],
+      "opposing_or_qualifying_evidence": [
+        "doi:10.1016/j.xcrm.2026.102767"
+      ],
+      "key_alternative": "The expression signal may reflect sex composition, blood-cell composition, immune state or survivor selection; the cell/fly perturbations may not translate to human lifespan.",
+      "falsifiable_tests": [
+        "Obtain the source-authenticated 171-sample age/cohort manifest and test the published autophagy gene set within the original Hainan cohort without inferring labels.",
+        "Test autophagic flux, lysosomal acidification and cargo clearance in relevant human cell models rather than relying only on transcript abundance.",
+        "Perturb CTSB, ATP6V0C, ATG4D and WIPI1 individually and in combination with rescue controls; measure senescence and mitochondrial quality-control phenotypes.",
+        "Test whether autophagy scores add predictive information beyond the 8-mRPG signature in independent, non-overlapping cohorts."
+      ]
     }
   ],
   "gates": [
@@ -226,6 +281,7 @@
     "The 2013 MRPS5/UPRmt intervention literature and 2026 human expression signature have different directions and biological contexts; reconcile rather than cherry-pick.",
     "The 2021 human muscle translation study concerns mitochondrial-genome-encoded OXPHOS translation, not the same nuclear-encoded mRPG transcript signature.",
     "The 2022 ETS1 and Mendelian-randomization findings concern broad/cytosolic translation machinery, not direct replication of the 8-mRPG signature.",
-    "No mechanism passes novelty or causality review until independent sample-level replication and functional perturbation/rescue are complete."
+    "No mechanism passes novelty or causality review until independent sample-level replication and functional perturbation/rescue are complete.",
+    "The 2018 autophagy-lysosome result uses the same 171-person Hainan/CRA000515 cohort; do not count it as independent cohort replication."
   ]
 }

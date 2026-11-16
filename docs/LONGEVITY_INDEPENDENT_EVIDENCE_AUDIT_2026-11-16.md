@@ -91,3 +91,16 @@ Source: [full article](https://pmc.ncbi.nlm.nih.gov/articles/PMC8583053/).
 **Expert review: PENDING.**
 
 The current defensible output is a set of testable research directions, not a newly discovered longevity mechanism.
+
+
+## Additional independent prior art: 2018 Hainan centenarian cohort and autophagy–lysosome function
+
+Xiao et al., *Genome Research* (2018), DOI [10.1101/gr.220780.117](https://doi.org/10.1101/gr.220780.117), analyzed peripheral-white-blood-cell transcriptomes from 171 Hainan longevity-family participants: 76 centenarians (mean age 102.2 ± 2.4 years), 54 centenarian offspring (63.2 ± 7.7 years), and 41 offspring spouses (59.9 ± 6.6 years). The paper reported increased autophagy–lysosomal pathway expression in centenarians, including CTSB, ATP6V0C, ATG4D and WIPI1. Overexpression of selected genes promoted autophagy and delayed senescence in cultured IMR-90 cells; overexpression of the Drosophila WIPI1 homolog Atg18a extended fly lifespan. The authors also reported higher serum BECN1 in centenarians and offspring than spouses.
+
+**Evidence grade:** human observational association plus cell/fly functional support. It is not proof that autophagy enhancement caused human longevity. The paper itself notes the female-heavy centenarian sample and that the findings may be particularly applicable to female centenarians.
+
+**Important cohort-independence correction:** this 171-person Hainan cohort is the same cohort whose 171 CRA000515 run/BioSample/CHHA records are now cross-referenced in ORACLE. The independent public BioSample sex labels reproduce the published aggregate counts (101 female, 70 male), but individual alias-to-CEN/F1/F1SP labels remain unavailable. Therefore, the 2018 autophagy result and any later reanalysis of those same 171 participants must not be counted as independent cohort replications of each other.
+
+This prior art changes the mission's novelty assessment: autophagy–lysosome enhancement is also an already-published longevity-associated direction. It remains a reasonable mechanistic arm to test alongside the 2026 mRPG expression signature, but ORACLE must not present either as a new discovery.
+
+Source: [Xiao et al. 2018 full-text record](https://pmc.ncbi.nlm.nih.gov/articles/PMC6211641/); [full article](https://genome.cshlp.org/content/28/11/1601).
