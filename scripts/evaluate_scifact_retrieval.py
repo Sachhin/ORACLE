@@ -15,8 +15,7 @@ if str(REPOSITORY_ROOT) not in sys.path:
     sys.path.insert(0, str(REPOSITORY_ROOT))
 
 from oracle.scifact_benchmark import _jsonl
-from scripts.predict_scifact_local import sha256
-from scripts.predict_scifact_open_corpus import BM25Index, retrieval_diagnostics
+from scripts.scifact_retrieval import BM25Index, retrieval_diagnostics, sha256
 
 
 def evaluate_retrieval(claims_path: str, corpus_path: str, *, top_k: int = 20) -> dict:
