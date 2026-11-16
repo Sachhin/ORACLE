@@ -90,3 +90,14 @@ References:
 - Example BioSample record CHHA3 / SAMC016716: https://ngdc.cncb.ac.cn/biosample/browse/SAMC016716
 - Example BioSample record CHHA171 / SAMC016887: https://ngdc.cncb.ac.cn/biosample/browse/SAMC016887
 - Mendeley expression-matrix dataset: https://data.mendeley.com/datasets/fpf4y72kfz/1
+
+
+## Pull-request audit artifacts
+
+The metadata-only acquisition runs on pull requests as a reproducibility check.
+Its output artifact is now uploaded for pull_request, push, and manual
+workflow_dispatch events alike, so the raw response hashes, extracted workbook
+sheets, 171-row run/BioSample manifest and cohort audit can be inspected
+before merge. The acquisition job is not considered cohort validation merely
+because it exits successfully; missing group/age annotations remain a
+manual-provenance blocker.
