@@ -41,3 +41,16 @@ Official references:
 - Pinned GGUF repository and revision: https://huggingface.co/ggml-org/Qwen3-1.7B-GGUF/tree/daeb8e2d528a760970442092f6bf1e55c3b659eb
 - Qwen3 llama.cpp instructions: https://github.com/QwenLM/Qwen3/blob/main/docs/source/run_locally/llama.cpp.md
 - SciFact dataset and split definitions: https://huggingface.co/datasets/allenai/scifact
+
+
+### Runtime-bounded prompt configuration (2026-11-16)
+
+The full CPU benchmark uses BM25 top-20 for retrieval diagnostics, but exposes
+only the top 3 documents to Qwen3. Each document's abstract is capped at 1,600
+characters and generated output is capped at 192 tokens. This keeps prompt
+size bounded below the 8,192-token llama.cpp context window and makes a
+300-claim run more likely to finish inside the 360-minute Actions limit.
+The report records both broad retrieval metrics and the smaller model-context
+evidence metrics. The narrower context is part of the benchmark configuration
+and must be frozen alongside its results; accuracy must be interpreted at
+this setting, not as a model-independent score.
