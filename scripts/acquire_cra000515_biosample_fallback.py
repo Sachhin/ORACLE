@@ -170,7 +170,15 @@ def _biosample_fields(accession: str, payload: bytes, source: str) -> dict[str, 
         attrs = obj.get("sampleAttribute") or obj.get("sample_attribute") or {}
         if not isinstance(attrs, dict):
             attrs = {}
-        record["sample_title"] = str(obj.get("name") or obj.get("title") or "")
+        sample = attrs.get("sample") or obj.get("sample") or {}
+        if not isinstance(sample, dict):
+            sample = {}
+        record["sample_title"] = str(
+            obj.get("name") or obj.get("title") or sample.get("title") or sample.get("name") or ""
+        )
+        record["sample_alias"] = str(
+            obj.get("alias") or sample.get("alias") or attrs.get("sampleAlias") or ""
+        )
         key_map = {
             "age": ("age",), "age_unit": ("ageUnit", "age_unit"),
             "sex": ("sex",), "tissue": ("tissue",),
@@ -186,7 +194,6 @@ def _biosample_fields(accession: str, payload: bytes, source: str) -> dict[str, 
         submitter = obj.get("submitter") or obj.get("submitterInfo") or {}
         if isinstance(submitter, dict):
             record["submitter"] = str(submitter.get("name") or submitter.get("submitterName") or "")
-        sample = attrs.get("sample") or {}
         if isinstance(sample, dict):
             record["project_accession"] = str(sample.get("prjAccession") or "")
     else:
@@ -223,7 +230,16 @@ def _biosample_fields(accession: str, payload: bytes, source: str) -> dict[str, 
 def _fetch_biosample_record(accession: str, client: Any, out: Path, headers: dict[str, str]) -> dict[str, Any]:
     api_url = BIOSAMPLE_API_URL.format(accession=accession)
     page_url = BIOSAMPLE_PAGE_URL.format(accession=accession)
+    merged = {
+        "biosample_accession": accession, "metadata_source": "",
+        "sample_alias": "", "sample_title": "", "age": "", "age_unit": "",
+        "sex": "", "tissue": "", "disease": "", "health_state": "",
+        "phenotype": "", "population": "", "biomaterial_provider": "",
+        "submitter": "", "project_accession": "",
+    }
+    source_refs: list[dict[str, str]] = []
     errors = []
+    total_bytes = 0
     for source, url in (("cncb_biosample_api", api_url), ("cncb_biosample_page", page_url)):
         try:
             if source.endswith("_api"):
@@ -235,35 +251,44 @@ def _fetch_biosample_record(accession: str, client: Any, out: Path, headers: dic
                 if not payload:
                     raise RuntimeError("Empty BioSample page response")
             fields = _biosample_fields(accession, payload, source)
-            # If the API returns an empty shell, try the human-readable source page.
-            if source.endswith("_api") and not any(fields.get(k) for k in ("sample_title", "age", "sex", "tissue")):
-                errors.append("API response contained no usable sample attributes")
-                continue
             suffix = "json" if source.endswith("_api") else "html"
             raw_path = out / "biosamples" / f"{accession}.{suffix}"
             raw_path.parent.mkdir(parents=True, exist_ok=True)
             raw_path.write_bytes(payload)
-            fields.update({
-                "metadata_fetch_status": "retrieved",
-                "source_url": url,
-                "source_sha256": sha256_bytes(payload),
-                "http_payload_bytes": len(payload),
-            })
-            return fields
+            digest = sha256_bytes(payload)
+            source_refs.append({"source": source, "url": url, "sha256": digest})
+            total_bytes += len(payload)
+            for key, value in fields.items():
+                if key in {"metadata_source", "biosample_accession"}:
+                    continue
+                if value not in (None, "") and merged.get(key) in (None, ""):
+                    merged[key] = str(value)
+            # The public API is the primary source. Fetch the human-readable
+            # record as a second source when any key cohort metadata is absent.
+            if source.endswith("_api") and all(merged.get(key) for key in ("age", "sex", "tissue")):
+                break
         except Exception as exc:
             errors.append(f"{source}: {type(exc).__name__}: {exc}")
-    return {
-        "biosample_accession": accession,
-        "metadata_source": "unavailable",
-        "metadata_fetch_status": "failed",
-        "source_url": page_url,
-        "source_sha256": "",
-        "error": " | ".join(errors),
-        "sample_alias": "", "sample_title": "", "age": "", "age_unit": "",
-        "sex": "", "tissue": "", "disease": "", "health_state": "",
-        "phenotype": "", "population": "", "biomaterial_provider": "",
-        "submitter": "", "project_accession": "",
-    }
+
+    if not source_refs:
+        return {
+            **merged, "metadata_source": "unavailable",
+            "metadata_fetch_status": "failed", "source_url": page_url,
+            "source_sha256": "", "source_references": [],
+            "error": " | ".join(errors),
+        }
+    merged.update({
+        "metadata_source": "+".join(item["source"] for item in source_refs),
+        "metadata_fetch_status": "retrieved",
+        "source_url": page_url if any(x["source"] == "cncb_biosample_page" for x in source_refs) else api_url,
+        "source_sha256": sha256_bytes(json.dumps(source_refs, sort_keys=True).encode("utf-8")),
+        "source_references": source_refs,
+        "api_source_sha256": next((x["sha256"] for x in source_refs if x["source"] == "cncb_biosample_api"), ""),
+        "page_source_sha256": next((x["sha256"] for x in source_refs if x["source"] == "cncb_biosample_page"), ""),
+        "http_payload_bytes": total_bytes,
+        "source_fetch_warnings": errors,
+    })
+    return merged
 
 
 def acquire_metadata(

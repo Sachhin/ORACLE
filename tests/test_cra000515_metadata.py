@@ -45,6 +45,16 @@ class FakeSession:
                 }
             }
             return FakeResponse(json.dumps(payload).encode())
+        if "/biosample/browse/" in url:
+            html = (
+                "<html><table>"
+                "<tr><td>Sample title</td><td>RNA-seq of human peripheral white blood cells; CHHA67</td></tr>"
+                "<tr><td>Age</td><td>101</td></tr>"
+                "<tr><td>Sex</td><td>female</td></tr>"
+                "<tr><td>Tissue</td><td>peripheral blood</td></tr>"
+                "</table></html>"
+            )
+            return FakeResponse(html.encode())
         raise AssertionError("Unexpected source URL: " + url)
 
 
@@ -87,6 +97,7 @@ class CRAAcquisitionTests(unittest.TestCase):
             self.assertEqual(manifest[0]["raw_group_label"], "Centenarian")
             self.assertEqual(manifest[0]["sex"], "female")
             self.assertEqual(manifest[0]["tissue"], "peripheral blood")
+            self.assertEqual(manifest[0]["age"], "101")
             self.assertEqual(manifest[0]["biosample_metadata_status"], "retrieved")
             self.assertGreaterEqual(len(session.calls), 4)
             audit = json.loads((Path(tmp) / "CRA000515.metadata_audit.json").read_text())
