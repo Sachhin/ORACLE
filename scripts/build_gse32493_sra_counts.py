@@ -180,6 +180,9 @@ def main() -> None:
             "The cohort contains only three centenarians and three controls, and samples are EBV-transformed B-cell lines.",
         ],
     }
+    ena_manifest_path = args.outdir / "ena_download_manifest.json"
+    if ena_manifest_path.exists():
+        report["ena_source_manifest"] = json.loads(ena_manifest_path.read_text(encoding="utf-8"))
     report_path = args.outdir / "raw_read_analysis_manifest.json"
     report_path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     print(json.dumps({"features": len(features), "samples": len(sample_qc), "report": str(report_path)}, indent=2))
