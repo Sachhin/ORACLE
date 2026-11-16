@@ -18,7 +18,7 @@ on:
       top_k:
         description: BM25 candidate abstracts per claim
         required: true
-        default: "5"
+        default: "20"
         type: string
   pull_request:
     branches: [main]
@@ -34,16 +34,16 @@ permissions:
 
 jobs:
   qwen3-full-dev:
-    name: Qwen3-0.6B local inference on all labelled SciFact dev claims
+    name: Qwen3-1.7B local inference on all labelled SciFact dev claims
     runs-on: ubuntu-latest
     timeout-minutes: 360
     env:
-      MODEL_ALIAS: Qwen3-0.6B
-      TOP_K: ${{ github.event_name == 'workflow_dispatch' && inputs.top_k || '5' }}
-      HF_REPO: Qwen/Qwen3-0.6B-GGUF
-      HF_REVISION: 8e42d41f70cb6c571f58c3f31bd9287b372d97cc
-      HF_FILE: Qwen3-0.6B-Q4_K_M.gguf
-      MODEL_SHA256: b0638f08417a2d3c8652760462eb5407c6e30173cf9608ad0820757a281eea0e
+      MODEL_ALIAS: Qwen3-1.7B
+      TOP_K: ${{ github.event_name == 'workflow_dispatch' && inputs.top_k || '20' }}
+      HF_REPO: Qwen/Qwen3-1.7B-GGUF
+      HF_REVISION: daeb8e2d528a760970442092f6bf1e55c3b659eb
+      HF_FILE: Qwen3-1.7B-Q4_K_M.gguf
+      MODEL_SHA256: d2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5
     steps:
       - uses: actions/checkout@v4
 
@@ -132,7 +132,7 @@ jobs:
             --base-url http://127.0.0.1:8000/v1 \
             --model "$MODEL_ALIAS" \
             --top-k "$TOP_K" \
-            --max-tokens 384 \
+            --max-tokens 512 \
             --timeout 180 \
             --max-claims 5 \
             --max-invalid-responses 30 \
@@ -168,12 +168,12 @@ jobs:
           python scripts/predict_scifact_open_corpus.py \
             --claims data/scifact/benchmark-input/claims_dev.jsonl \
             --corpus data/scifact/benchmark-input/corpus.jsonl \
-            --output data/scifact/qwen3_0.6b_open_corpus_dev_predictions.jsonl \
-            --report data/scifact/qwen3_0.6b_open_corpus_dev_report.json \
+            --output data/scifact/qwen3_1.7b_open_corpus_dev_predictions.jsonl \
+            --report data/scifact/qwen3_1.7b_open_corpus_dev_report.json \
             --base-url http://127.0.0.1:8000/v1 \
             --model "$MODEL_ALIAS" \
             --top-k "$TOP_K" \
-            --max-tokens 384 \
+            --max-tokens 512 \
             --timeout 180 \
             --max-invalid-responses 30 \
             --max-model-attempts 3
@@ -184,8 +184,8 @@ jobs:
           python - <<'PY'
           import json, os
           from pathlib import Path
-          report_path = Path("data/scifact/qwen3_0.6b_open_corpus_dev_report.json")
-          summary = ["## Qwen3-0.6B SciFact open-corpus dev benchmark"]
+          report_path = Path("data/scifact/qwen3_1.7b_open_corpus_dev_report.json")
+          summary = ["## Qwen3-1.7B SciFact open-corpus dev benchmark"]
           if report_path.exists():
               report = json.loads(report_path.read_text())
               run = report.get("prediction_run", {})
@@ -216,11 +216,11 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: oracle-scifact-qwen3-0.6b-open-corpus-dev
+          name: oracle-scifact-qwen3-1.7b-open-corpus-dev
           path: |
-            data/scifact/qwen3_0.6b_open_corpus_dev_predictions.jsonl
-            data/scifact/qwen3_0.6b_open_corpus_dev_report.json
-            data/scifact/qwen3_0.6b_open_corpus_dev_predictions.jsonl.errors.jsonl
+            data/scifact/qwen3_1.7b_open_corpus_dev_predictions.jsonl
+            data/scifact/qwen3_1.7b_open_corpus_dev_report.json
+            data/scifact/qwen3_1.7b_open_corpus_dev_predictions.jsonl.errors.jsonl
             data/scifact/qwen3_preflight_predictions.jsonl
             data/scifact/qwen3_preflight_report.json
             data/scifact/qwen3_preflight_predictions.jsonl.errors.jsonl
