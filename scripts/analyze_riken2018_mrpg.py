@@ -145,14 +145,14 @@ def main() -> None:
     counts = np.vstack(donor_counts).T
     counts_df = pd.DataFrame(counts, index=gene_names, columns=donor_meta["patient"].tolist())
     counts_df.index.name = "gene_symbol"
-    counts_df.to_csv(out / "pseudobulk_counts.tsv", sep="\\t")
-    donor_meta.to_csv(out / "donor_metadata.tsv", sep="\\t", index=False)
+    counts_df.to_csv(out / "pseudobulk_counts.tsv", sep="\t")
+    donor_meta.to_csv(out / "donor_metadata.tsv", sep="\t", index=False)
 
     counts_firstrun = np.vstack(donor_counts_firstrun).T
     counts_firstrun_df = pd.DataFrame(counts_firstrun, index=gene_names, columns=donor_meta_firstrun["patient"].tolist())
     counts_firstrun_df.index.name = "gene_symbol"
-    counts_firstrun_df.to_csv(out / "pseudobulk_counts_firstrun.tsv", sep="\\t")
-    donor_meta_firstrun.to_csv(out / "donor_metadata_firstrun.tsv", sep="\\t", index=False)
+    counts_firstrun_df.to_csv(out / "pseudobulk_counts_firstrun.tsv", sep="\t")
+    donor_meta_firstrun.to_csv(out / "donor_metadata_firstrun.tsv", sep="\t", index=False)
 
     report = {
         "status": "PSEUDOBULK_COUNTS_BUILT",
