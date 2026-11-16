@@ -27,21 +27,57 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p reference artifacts
-          curl --fail --location --retry 1 --retry-all-errors --connect-timeout 20 --max-time 120 \
-            --user-agent "Mozilla/5.0 ORACLE reproducible research workflow" \
-            --header "Accept: text/plain,*/*" \
+          curl --fail --location --retry 2 --retry-all-errors --connect-timeout 20 --max-time 120 \
             https://www.mirbase.org/download/CURRENT/mature.fa \
-            -o reference/mature.fa
-          first_line=$(head -n 1 reference/mature.fa)
-          test "${first_line#>}" != "${first_line}"
-          total_count=$(grep -c '^>' reference/mature.fa)
-          test "$total_count" -eq 74463
+            -o reference/mature.fa.download
+          python - <<'PY'
+          from html.parser import HTMLParser
+          from pathlib import Path
+          import re
+
+          class Text(HTMLParser):
+              def __init__(self):
+                  super().__init__(convert_charrefs=True)
+                  self.parts = []
+              def handle_starttag(self, tag, attrs):
+                  if tag in {"br", "p", "div", "li"}:
+                      self.parts.append("\\n")
+              def handle_endtag(self, tag):
+                  if tag in {"p", "div", "li"}:
+                      self.parts.append("\\n")
+              def handle_data(self, data):
+                  self.parts.append(data)
+
+          raw = Path("reference/mature.fa.download").read_text(encoding="utf-8", errors="replace")
+          parser = Text()
+          parser.feed(raw)
+          lines = "".join(parser.parts).splitlines()
+          records = []
+          header = None
+          sequence = []
+          for line in lines:
+              line = line.strip()
+              if line.startswith(">"):
+                  if header and sequence:
+                      records.append((header, "".join(sequence)))
+                  header, sequence = line, []
+              elif header and re.fullmatch(r"[ACGTUNacgtun]+", line):
+                  sequence.append(line)
+          if header and sequence:
+              records.append((header, "".join(sequence)))
+          if len(records) != 74463:
+              raise SystemExit(f"Expected exactly 74,463 miRBase 23.1 mature records; parsed {len(records)}")
+          Path("reference/mature.fa").write_text(
+              "".join(f"{h}\\n{s}\\n" for h, s in records), encoding="utf-8"
+          )
+          print(f"Verified miRBase 23.1: {len(records)} mature records")
+          PY
           awk '/^>hsa/{print; if(getline) print}' reference/mature.fa > reference/hsa_mature.rna.fa
           sed '/^>/!s/U/T/g' reference/hsa_mature.rna.fa > reference/hsa_mature.fa
           human_count=$(grep -c '^>hsa' reference/hsa_mature.fa || true)
           test "$human_count" -gt 100
           sha256sum reference/mature.fa reference/hsa_mature.fa | tee artifacts/miRBase_23.1.sha256
-          echo "Verified 74,463 mature miRNA entries; human entries: $human_count"
+          echo "Human mature-miRNA entries: $human_count"
       - uses: actions/upload-artifact@v4
         with:
           name: oracle-gse32493-mirbase-reference-check
