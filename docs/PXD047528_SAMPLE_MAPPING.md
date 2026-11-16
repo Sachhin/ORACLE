@@ -104,3 +104,28 @@ The full file manifest and SEARCH report are preserved in docs/PXD047528_PRIDE_F
 ## Independent file-index discrepancy
 
 OmicsDI's public PXD047528 page displays 32 total file entries, whereas the live PRIDE Archive v3 files/all API returned 31 records (30 RAW + 1 SEARCH). ORACLE now probes the paginated PRIDE endpoint as a second check. The former statement “32 raw files” was incorrect: 32 is the external index's total entry count, not a verified raw-file count. The one-record difference remains under investigation.
+
+
+## Clinical-paper reference cohort (13 reported participants)
+
+Ahmed et al. (2022) Table 1 reports 13 participants: 8 virally suppressed people with HIV (3 cognitively normal, 3 MND, 2 HAD) and 5 herpes CNS infection participants (HSV-1 n=1, HSV-2 n=2, VZV n=2). The cohort is 11 male and 2 female; median age 53 years (IQR 39–64). The published table provides group, age and sex but no accession IDs that can be joined to the 15 processed aliases.
+
+| Clinical group | Age | Sex |
+|---|---:|---|
+| Cognitively normal PWH | 51 | M |
+| Cognitively normal PWH | 52 | M |
+| Cognitively normal PWH | 29 | M |
+| MND | 53 | M |
+| MND | 67 | M |
+| MND | 64 | M |
+| HAD | 78 | M |
+| HAD | 61 | M |
+| HSV-1 | 25 | M |
+| HSV-2 | 39 | F |
+| HSV-2 | 54 | F |
+| VZV | 85 | M |
+| VZV | 33 | M |
+
+The PRIDE project was announced on 2024-03-05 and its metadata was updated on 2024-10-22, after the 2022 article. PEPerMINT reports 15 samples and 15 biological samples for PXD047528. The 15 raw DDA/DIA acquisition pairs and 15 HIVPCA labels in the SEARCH report are not linked to the 13 clinical-paper rows. The two-count difference could reflect additional samples or a different data scope, but the public evidence does not resolve it.
+
+Source: Ahmed et al. 2022, Table 1, DOI 10.1007/s13365-022-01077-0; PRIDE/ProteomeXchange project PXD047528; PEPerMINT Table 2.
