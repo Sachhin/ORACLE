@@ -1,0 +1,46 @@
+{
+  "mission_id": "human-longevity",
+  "updated_at": "2026-11-16",
+  "purpose": "Prior-art seed for the next longevity mission rerun. This record is a source pointer and claim map, not a validated ORACLE finding.",
+  "novelty_policy": "The 8-mRPG signature and its association with transcriptomic aging are published prior art. ORACLE must not claim this signature itself as a novel discovery.",
+  "sources": [
+    {
+      "source_id": "doi:10.1016/j.xcrm.2026.102767",
+      "title": "Preserved mitochondrial ribosomal protein gene expression marks a youthful transcriptional state in Chinese nonagenarians and centenarians",
+      "journal": "Cell Reports Medicine",
+      "publication_date": "2026-05-19",
+      "doi": "10.1016/j.xcrm.2026.102767",
+      "pmid": "42030936",
+      "pmcid": "PMC13198318",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC13198318/",
+      "claims": [
+        "The study analyzed 1,751 individuals: 811 long-lived individuals aged 90-113 and 940 younger controls aged 10-89.",
+        "Eight mitochondrial ribosomal protein genes showed upward deviation from the typical age-related decline trajectory in long-lived individuals.",
+        "The 8-mRPG expression score was associated with lower transcriptomic aging and senescence-related scores.",
+        "The authors report replication of the signature pattern in additional longevity cohorts, including the Leiden Longevity Study."
+      ],
+      "limitations": [
+        "The study is observational and cross-sectional; it does not establish that mRPG expression causes longevity.",
+        "The upstream regulatory processes maintaining mRPG expression remain unknown.",
+        "The authors call for functional experiments and note residual confounding may remain."
+      ],
+      "data_accessions": {
+        "cra": "CRA000515 (171 samples)",
+        "hra_previous": "HRA000656 (271 samples)",
+        "hra_new": [
+          "HRA000721",
+          "HRA015371",
+          "HRA015372"
+        ],
+        "mendeley_doi": "10.17632/fpf4y72kfz.1"
+      },
+      "next_checks": [
+        "Obtain sample-level metadata and mapping for CRA000515 aliases.",
+        "Verify the integrated expression matrix sample annotations and cohort overlap before treating datasets as independent.",
+        "Reproduce the 8-mRPG signature with the published code and exact cohort splits.",
+        "Test robustness to leukocyte composition, sex, region, sequencing batch, and age.",
+        "Generate and experimentally test upstream-regulator hypotheses; do not infer causality from expression associations."
+      ]
+    }
+  ]
+}
