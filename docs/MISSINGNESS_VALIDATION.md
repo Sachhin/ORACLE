@@ -170,6 +170,26 @@ The PEPerMINT article also describes a HeLa/E. coli mixture dataset
 downstream differential-abundance ground-truth check but is not a substitute
 for the real-missing-cell HIV benchmark.
 
+To validate the completed crosswalk before any outcome analysis, fill every
+provenance field in `sample_map_template.tsv` and run:
+
+```bash
+python scripts/validate_pxd047528_clinical_manifest.py \
+  --manifest validation/pxd047528/sample_map_template.tsv \
+  --report validation/pxd047528/clinical_crosswalk_audit.json
+```
+
+The validator requires exactly 15 aliases mapping to 13 distinct patient IDs,
+8 HIV and 5 HERPES patients, and the source-reported HIV HAND split (3 MND,
+2 HAD, 3 cognitively normal). Every row must cite raw DDA/DIA file identifiers,
+a source URL, a source-document SHA-256, a provenance status, and a rationale
+for the alias-to-patient relationship. Repeated aliases for one patient must
+identify one primary row and explicitly document the additional acquisition.
+A successful software check does not independently authenticate the source;
+a reviewer must inspect the submitter/repository record. Do not fill this
+template from filenames, sample order, inferred clinical similarity, or
+published aggregate counts.
+
 The evaluator does not download or infer labels. It rejects mismatched sample
 or feature identifiers and records SHA-256 hashes for every input. DIA is an
 orthogonal reference, not a perfect physical truth; outcome association is not
