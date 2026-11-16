@@ -45,8 +45,10 @@ KNN modestly improves the reported reconstruction metrics over the row-median ba
 2. Only 8,859 of the 13,043 DDA-missing cells had a DIA value and entered the scored set. Coverage is 67.92%, so results do not describe every missing cell.
 3. Per-feature additive offset alignment is an assumption; it does not prove the assays are biologically interchangeable.
 4. The benchmark is reconstruction-only. No phenotype or clinical outcome column was supplied.
-5. The 15 processed aliases remain unmapped to the 13 clinical participants reported in Ahmed et al. (2022). The PEPerMINT paper independently lists 15 samples and 15 biological samples, so the two additional aliases must not be assumed to be technical repeats.
-6. The sample-map template is deliberately blank. No patient identity, HIV/herpes label, or HAND status was inferred.
+5. The live PRIDE API inventory is 30 RAW files (15 DDA + 15 DIA acquisitions) plus one SEARCH report, 31 files total. The 15 raw DDA/DIA pairs share suffixes but those suffixes do not map to the processed 1_Slot1 through 15_Slot1 aliases.
+6. The downloaded 113,569-byte SEARCH report contains 15 HIVPCA1–HIVPCA15 protein-group quantity columns, but no authenticated crosswalk to the processed aliases, raw suffixes, or clinical participants.
+7. The 15 processed aliases remain unmapped to the 13 clinical participants reported in Ahmed et al. (2022). The PEPerMINT paper lists 15 samples and 15 biological samples, so the discrepancy remains unresolved.
+8. The sample-map template is deliberately blank. No patient identity, HIV/herpes label, or HAND status was inferred.
 
 ## Clinical provenance gate
 
