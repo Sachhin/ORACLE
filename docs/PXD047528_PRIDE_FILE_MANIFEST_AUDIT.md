@@ -46,3 +46,8 @@ The report therefore supplies a useful additional technical inventory but does n
 - Mapping to 13 clinical participants and HIV/herpes/HAND labels: **BLOCKED**
 
 A source-authenticated submitter manifest remains required. No clinical labels are inferred from raw suffixes, file order, HIVPCA labels, or processed-table column order.
+
+
+## Independent file-index count discrepancy
+
+The OmicsDI PXD047528 page currently displays 1–5 of 32 file entries, while the live PRIDE Archive v3 files/all endpoint returned 31 records (30 RAW + 1 SEARCH) on 2026-11-16. This is a one-record discrepancy between an external index and the live PRIDE API. The PRIDE audit workflow now also queries the paginated PRIDE endpoint to compare both API representations. Until that cross-check is complete, 31 is the observed files/all API count, not a claim that every historical mirror has exactly 31 entries. The older phrase “32 raw files” is unsupported: the external index shows 32 total entries, not 32 raw files.
