@@ -57,7 +57,43 @@ jobs:
           grep -m 1 'Release 23.1' reference/README
           curl --fail --location --retry 5 --retry-all-errors --connect-timeout 30 --max-time 600 \
             https://www.mirbase.org/download/CURRENT/mature.fa \
-            -o reference/mature.fa
+            -o reference/mature.fa.download
+          python - <<'PY'
+          from html.parser import HTMLParser
+          from pathlib import Path
+          import re
+
+          class Text(HTMLParser):
+              def __init__(self):
+                  super().__init__(convert_charrefs=True)
+                  self.parts = []
+              def handle_data(self, data):
+                  self.parts.append(data)
+
+          raw = Path("reference/mature.fa.download").read_text(encoding="utf-8", errors="replace")
+          parser = Text()
+          parser.feed(raw)
+          lines = "".join(parser.parts).splitlines()
+          records = []
+          header = None
+          sequence = []
+          for line in lines:
+              line = line.strip()
+              if line.startswith(">"):
+                  if header and sequence:
+                      records.append((header, "".join(sequence)))
+                  header, sequence = line, []
+              elif header and re.fullmatch(r"[ACGTUNacgtun]+", line):
+                  sequence.append(line)
+          if header and sequence:
+              records.append((header, "".join(sequence)))
+          if len(records) < 1000:
+              raise SystemExit(f"Expected a full miRBase FASTA; parsed only {len(records)} records")
+          Path("reference/mature.fa").write_text(
+              "".join(f"{h}\\n{s}\\n" for h, s in records), encoding="utf-8"
+          )
+          print(f"Parsed {len(records)} mature-miRNA records from miRBase download page")
+          PY
           grep -m 3 '^>hsa' reference/mature.fa
           awk '/^>hsa/{print; if(getline) print}' reference/mature.fa > reference/hsa_mature.rna.fa
           sed '/^>/!s/U/T/g' reference/hsa_mature.rna.fa > reference/hsa_mature.fa
