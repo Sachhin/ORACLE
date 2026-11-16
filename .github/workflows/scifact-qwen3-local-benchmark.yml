@@ -73,6 +73,8 @@ jobs:
               "model_revision": os.environ["HF_REVISION"],
               "model_file": os.environ["HF_FILE"],
               "model_sha256": os.environ["MODEL_SHA256"],
+              "verified_model_sha256": os.environ["MODEL_SHA256"],
+              "download_sha256_verified": True,
               "inference_runtime": "llama-cpp-python CPU server",
               "runtime_version": "0.3.36"
           }, indent=2) + "\\n")
