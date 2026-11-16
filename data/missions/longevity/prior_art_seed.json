@@ -262,7 +262,9 @@
       "status": "published_prior_art_candidate_not_novel",
       "confidence": "human_observational_plus_cell_fly_functional_support",
       "supporting_prior_art": [
-        "doi:10.1101/gr.220780.117"
+        "doi:10.1101/gr.220780.117",
+        "Supplemental Table S5 (38 autophagy-lysosomal SDEGs)",
+        "Supplemental Table S6 (11 potential regulators)"
       ],
       "opposing_or_qualifying_evidence": [
         "doi:10.1016/j.xcrm.2026.102767"
@@ -273,7 +275,64 @@
         "Test autophagic flux, lysosomal acidification and cargo clearance in relevant human cell models rather than relying only on transcript abundance.",
         "Perturb CTSB, ATP6V0C, ATG4D and WIPI1 individually and in combination with rescue controls; measure senescence and mitochondrial quality-control phenotypes.",
         "Test whether autophagy scores add predictive information beyond the 8-mRPG signature in independent, non-overlapping cohorts."
-      ]
+      ],
+      "known_gene_panel": [
+        "CTSD",
+        "GABARAPL1",
+        "CD63",
+        "CLN3",
+        "CTSB",
+        "ATP6AP1",
+        "HEXB",
+        "LIPA",
+        "MAN2B1",
+        "AP1S1",
+        "PSAP",
+        "GM2A",
+        "LAPTM4A",
+        "WIPI1",
+        "GLB1",
+        "ATG10",
+        "ATG4D",
+        "GUSB",
+        "CTSC",
+        "HGSNAT",
+        "CLTA",
+        "CD68",
+        "NAGLU",
+        "AP1B1",
+        "GAA",
+        "ARSB",
+        "ATP6V0C",
+        "HEXA",
+        "CTSW",
+        "CTSH",
+        "ABCA2",
+        "NAGA",
+        "PLA2G15",
+        "AP1S2",
+        "ATG101",
+        "ACP2",
+        "SCARB2",
+        "TPP1"
+      ],
+      "potential_regulators": [
+        "FOXO1",
+        "INSR",
+        "IGF1R",
+        "IGFBP3",
+        "RHEB",
+        "AKT1",
+        "DDIT4",
+        "RPS6KB1",
+        "IKBKB",
+        "PIK3R1",
+        "IRS1"
+      ],
+      "qualifying_evidence": [
+        "Supplemental Table S7 reports no p<0.05 age-expression correlation for the 38 upregulated autophagy-lysosomal genes in the middle-aged F1/F1SP subset; this is not evidence for a monotonic age trend in that subgroup."
+      ],
+      "sample_level_data_blocker": "Supplemental File S1 references samples_information.csv with sample IDs, condition, read_type and library_type; that CSV is absent from the public supplement archive."
     }
   ],
   "gates": [

@@ -104,3 +104,12 @@ Xiao et al., *Genome Research* (2018), DOI [10.1101/gr.220780.117](https://doi.o
 This prior art changes the mission's novelty assessment: autophagy–lysosome enhancement is also an already-published longevity-associated direction. It remains a reasonable mechanistic arm to test alongside the 2026 mRPG expression signature, but ORACLE must not present either as a new discovery.
 
 Source: [Xiao et al. 2018 full-text record](https://pmc.ncbi.nlm.nih.gov/articles/PMC6211641/); [full article](https://genome.cshlp.org/content/28/11/1601).
+
+
+### 2018 supplementary-table detail (newly retrieved)
+
+The full Europe PMC supplementary archive is now retrieved and checksummed. Supplemental Table S5 lists 38 autophagy–lysosomal SDEGs, including CTSD, GABARAPL1, CD63, CLN3, CTSB, ATP6AP1, HEXB, LIPA, MAN2B1, AP1S1, PSAP, GM2A, LAPTM4A, WIPI1, GLB1, ATG10, ATG4D, GUSB, CTSC, HGSNAT, CLTA, CD68, NAGLU, AP1B1, GAA, ARSB, ATP6V0C, HEXA, CTSW, CTSH, ABCA2, NAGA, PLA2G15, AP1S2, ATG101, ACP2, SCARB2 and TPP1. Supplemental Table S6 lists 11 potential autophagy regulators: FOXO1, INSR, IGF1R, IGFBP3, RHEB, AKT1, DDIT4, RPS6KB1, IKBKB, PIK3R1 and IRS1.
+
+Supplemental Table S7 reports age-expression correlations for 38 upregulated autophagy–lysosomal genes in the middle-aged F1/F1SP groups; none of the listed p-values is below 0.05. This does not negate the centenarian-versus-spouse group association, but it does not support a simple monotonic age trend across the middle-aged offspring/spouse subset.
+
+Crucially, Supplemental File S1 references a missing samples_information.csv containing the sample IDs/row names, condition (CEN/F1/F1SP), read_type and library_type. That CSV is not in the public supplement archive. Thus the exact 171-sample individual crosswalk remains unavailable even after the supplement retrieval.

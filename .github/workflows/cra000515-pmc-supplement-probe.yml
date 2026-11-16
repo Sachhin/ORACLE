@@ -1,0 +1,30 @@
+name: ORACLE CRA000515 2018 cohort PMC supplement probe
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/cra000515-pmc-supplement-probe.yml"
+      - "scripts/probe_cra000515_pmc_supplements.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe-supplement:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Retrieve PMC Open Access package and supplement manifest
+        run: python scripts/probe_cra000515_pmc_supplements.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: oracle-cra000515-pmc-supplement-probe
+          path: artifacts/cra000515-pmc-supplements/
+          if-no-files-found: error
+          retention-days: 90
