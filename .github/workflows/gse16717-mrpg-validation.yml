@@ -23,6 +23,8 @@ jobs:
           python-version: "3.12"
       - name: Install numerical analysis packages
         run: python -m pip install --upgrade numpy scipy
+      - name: Test complete-panel scoring and missing-gene guard
+        run: python -m unittest discover -s tests -p 'test_gse16717_mrpg_signature.py' -v
       - name: Reproduce published 8-mRPG and 7-cRPG signatures in GSE16717
         run: python scripts/analyze_gse16717_mrpg_signature.py
       - uses: actions/upload-artifact@v4
