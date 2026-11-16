@@ -61,63 +61,22 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p reference
-          curl --fail --location --retry 4 --connect-timeout 20 --max-time 300 \
-            https://www.mirbase.org/download/CURRENT/README/ \
-            -o reference/README
-          grep -m 1 'Release 23.1' reference/README
           curl --fail --location --retry 5 --retry-all-errors --connect-timeout 30 --max-time 600 \
+            --user-agent "Mozilla/5.0 ORACLE reproducible research workflow" \
+            --header "Accept: text/plain,*/*" \
             https://www.mirbase.org/download/CURRENT/mature.fa \
-            -o reference/mature.fa.download
-          python - <<'PY'
-          from html.parser import HTMLParser
-          from pathlib import Path
-          import re
-
-          class Text(HTMLParser):
-              def __init__(self):
-                  super().__init__(convert_charrefs=True)
-                  self.parts = []
-              def handle_starttag(self, tag, attrs):
-                  if tag in {"br", "p", "div", "li"}:
-                      self.parts.append("\n")
-              def handle_endtag(self, tag):
-                  if tag in {"p", "div", "li"}:
-                      self.parts.append("\n")
-              def handle_data(self, data):
-                  self.parts.append(data)
-
-          raw = Path("reference/mature.fa.download").read_text(encoding="utf-8", errors="replace")
-          parser = Text()
-          parser.feed(raw)
-          lines = "".join(parser.parts).splitlines()
-          records = []
-          header = None
-          sequence = []
-          for line in lines:
-              line = line.strip()
-              if line.startswith(">"):
-                  if header and sequence:
-                      records.append((header, "".join(sequence)))
-                  header, sequence = line, []
-              elif header and re.fullmatch(r"[ACGTUNacgtun]+", line):
-                  sequence.append(line)
-          if header and sequence:
-              records.append((header, "".join(sequence)))
-          if len(records) < 1000:
-              raise SystemExit(f"Expected a full miRBase FASTA; parsed only {len(records)} records")
-          Path("reference/mature.fa").write_text(
-              "".join(f"{h}\n{s}\n" for h, s in records), encoding="utf-8"
-          )
-          print(f"Parsed {len(records)} mature-miRNA records from miRBase download page")
-          PY
-          grep -m 3 '^>hsa' reference/mature.fa
+            -o reference/mature.fa
+          first_line=$(head -n 1 reference/mature.fa)
+          test "${first_line#>}" != "${first_line}"
+          total_count=$(grep -c '^>' reference/mature.fa)
+          echo "miRBase mature sequence entries: $total_count"
+          test "$total_count" -eq 74463
           awk '/^>hsa/{print; if(getline) print}' reference/mature.fa > reference/hsa_mature.rna.fa
           sed '/^>/!s/U/T/g' reference/hsa_mature.rna.fa > reference/hsa_mature.fa
           human_count=$(grep -c '^>hsa' reference/hsa_mature.fa || true)
           echo "Human mature-miRNA reference entries: $human_count"
           test "$human_count" -gt 100
           sha256sum reference/mature.fa reference/hsa_mature.fa
-          grep -m 1 -E 'Release 23\.1|23\.1' reference/mature.fa || true
 
       - name: Trim, map and count uniquely assigned mature miRNAs
         run: |
