@@ -90,7 +90,7 @@ jobs:
           if len(records) < 1000:
               raise SystemExit(f"Expected a full miRBase FASTA; parsed only {len(records)} records")
           Path("reference/mature.fa").write_text(
-              "".join(f"{h}\\n{s}\\n" for h, s in records), encoding="utf-8"
+              "".join(f"{h}\n{s}\n" for h, s in records), encoding="utf-8"
           )
           print(f"Parsed {len(records)} mature-miRNA records from miRBase download page")
           PY
