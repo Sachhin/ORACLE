@@ -98,16 +98,6 @@ python -m oracle.external_validation de \
 
 See [docs/EXTERNAL_VALIDATION.md](docs/EXTERNAL_VALIDATION.md) for required provenance, file formats, metrics, and interpretation limits. The comparator is implemented and tested; trusted external reference files must still be supplied before empirical reference validation can be claimed.
 
-## Paired model evaluation
-
-To compare an independently operated external model with ORACLE's deterministic baseline, use the paired human-scoring template at `benchmarks/paired_model_comparison_template.json` (schema v2). Populate it only after both systems answer the same frozen question using the same source packet. At least two reviewers must independently score both answers; store each reviewer's baseline and candidate scores separately under `reviewer_scores`. The evaluator averages reviewer deltas within each case and bootstraps paired cases, avoiding the false assumption that multiple reviewer scores are independent research cases.
-
-```bash
-python -m oracle --paired-answer-benchmark benchmarks/my_paired_scores.json
-```
-
-The evaluator reports per-dimension paired score deltas and reproducible bootstrap intervals. Scores are subjective ordinal judgments, not calibrated accuracy or proof of general model superiority. The checked-in template contains no fabricated results.
-
 ## Independent preprocessing and evidence benchmarks
 
 Compare ORACLE TMM normalization factors with a local edgeR installation on the exact same raw-count matrix:
