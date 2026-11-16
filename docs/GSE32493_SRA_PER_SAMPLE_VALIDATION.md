@@ -47,3 +47,17 @@ Sources:
 ## Release status
 
 The pipeline and offline SAM parser tests are included in PR. The live raw-read run must pass before reporting numerical outcomes. The result artifact must be inspected for per-sample read counts, mapping rates, adapter trimming, sample mapping, count matrix, edgeR FDR and reference checksum.
+
+
+## Raw FASTQ diagnostic and adapter correction (2026-11-16)
+
+The first SRA attempt exposed a real preprocessing mismatch: the first ten raw reads are 35 nt and their quality characters correspond to Phred Q0–Q10, so fastp's default Q15 filter rejected all reads. The reads also contain the Illumina SRA 3′ adapter motif `TCGTATGCCGTCTTCTGCTTG`; fastp's automatic adapter detector did not identify it.
+
+The corrected pipeline now supplies the explicit Illumina v1.0 small-RNA 3′ adapter sequence and disables quality filtering (but retains the original quality strings and reports their distribution). It keeps only adapter-trimmed inserts 18–30 nt long. This avoids treating low/archived quality values as a reliable filtering signal, but it is an explicit limitation and must be considered when interpreting counts.
+
+Evidence:
+- GEO sample GSM804340 records Illumina Small RNA Prep Kit FC-930-1004: https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSM804340
+- Illumina's FC-930-1004 guide identifies the SRA 3′ adapter and the 18–30 nt size-selection range: https://sapac.illumina.com/content/dam/illumina-support/documents/documentation/chemistry_documentation/samplepreps_legacy/SmallRNA_SamplePrep_Guide_1004239_D.pdf
+- A public GEO record documents the exact Illumina v1.0 small-RNA 3′ adapter sequence `TCGTATGCCGTCTTCTGCTTG`: https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSM803573
+
+The new workflow preserves the raw-read preview artifact even if trimming or mapping fails. No differential-expression result is considered valid until all six samples have non-zero post-trim reads, per-sample mapping QC is inspected, and the edgeR output is independently checked.
