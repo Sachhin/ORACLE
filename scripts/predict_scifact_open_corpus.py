@@ -142,6 +142,13 @@ def select_model_context(retrieved_doc_ids: list[str], context_top_k: int) -> li
     return retrieved_doc_ids[:context_top_k]
 
 
+def select_model_context(retrieved_doc_ids: list[str], context_top_k: int) -> list[str]:
+    """Keep retrieval diagnostics broad while bounding model prompt context."""
+    if context_top_k < 1:
+        raise ValueError("context_top_k must be at least 1")
+    return retrieved_doc_ids[:context_top_k]
+
+
 def retrieval_diagnostics(claims: list[dict[str, Any]], retrieved: dict[str, list[str]]) -> dict[str, Any]:
     relevant_claims = 0
     hit_claims = 0
