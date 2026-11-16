@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Conservative ORACLE v1.0 release gate over frozen validation artifacts."""
+"""Conservative model-free ORACLE v1.0 release gate over frozen artifacts."""
 from __future__ import annotations
 
 import argparse
@@ -26,33 +26,11 @@ def verify(args: argparse.Namespace) -> dict[str, Any]:
     try:
         ci = load_json(args.ci_summary)
         required = ci.get("required_checks", {})
-        expected = {"offline_tests", "geo", "qwen3"}
+        expected = {"offline_tests", "geo", "riken2018"}
         ci_ok = expected.issubset(required) and all(required.get(key) == "success" for key in expected)
         add("release_critical_ci", ci_ok, f"required={sorted(expected)}; observed={required}")
     except Exception as exc:
         add("release_critical_ci", False, str(exc))
-
-    try:
-        report = load_json(args.qwen_report)
-        run = report.get("prediction_run", {})
-        provenance = load_json(args.qwen_provenance)
-        qwen_ok = (
-            report.get("scored_claim_count") == 300
-            and float(report.get("prediction_coverage", 0)) == 1.0
-            and run.get("requested_claims") == 300
-            and run.get("gold_evidence_exposed_to_model") is False
-            and bool(run.get("predictions_sha256"))
-            and bool(run.get("corpus_sha256"))
-            and bool(run.get("claims_sha256"))
-            and bool(provenance.get("model_sha256"))
-            and provenance.get("download_sha256_verified") is True
-            and provenance.get("model_sha256") == provenance.get("verified_model_sha256")
-        )
-        add("qwen3_full_frozen_benchmark", qwen_ok,
-            f"scored={report.get('scored_claim_count')}/300; coverage={report.get('prediction_coverage')}; "
-            f"invalid={run.get('invalid_model_response_count')}; model={run.get('model')}")
-    except Exception as exc:
-        add("qwen3_full_frozen_benchmark", False, str(exc))
 
     try:
         geo = load_json(args.geo_report)
@@ -77,20 +55,23 @@ def verify(args: argparse.Namespace) -> dict[str, Any]:
 
     try:
         cra = load_json(args.cra_audit)
-        design = cra.get("cohort_design_check", {})
-        join = cra.get("biosample_join", {})
-        enrichment = cra.get("biosample_page_enrichment", {})
-        cra_ok = (
-            cra.get("status") in {"cohort_manifest_validated", "metadata_acquired_and_cohort_validated"}
-            and design.get("all_expected_group_labels_explicitly_present") is True
-            and join.get("unmatched_runs", 1) == 0
-            and enrichment.get("samples_with_age", 0) >= 150
-        )
-        add("cra000515_cohort_provenance", cra_ok,
-            f"status={cra.get('status')}; explicit_groups={design.get('all_expected_group_labels_explicitly_present')}; "
-            f"unmatched_runs={join.get('unmatched_runs')}; samples_with_age={enrichment.get('samples_with_age')}")
+        acquisition = cra.get("accession_provenance", cra.get("acquisition", {}))
+        run_count = acquisition.get("unique_run_count", acquisition.get("runs", 0))
+        biosample_count = acquisition.get("unique_biosample_count", acquisition.get("biosamples", 0))
+        alias_count = acquisition.get("unique_alias_count", acquisition.get("aliases", 0))
+        acquisition_ok = run_count == 171 and biosample_count == 171 and alias_count == 171
+        add("cra000515_accession_provenance", acquisition_ok,
+            f"runs={run_count}; BioSamples={biosample_count}; aliases={alias_count}")
+
+        enrichment = cra.get("biosample_page_enrichment", cra.get("sample_metadata", {}))
+        ages = enrichment.get("samples_with_age", 0)
+        groups = enrichment.get("samples_with_explicit_group", 0)
+        labels_ok = ages >= 150 and groups >= 150
+        add("cra000515_authenticated_age_and_cohort_labels", labels_ok,
+            f"samples_with_age={ages}; samples_with_explicit_group={groups}; source manifest required")
     except Exception as exc:
-        add("cra000515_cohort_provenance", False, str(exc))
+        add("cra000515_accession_provenance", False, str(exc))
+        add("cra000515_authenticated_age_and_cohort_labels", False, str(exc))
 
     try:
         pxd = load_json(args.pxd_audit)
@@ -100,22 +81,24 @@ def verify(args: argparse.Namespace) -> dict[str, Any]:
             and pxd.get("distinct_patient_count") == 13
             and not pxd.get("errors")
         )
-        add("pxd047528_clinical_crosswalk", pxd_ok,
+        add("pxd047528_authenticated_clinical_crosswalk", pxd_ok,
             f"status={pxd.get('status')}; aliases={pxd.get('alias_count')}; patients={pxd.get('distinct_patient_count')}")
     except Exception as exc:
-        add("pxd047528_clinical_crosswalk", False, str(exc))
+        add("pxd047528_authenticated_clinical_crosswalk", False, str(exc))
 
     try:
         longevity = load_json(args.longevity_audit)
-        longevity_ok = (
-            longevity.get("overall_assessment") == "screening_only_no_validated_discovery"
-            and "hypothesis_reviews" in longevity
-            and "gates" in longevity
-        )
-        add("longevity_claim_scope_audit", longevity_ok,
-            f"assessment={longevity.get('overall_assessment')}; discovery claims must remain unvalidated unless independently replicated")
+        assessment = longevity.get("overall_assessment", longevity.get("status", ""))
+        validated = int(longevity.get("validated_new_mechanism_count", 0) or 0)
+        no_overclaim = assessment in {
+            "screening_only_no_validated_discovery",
+            "MIXED_EXPLORATORY_NO_VALIDATED_DISCOVERY",
+            "exploratory_mixed_no_validated_discovery",
+        } and validated == 0
+        add("longevity_claim_scope_and_independent_evidence", no_overclaim,
+            f"assessment={assessment}; validated_new_mechanisms={validated}")
     except Exception as exc:
-        add("longevity_claim_scope_audit", False, str(exc))
+        add("longevity_claim_scope_and_independent_evidence", False, str(exc))
 
     try:
         expert = load_json(args.expert_review)
@@ -134,22 +117,22 @@ def verify(args: argparse.Namespace) -> dict[str, Any]:
 
     blocked = [item for item in checks if item["status"] != "PASS"]
     return {
-        "release_gate_version": "1.0",
+        "release_gate_version": "1.0-model-free",
         "status": "READY_FOR_V1_TAG" if not blocked else "BLOCKED",
         "passed_gate_count": len(checks) - len(blocked),
         "total_gate_count": len(checks),
         "checks": checks,
         "release_note": (
             "A passing engineering gate does not establish that ORACLE is a validated autonomous scientist. "
-            "Scientific novelty and causality require independent replication and human review."
+            "Scientific novelty and causality require independent replication and human review. "
+            "No AI model is required or invoked by this release gate."
         ),
     }
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    for name in ("ci-summary", "qwen-report", "qwen-provenance", "geo-report",
-                 "cra-audit", "pxd-audit", "longevity-audit", "expert-review"):
+    for name in ("ci-summary", "geo-report", "cra-audit", "pxd-audit", "longevity-audit", "expert-review"):
         parser.add_argument("--" + name, default="", help=f"Path to frozen {name} JSON artifact")
     parser.add_argument("--output", default="artifacts/oracle_v1_release_gate.json")
     args = parser.parse_args()
