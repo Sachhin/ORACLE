@@ -105,7 +105,6 @@ def main() -> None:
         run([
             "fastp", "-i", str(raw), "-o", str(trimmed),
             "--adapter_sequence", "TCGTATGCCGTCTTCTGCTTG",
-            "--overlap_len_require", "10",
             "--disable_quality_filtering",
             "--length_required", "18", "--length_limit", "30",
             "--thread", "2", "--json", str(fastp_json), "--html", str(fastp_html),
