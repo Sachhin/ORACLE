@@ -1,0 +1,28 @@
+{
+  "schema": "oracle-gse16717-age-trajectory-feasibility/1.0",
+  "source_accession": "GSE16717",
+  "platform": "GPL2895",
+  "source_workflow_run": "43912408479",
+  "source_artifact_id": 14248412268,
+  "source_artifact_zip_sha256": "871ea0d4993a2392d261a895992de97892dc8aec8863c6c19372fe386a0e931d",
+  "matrix_sha256_from_source_summary": "33e9cd42c0b3721afe54117d07904b5b78d9e6c78c8c70ca890d03600c788400",
+  "metadata_sha256": "60afbbfc3fcf57f5aa9c8bccffd21040bc92edbf5bed190ea997c78f0caeb276",
+  "gene_expression_sha256": "38a8da03752423dbd976e58054c5f83cb2004a8a4b8897d304c0421802a94913",
+  "sample_count": 150,
+  "age_bins_10y_minimum_n20": [
+    {"age_group_code": 6, "age_bin": "50-60", "n": 31, "age_min": 51.48, "age_max": 59.93, "group_counts": {"offspring": 19, "control": 12}, "mRPG8_gene_means": {"MRPL3": 6.785234, "MRPL32": 4.881309, "MRPL42": 3.644379, "MRPL45": 9.0716, "MRPL50": 6.370911, "MRPS10": 10.139888, "MRPS33": 7.823787, "MRPS35": 9.134749}},
+    {"age_group_code": 7, "age_bin": "60-70", "n": 55, "age_min": 60.29, "age_max": 69.37, "group_counts": {"control": 29, "offspring": 26}, "mRPG8_gene_means": {"MRPL3": 6.914672, "MRPL32": 4.997774, "MRPL42": 3.499957, "MRPL45": 9.040462, "MRPL50": 6.38968, "MRPS10": 10.126879, "MRPS33": 7.876895, "MRPS35": 9.185428}},
+    {"age_group_code": 10, "age_bin": "90-100", "n": 44, "age_min": 90.09, "age_max": 99.16, "group_counts": {"long_lived_sibling": 44}, "mRPG8_gene_means": {"MRPL3": 6.673841, "MRPL32": 4.939662, "MRPL42": 3.452373, "MRPL45": 8.920427, "MRPL50": 6.299064, "MRPS10": 10.115594, "MRPS33": 7.932781, "MRPS35": 9.001599}}
+  ],
+  "age_bins_5y_minimum_n20": [
+    {"age_bin": "55-60", "n": 22, "age_min": 55.78, "age_max": 59.93, "group_counts": {"offspring": 14, "control": 8}},
+    {"age_bin": "60-65", "n": 40, "age_min": 60.29, "age_max": 64.89, "group_counts": {"control": 22, "offspring": 18}},
+    {"age_bin": "90-95", "n": 34, "age_min": 90.09, "age_max": 94.95, "group_counts": {"long_lived_sibling": 34}}
+  ],
+  "eligible_10y_bin_count": 3,
+  "eligible_5y_bin_count": 3,
+  "published_method_requirements": {"mfuzz_clusters": 4, "min_samples_per_10y_bin": 20, "gam_spline_k": 5, "five_year_gam_spline_k": 8, "seed_mfuzz": 123, "seed_gam": 1234},
+  "feasibility": "NOT_REPRODUCIBLE_AS_PUBLISHED_AGE_TRAJECTORY_ON_GSE16717",
+  "reason": "Only three 10-year bins and three 5-year bins meet the published >=20-sample threshold. The source workflow clusters all measured genes into four Mfuzz clusters and fits nonlinear GAM curves (k=5 or k=8) across age-bin means. The 14-gene targeted panel is not the full transcriptome, so it cannot reproduce the genome-wide clustering. The 2026 integrated 1,751-sample matrix and authenticated phenotype manifest are not available in the current public acquisition path.",
+  "interpretation": "This is a feasibility audit plus descriptive gene means, not a fitted Mfuzz/GAM model and not an exact replication. No interpolation across the age gap is performed."
+}
