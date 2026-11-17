@@ -1,7 +1,32 @@
 {
-  "schema_version": "oracle-longevity-numerical-audit/1.0",
+  "schema_version": "oracle-longevity-numerical-audit/1.1",
   "status": "EXPLORATORY_MIXED_NO_VALIDATED_DISCOVERY",
-  "scope": "Frozen summary of completed numerical audits; not a substitute for raw matrices or a rerun of the published age-trajectory model.",
+  "scope": "Frozen, artifact-backed summary of completed numerical analyses. Values below were read from uploaded GitHub Actions artifacts; this snapshot does not substitute for raw matrices or reproduce the published 2026 age-trajectory model.",
+  "provenance": {
+    "gse16717": {
+      "workflow_run_id": 43912408479,
+      "artifact_id": 14248412268,
+      "artifact_name": "oracle-gse16717-mrpg-signature-validation",
+      "artifact_sha256": "871ea0d4993a2392d261a895992de97892dc8aec8863c6c19372fe386a0e931d",
+      "matrix_sha256": "33e9cd42c0b3721afe54117d07904b5b78d9e6c78c8c70ca890d03600c788400",
+      "platform_annotation_sha256": "91e4f679c2a99e6274583b98906c28d4702146e85c63f26b927dc183d0041ce9"
+    },
+    "riken_sc2018": {
+      "workflow_run_id": 43911857872,
+      "artifact_id": 14248282108,
+      "artifact_name": "oracle-riken2018-mrpg-independent-validation",
+      "artifact_sha256": "bd527a7710b8d0541271be7f05de794b7b283a0b18fc3be9a475dc6fe1d79eeb",
+      "h5ad_sha256": "2b0ce324e3cf29363a68689ac8772f122221728a11db0a3e50314c2e0b06553a",
+      "metadata_sha256": "40884e40921bb32ecde184085bcb3240f10f790bab85a9a246302c0a3a842798"
+    },
+    "geo_context_only": {
+      "workflow_run_id": 43914355105,
+      "artifact_id": 14249224272,
+      "artifact_sha256": "fdf694cf77b8a8179a0768a8d5e7f49a1936815eccc3de40ae8088a7dd71bece",
+      "accessions": ["GSE58137", "GSE65219"],
+      "scope_note": "These GEO analyses tested a separate autophagy/lysosomal/inflammatory candidate panel, not the exact 8-mRPG signature; they are not included in the mRPG numerical comparison."
+    }
+  },
   "published_signature": {
     "source_id": "doi:10.1016/j.xcrm.2026.102767",
     "genes": ["MRPL3", "MRPL32", "MRPL42", "MRPL45", "MRPL50", "MRPS10", "MRPS33", "MRPS35"],
@@ -16,31 +41,68 @@
       "age_available_n": 150,
       "sex_available_n": 150,
       "mRPG8_complete": true,
-      "mRPG8_mean_difference_long_lived_minus_controls_z": -0.1626,
-      "mRPG8_welch_p": 0.3159,
-      "mRPG8_bh_q": 0.6671,
+      "mRPG8_mean_difference_long_lived_minus_controls_z": -0.1625990964200812,
+      "mRPG8_welch_p": 0.3159219781669193,
+      "mRPG8_bh_q": 0.6670988058260628,
       "individual_mRPG_gene_fdr_significant": 0,
+      "mRPG8_gene_results_long_lived_vs_control": [
+        {"gene":"MRPL3","difference":-0.1952370141,"p":0.1643456406,"fdr":0.6670988058},
+        {"gene":"MRPL32","difference":-0.0488312679,"p":0.5929767163,"fdr":0.6670988058},
+        {"gene":"MRPL42","difference":-0.1096528058,"p":0.4544936792,"fdr":0.6670988058},
+        {"gene":"MRPL45","difference":-0.0976712303,"p":0.2874884048,"fdr":0.6670988058},
+        {"gene":"MRPL50","difference":-0.0832824963,"p":0.5300754834,"fdr":0.6670988058},
+        {"gene":"MRPS10","difference":-0.0703167863,"p":0.3828381244,"fdr":0.6670988058},
+        {"gene":"MRPS33","difference":0.0405188625,"p":0.7834750126,"fdr":0.7834750126},
+        {"gene":"MRPS35","difference":-0.1508492178,"p":0.1015629438,"fdr":0.6670988058}
+      ],
+      "age_min_years": {"long_lived_siblings":89.27,"controls":43.71},
+      "age_max_years": {"long_lived_siblings":102.19,"controls":78.76},
       "age_support_overlap_between_long_lived_and_controls": false,
-      "interpretation": "Unadjusted descriptive group contrast does not reproduce a higher score. It is not an exact test of the published age-trajectory model; age ranges do not overlap, so adjusted extrapolation would be weakly identified.",
-      "source_document": "docs/GSE16717_MRPG_NUMERICAL_AUDIT_2026-11-16.md"
+      "cRPG7_status": "INCOMPLETE_NO_COMPOSITE_SCORE",
+      "cRPG7_missing_gene": "RPS6",
+      "interpretation": "Unadjusted descriptive group contrast does not reproduce a higher mRPG8 score. It is not an exact test of the published age-trajectory model; age ranges do not overlap, so adjusted extrapolation would be weakly identified."
     },
     {
       "accession": "RIKEN_SC2018",
       "role": "distinct Japanese supercentenarian PBMC cohort; reused across multiple papers and counted once",
-      "donors": {"supercentenarians": 7, "controls": 5},
+      "donors": {"supercentenarians":7,"controls":5},
       "cells": 69844,
       "biological_replicate": "donor",
-      "mRPG8_all_batches_score_difference_SC_minus_CT_z": -0.737,
-      "mRPG8_all_batches_exact_two_sided_permutation_p": 0.0101,
-      "mRPG8_firstrun_score_difference_SC_minus_CT_z": -0.691,
-      "mRPG8_firstrun_exact_two_sided_permutation_p": 0.0316,
+      "raw_count_matrix_nonnegative_integer_verified": true,
+      "parquet_h5ad_metadata_rowwise_equal": true,
+      "mRPG8_genes_present": 8,
+      "mRPG8_genes_missing": [],
+      "mRPG8_all_batches_score_difference_SC_minus_CT_z": -0.737091762678425,
+      "mRPG8_all_batches_exact_two_sided_permutation_p": 0.0101010101010101,
+      "mRPG8_firstrun_score_difference_SC_minus_CT_z": -0.69126992805602,
+      "mRPG8_firstrun_exact_two_sided_permutation_p": 0.0315656565656566,
+      "gene_results_all_batches": [
+        {"gene":"MRPL3","logFC":-0.1387724525,"p":0.4074309568,"fdr":0.7567826639},
+        {"gene":"MRPL32","logFC":-0.1697988145,"p":0.2929377922,"fdr":0.6701460749},
+        {"gene":"MRPL42","logFC":-0.1077005766,"p":0.3914574587,"fdr":0.7464718845},
+        {"gene":"MRPL45","logFC":-0.3263958685,"p":0.0794130244,"fdr":0.3605764595},
+        {"gene":"MRPL50","logFC":-0.1395622718,"p":0.4928896581,"fdr":0.8150527654},
+        {"gene":"MRPS10","logFC":-0.0581286093,"p":0.6275470051,"fdr":0.8801958493},
+        {"gene":"MRPS33","logFC":-0.2626947428,"p":0.0795614944,"fdr":0.3605764595},
+        {"gene":"MRPS35","logFC":-0.2277938375,"p":0.1264347645,"fdr":0.4598702014}
+      ],
+      "gene_results_firstrun_only": [
+        {"gene":"MRPL3","logFC":-0.2069216745,"p":0.1613561124,"fdr":0.4955578519},
+        {"gene":"MRPL32","logFC":-0.0866037909,"p":0.5554406325,"fdr":0.8341376907},
+        {"gene":"MRPL42","logFC":-0.0815143794,"p":0.488857477,"fdr":0.7946027517},
+        {"gene":"MRPL45","logFC":-0.4273866541,"p":0.0193663356,"fdr":0.1442341621},
+        {"gene":"MRPL50","logFC":-0.1552884215,"p":0.4302993331,"fdr":0.7597704283},
+        {"gene":"MRPS10","logFC":0.0001148751,"p":0.9778799815,"fdr":1.0},
+        {"gene":"MRPS33","logFC":-0.1968477005,"p":0.1543624859,"fdr":0.4845340468},
+        {"gene":"MRPS35","logFC":-0.2774962166,"p":0.0397299184,"fdr":0.2293314147}
+      ],
       "all_eight_gene_wise_fdr_significant": 0,
-      "common_batch_leave_one_donor_out_p_range": [0.0182, 0.1061],
+      "common_batch_leave_one_donor_out_p_range": [0.0182,0.1061],
       "common_batch_leave_one_donor_out_nominal_p_below_0_05": 6,
       "individual_age_available": false,
       "individual_sex_available": false,
-      "interpretation": "The score direction is opposite to the published Chinese cohort association. Small donor count and leave-one-donor-out sensitivity limit inference; no gene-wise FDR result is significant.",
-      "source_document": "data/missions/longevity/prior_art_seed.json#independent_evidence"
+      "cell_type_resolution": ["PBMC"],
+      "interpretation": "The panel score direction is opposite to the published Chinese cohort association. Small donor count and leave-one-donor-out sensitivity limit inference; no gene-wise FDR result is significant."
     }
   ],
   "upstream_regulator_screen": [
