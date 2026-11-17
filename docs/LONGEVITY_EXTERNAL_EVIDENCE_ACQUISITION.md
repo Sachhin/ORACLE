@@ -10,7 +10,7 @@ Updated: 2026-11-17
 
 **Request prepared:** a de-identified manifest mapping public CRA run/BioSample/accession/sample alias to participant key, age or age band, group/cohort/region, permitted sex metadata, and any excluded sample with reason. The request excludes direct identifiers and asks for provenance and access requirements.
 
-**Outreach status:** Gmail draft created for the user; not sent. A response or authenticated source file is not yet available.
+**Outreach status:** Request email sent to the published lead-author contact on 2026-11-17. Awaiting response; no authenticated source file has been received.
 
 ## PXD047528 — authenticated clinical crosswalk
 
@@ -20,7 +20,7 @@ Updated: 2026-11-17
 
 **Request prepared:** a de-identified mapping of each processed alias/raw filename to participant key, aliquot/technical-replicate relation, permitted clinical group/outcome, exclusions and provenance. Direct identifiers are excluded.
 
-**Outreach status:** Gmail draft created for the user; not sent. A response or authenticated crosswalk is not yet available.
+**Outreach status:** Request email sent to the published primary-submitter contact on 2026-11-17. Awaiting response; no authenticated crosswalk has been received.
 
 ## Independent scientific reviewers
 
