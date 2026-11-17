@@ -5,6 +5,10 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+import sys
+
+# Allow direct execution from a source checkout without requiring installation.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from oracle.research_assurance import run_research_assurance
 
