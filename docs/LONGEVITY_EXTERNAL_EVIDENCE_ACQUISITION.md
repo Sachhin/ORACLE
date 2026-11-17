@@ -64,3 +64,18 @@ Prioritized hypothesis classes: mitochondrial integrated stress response (ATF4/A
 Minimum experiment: relevant human primary cells or characterized models; graded CRISPRi/siRNA or validated pharmacological perturbation; measure all eight mRPG transcripts and proteins, mitochondrial translation, respiration, membrane potential and stress markers; include non-targeting, viability, dose/time, rescue/epistasis controls; replicate across independent donors/cell batches and pre-register primary outcomes.
 
 This is a proposed protocol only. ORACLE cannot perform wet-lab perturbations or report results without a collaborating laboratory and real experimental data.
+
+## GSE16717 age-trajectory feasibility audit (actual artifact)
+
+ORACLE downloaded and inspected the source analysis artifact from workflow run 43912408479 (artifact 14248412268; SHA-256 871ea0d4993a2392d261a895992de97892dc8aec8863c6c19372fe386a0e931d). The artifact contains all 150 samples, individual ages/sex/groups, and a 14-gene targeted panel.
+
+Applying the authors' 10-year binning rule and minimum n=20 yields only three eligible bins:
+- 50–60: n=31 (19 offspring, 12 controls)
+- 60–70: n=55 (29 controls, 26 offspring)
+- 90–100: n=44 (44 long-lived siblings)
+
+The 5-year sensitivity similarly has only three bins meeting n>=20: 55–60 (n=22), 60–65 (n=40), and 90–95 (n=34). The 80–90 decade contains only four people; 100+ contains two. There is no overlap of long-lived-sibling ages with the younger control/offspring ages.
+
+Therefore this Leiden cohort cannot support the paper's four-cluster Mfuzz and GAM (k=5 / k=8) trajectory model under the published bin eligibility rule. In addition, the available artifact is a 14-gene panel, not the full transcriptome needed for genome-wide clustering. We did not fit an unstable spline, extrapolate across the age gap, or label this as a reproduction. The exact bin counts and descriptive mRPG gene means are frozen in `data/missions/longevity/gse16717_age_trajectory_feasibility.json`.
+
+**Conclusion:** the published model's exact replication still requires the original 1,751-sample matrix plus authenticated phenotype/sample manifest and the authors' analysis data object. This is a concrete failed-feasibility result, not a negative biological result.
