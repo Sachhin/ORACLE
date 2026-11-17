@@ -1,0 +1,58 @@
+name: ORACLE frozen longevity assurance bundle
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/build_longevity_assurance_bundle.py"
+      - "scripts/run_research_assurance.py"
+      - "oracle/research_assurance.py"
+      - "data/missions/longevity/**"
+      - "artifacts/longevity/run_a19934cc2692_quality_audit.md"
+      - ".github/workflows/longevity-frozen-assurance.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  freeze-and-assure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Freeze source-backed mission bundle
+        run: python scripts/build_longevity_assurance_bundle.py
+      - name: Run all deterministic assurance modules
+        run: python scripts/run_research_assurance.py --input artifacts/longevity/frozen_assurance_bundle.json --output artifacts/longevity/frozen_assurance_report.json
+      - name: Enforce conservative scientific status
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          bundle = json.loads(Path("artifacts/longevity/frozen_assurance_bundle.json").read_text())
+          report = json.loads(Path("artifacts/longevity/frozen_assurance_report.json").read_text())
+          modules = report["modules"]
+          assert report["status"] == "SCREEN_COMPLETE"
+          assert modules["evidence_integrity"]["status"] == "PASS"
+          assert modules["cross_dataset_validation"]["status"] == "NOT_RUN"
+          assert modules["mechanism_discovery"]["candidate_count"] == 0
+          assert modules["novelty_screen"]["status"] != "NOVELTY_ESTABLISHED"
+          assert bundle["external_blockers"]["CRA000515_individual_age_and_cohort_manifest"].startswith("BLOCKED")
+          assert bundle["external_blockers"]["PXD047528_15_alias_to_13_participant_crosswalk"].startswith("BLOCKED")
+          assert bundle["external_blockers"]["independent_blinded_expert_reviews"].startswith("PENDING")
+          assert bundle["numerical_audit_snapshot"]["validated_new_mechanism_count"] == 0
+          print("Frozen assurance bundle is internally consistent; discovery remains unvalidated.")
+          PY
+      - name: Upload frozen bundle and assurance report
+        uses: actions/upload-artifact@v4
+        with:
+          name: oracle-frozen-longevity-assurance
+          path: |
+            artifacts/longevity/frozen_assurance_bundle.json
+            artifacts/longevity/frozen_assurance_report.json
+          if-no-files-found: error
+          retention-days: 90
