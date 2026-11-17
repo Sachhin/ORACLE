@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "scripts/build_longevity_assurance_bundle.py"
+      - "scripts/validate_longevity_numerical_snapshot.py"
       - "scripts/run_research_assurance.py"
       - "oracle/research_assurance.py"
       - "data/missions/longevity/**"
@@ -24,7 +25,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Freeze source-backed mission bundle
+      - name: Validate artifact-backed mRPG numerical snapshot and regulator labels
+        run: python scripts/validate_longevity_numerical_snapshot.py
+      - name: Freeze source-backed mission bundle with input hashes
         run: python scripts/build_longevity_assurance_bundle.py
       - name: Run all deterministic assurance modules
         run: python scripts/run_research_assurance.py --input artifacts/longevity/frozen_assurance_bundle.json --output artifacts/longevity/frozen_assurance_report.json
@@ -36,6 +39,7 @@ jobs:
           bundle = json.loads(Path("artifacts/longevity/frozen_assurance_bundle.json").read_text())
           report = json.loads(Path("artifacts/longevity/frozen_assurance_report.json").read_text())
           modules = report["modules"]
+          assert bundle["numerical_validation_report"]["status"] == "PASS"
           assert report["status"] == "SCREEN_COMPLETE"
           assert modules["evidence_integrity"]["status"] == "PASS"
           assert modules["cross_dataset_validation"]["status"] == "NOT_RUN"
@@ -45,14 +49,15 @@ jobs:
           assert bundle["external_blockers"]["PXD047528_15_alias_to_13_participant_crosswalk"].startswith("BLOCKED")
           assert bundle["external_blockers"]["independent_blinded_expert_reviews"].startswith("PENDING")
           assert bundle["numerical_audit_snapshot"]["validated_new_mechanism_count"] == 0
-          print("Frozen assurance bundle is internally consistent; discovery remains unvalidated.")
+          print("Numerical artifact checks and frozen assurance passed; discovery remains unvalidated.")
           PY
-      - name: Upload frozen bundle and assurance report
+      - name: Upload frozen bundle, numerical validation and assurance report
         uses: actions/upload-artifact@v4
         with:
           name: oracle-frozen-longevity-assurance
           path: |
             artifacts/longevity/frozen_assurance_bundle.json
+            artifacts/longevity/numerical_validation_report.json
             artifacts/longevity/frozen_assurance_report.json
           if-no-files-found: error
           retention-days: 90
