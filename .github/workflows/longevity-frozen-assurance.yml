@@ -6,10 +6,15 @@ on:
     paths:
       - "scripts/build_longevity_assurance_bundle.py"
       - "scripts/validate_longevity_numerical_snapshot.py"
+      - "scripts/run_longevity_v1_release_gate_snapshot.py"
       - "scripts/run_research_assurance.py"
+      - "scripts/verify_v1_release.py"
       - "oracle/research_assurance.py"
       - "data/missions/longevity/**"
       - "artifacts/longevity/run_a19934cc2692_quality_audit.md"
+      - "docs/CRA000515_PUBLIC_METADATA_AUDIT_2026-11-16.md"
+      - "docs/PXD047528_RECONSTRUCTION_AUDIT_2026-11-16.md"
+      - "docs/LONGEVITY_EXPERT_REVIEW_BRIEF.md"
       - ".github/workflows/longevity-frozen-assurance.yml"
   workflow_dispatch:
 
@@ -51,7 +56,9 @@ jobs:
           assert bundle["numerical_audit_snapshot"]["validated_new_mechanism_count"] == 0
           print("Numerical artifact checks and frozen assurance passed; discovery remains unvalidated.")
           PY
-      - name: Upload frozen bundle, numerical validation and assurance report
+      - name: Execute v1.0 release gate against frozen CI and audit evidence
+        run: python scripts/run_longevity_v1_release_gate_snapshot.py
+      - name: Upload frozen bundle, numerical validation, assurance and release-gate reports
         uses: actions/upload-artifact@v4
         with:
           name: oracle-frozen-longevity-assurance
@@ -59,5 +66,7 @@ jobs:
             artifacts/longevity/frozen_assurance_bundle.json
             artifacts/longevity/numerical_validation_report.json
             artifacts/longevity/frozen_assurance_report.json
+            artifacts/longevity/release_gate_inputs/*.json
+            artifacts/longevity/oracle_v1_release_gate.json
           if-no-files-found: error
           retention-days: 90
