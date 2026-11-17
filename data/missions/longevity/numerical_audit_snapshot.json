@@ -1,0 +1,70 @@
+{
+  "schema_version": "oracle-longevity-numerical-audit/1.0",
+  "status": "EXPLORATORY_MIXED_NO_VALIDATED_DISCOVERY",
+  "scope": "Frozen summary of completed numerical audits; not a substitute for raw matrices or a rerun of the published age-trajectory model.",
+  "published_signature": {
+    "source_id": "doi:10.1016/j.xcrm.2026.102767",
+    "genes": ["MRPL3", "MRPL32", "MRPL42", "MRPL45", "MRPL50", "MRPS10", "MRPS33", "MRPS35"],
+    "novelty_status": "PUBLISHED_PRIOR_ART_NOT_AN_ORACLE_DISCOVERY"
+  },
+  "datasets": [
+    {
+      "accession": "GSE16717",
+      "role": "published Leiden validation cohort reanalysis; not independent of the 2026 paper's reported validation",
+      "n": 150,
+      "groups": {"long_lived_siblings": 50, "controls": 50, "offspring": 50},
+      "age_available_n": 150,
+      "sex_available_n": 150,
+      "mRPG8_complete": true,
+      "mRPG8_mean_difference_long_lived_minus_controls_z": -0.1626,
+      "mRPG8_welch_p": 0.3159,
+      "mRPG8_bh_q": 0.6671,
+      "individual_mRPG_gene_fdr_significant": 0,
+      "age_support_overlap_between_long_lived_and_controls": false,
+      "interpretation": "Unadjusted descriptive group contrast does not reproduce a higher score. It is not an exact test of the published age-trajectory model; age ranges do not overlap, so adjusted extrapolation would be weakly identified.",
+      "source_document": "docs/GSE16717_MRPG_NUMERICAL_AUDIT_2026-11-16.md"
+    },
+    {
+      "accession": "RIKEN_SC2018",
+      "role": "distinct Japanese supercentenarian PBMC cohort; reused across multiple papers and counted once",
+      "donors": {"supercentenarians": 7, "controls": 5},
+      "cells": 69844,
+      "biological_replicate": "donor",
+      "mRPG8_all_batches_score_difference_SC_minus_CT_z": -0.737,
+      "mRPG8_all_batches_exact_two_sided_permutation_p": 0.0101,
+      "mRPG8_firstrun_score_difference_SC_minus_CT_z": -0.691,
+      "mRPG8_firstrun_exact_two_sided_permutation_p": 0.0316,
+      "all_eight_gene_wise_fdr_significant": 0,
+      "common_batch_leave_one_donor_out_p_range": [0.0182, 0.1061],
+      "common_batch_leave_one_donor_out_nominal_p_below_0_05": 6,
+      "individual_age_available": false,
+      "individual_sex_available": false,
+      "interpretation": "The score direction is opposite to the published Chinese cohort association. Small donor count and leave-one-donor-out sensitivity limit inference; no gene-wise FDR result is significant.",
+      "source_document": "data/missions/longevity/prior_art_seed.json#independent_evidence"
+    }
+  ],
+  "upstream_regulator_screen": [
+    {
+      "candidate": "ETS1",
+      "evidence_source": "doi:10.1126/sciadv.abf2017",
+      "reported_context": "Cytosolic ribosomal activity and fibroblast senescence in a separate healthy-aging study",
+      "relationship_to_8_mRPG": "NOT_DIRECTLY_TESTED",
+      "status": "INDIRECT_PRIOR_ART_CANDIDATE_ONLY",
+      "required_test": "Test ETS1 occupancy/expression and perturbation against the exact eight mitochondrial ribosomal genes in relevant human cell types; include rescue and matched controls."
+    },
+    {
+      "candidate": "MRPS5",
+      "evidence_source": "doi:10.1038/nature12188",
+      "reported_context": "Mitochondrial ribosomal perturbation, mitonuclear protein imbalance and UPRmt in model systems",
+      "relationship_to_8_mRPG": "NOT_A_PROVEN_UPSTREAM_REGULATOR",
+      "status": "FUNCTIONAL_PATHWAY_CONTEXT_ONLY",
+      "required_test": "Treat as a pathway perturbation comparator, not an upstream regulator; assess graded perturbation/rescue and mitochondrial translation/respiration."
+    }
+  ],
+  "cross_dataset_pooling": {
+    "status": "NOT_PERFORMED",
+    "reason": "GSE16717 normalized microarray group z-score contrast and RIKEN donor-level pseudobulk count-based score are different estimands, tissues/processing contexts and statistical designs; combining them as a single replicated effect would be invalid."
+  },
+  "causal_status": "NOT_ESTABLISHED",
+  "validated_new_mechanism_count": 0
+}
