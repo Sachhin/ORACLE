@@ -24,7 +24,7 @@ Updated: 2026-11-17
 
 ## Independent scientific reviewers
 
-A public call for at least two independent reviewers is opened as GitHub issue URL unavailable. Desired expertise includes human transcriptomics/statistical genomics, mitochondrial biology, longevity/geroscience, and reproducible bioinformatics. The protocol requires conflict disclosure, blinded paired scoring, frozen corpus, independent scores and adjudication. No reviewers are yet recruited and no reviews are complete.
+A public call for at least two independent reviewers is opened as GitHub issue URL unavailable. Desired expertise includes human transcriptomics/statistical genomics, mitochondrial biology, longevity/geroscience, and reproducible bioinformatics. The protocol requires conflict disclosure, blinded paired scoring, frozen corpus, independent scores and adjudication. Three individual invitations were sent on 2026-11-17 to potential reviewers (Albert Higgins-Chen, T. Em Arpawong, and Raghav Sehgal) using publicly listed contact addresses. These are invitations only; acceptance, availability, conflicts and suitability remain unconfirmed. No reviewers are yet recruited and no reviews are complete.
 
 ## Published age-trajectory model — reproduction specification
 
