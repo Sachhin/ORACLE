@@ -51,3 +51,22 @@ The source-checksummed metadata probe verified a 622,904-byte Parquet file with 
 5. Do not mark the scientific release gate passed, and do not merge PR #167 without explicit user approval.
 
 No Qwen3 or Gemini API dependency is used or proposed.
+
+
+## Follow-up provenance check on PR head 0b3b3dd27bdb7e2b93f2df5dd89ff86df3f6e11d
+
+A second Actions execution was inspected on this head:
+
+- Frozen assurance run [44474232242](https://github.com/Sachhin/ORACLE/actions/runs/44474232242): success; artifact `14505287595`.
+- Mendeley probe run [44474232238](https://github.com/Sachhin/ORACLE/actions/runs/44474232238): success as a probe; artifact `14505597465`. The three API endpoints (dataset, metadata, public files) each returned HTTP 401; the landing page returned HTTP 200. No data files or participant manifest were downloaded.
+- Offline tests run [44474232346](https://github.com/Sachhin/ORACLE/actions/runs/44474232346): success. Python 3.10–3.14, live R/Bioconductor reference checks and RIKEN metadata provenance all passed.
+- GEO candidate analysis run [44474232247](https://github.com/Sachhin/ORACLE/actions/runs/44474232247): still in progress at inspection; GEOquery/limma installation step was active. No result is claimed from this run.
+
+### Frozen gate snapshot provenance caveat
+
+The frozen assurance artifact's `oracle_v1_release_gate.json` is still **BLOCKED (4/6)**. Its embedded `ci_summary.json` points to earlier workflow run IDs 44043297155 (offline tests), 43914355105 (GEO) and 43911857872 (RIKEN), rather than the current head's runs 44474232346 and 44474232247. The GEO report in that frozen input also describes the earlier autophagy/lysosomal/inflammatory panel (GSE58137/GSE65219), not the current head's later candidate-gene run. The current head's fresh GEO workflow had not completed when inspected.
+
+Therefore:
+- Treat the frozen gate as a reproducible snapshot of its explicitly recorded inputs, not as a live aggregation of the latest Actions state.
+- Do not claim the current GEO candidate-gene execution has passed until run 44474232247 completes and its artifact is inspected.
+- A follow-up release-gate refresh should consume immutable artifacts from the exact current head SHA and record each workflow run ID, artifact ID and SHA-256. It should fail closed when a required current-head run is pending, missing or from another commit.
