@@ -93,12 +93,13 @@ def main() -> int:
     target.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     blocked = [row["gate"] for row in report["checks"] if row["status"] == "BLOCKED"]
     expected = {"cra000515_authenticated_age_and_cohort_labels",
-                "pxd047528_authenticated_clinical_crosswalk",
                 "independent_blinded_expert_review"}
     if report["status"] != "BLOCKED" or set(blocked) != expected:
         raise SystemExit(f"Unexpected release-gate result: status={report['status']}; blocked={blocked}")
+    optional = {row["gate"]: row["status"] for row in report.get("optional_checks", [])}
     print(json.dumps({"status": report["status"], "passed_gate_count": report["passed_gate_count"],
                       "total_gate_count": report["total_gate_count"], "blocked_gates": blocked,
+                      "optional_checks": optional,
                       "report": str(target.relative_to(ROOT))}, indent=2))
     return 0
 
