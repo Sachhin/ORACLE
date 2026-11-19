@@ -15,7 +15,7 @@ Verified public acquisition:
 
 The 2018 supplement contains aggregate group counts only (76 CEN, 54 F1, 41 F1SP). Supplemental File S1 references a required samples_information.csv, but that file is absent from the public supplement archive. The 2026 Mendeley dataset landing page is visible, but its documented API endpoints returned HTTP 401; captured HTML had a disabled Download All control and no file IDs, filenames, or download URLs. This does not prove the dataset is empty.
 
-Required to unblock: a source-authenticated 171-row mapping from CHHA aliases to age, CEN/F1/F1SP group, sex, region, library/read type, and CRR/SAMC accessions. A detailed author request is prepared in docs/CRA000515_SUBMITTER_REQUEST_DRAFT_2026-11-19.md and has **not** been sent. No individual group or age values are inferred.
+Required to unblock: a source-authenticated 171-row mapping from CHHA aliases to age, CEN/F1/F1SP group, sex, region, library/read type, and CRR/SAMC accessions. The repository's 2026-11-17 outreach log records that the initial de-identified author request was sent to the published lead-author contact. No authenticated response or source file is recorded as of 2026-11-19. A follow-up template is available in docs/CRA000515_SUBMITTER_REQUEST_DRAFT_2026-11-19.md; check the user's email thread before sending any follow-up. No individual group or age values are inferred.
 
 Detailed records: docs/CRA000515_PUBLIC_METADATA_AUDIT_2026-11-16.md, docs/CRA000515_PMC_SUPPLEMENT_PROBE.md, docs/LONGEVITY_2026_SUPPLEMENT_PROBE.md, and the draft request above.
 
@@ -53,7 +53,7 @@ Hypotheses remain provisional. No new causal or previously unknown human longevi
 
 The rubric and review-validation tooling can validate submitted reviews, but cannot recruit reviewers or generate human judgments. At least two real independent reviewers must score a frozen paired corpus, with blinded scoring and adjudication. No reviewer identities or scores are fabricated.
 
-A reviewer invitation is prepared in docs/INDEPENDENT_REVIEWER_INVITATION_DRAFT_2026-11-19.md and has **not** been sent. Potential names previously noted remain unverified leads, not recruited reviewers. No invitation, reviewer acceptance, score, or adjudication is claimed.
+The repository's 2026-11-17 outreach log records that individual invitations were sent to Albert Higgins-Chen, T. Em Arpawong, and Raghav Sehgal. As of the latest recorded status, none had accepted; expertise fit/COI clearance, score files, and adjudication remain unconfirmed. A follow-up template is available in docs/INDEPENDENT_REVIEWER_INVITATION_DRAFT_2026-11-19.md; check the user's email thread before sending any follow-up. No reviewer endorsement, score, or adjudication is claimed.
 
 ## Model-free architecture and release scope
 
