@@ -9,13 +9,16 @@ Continue validation without waiting for email. Use public, source-authenticated 
 ### Priority 1 — ILO Blood Transcriptomics (Batch 1), ELITE Portal
 - ELITE Portal lists a dataset named “ILO Blood Transcriptomics (Batch 1)” with 801 items, human blood RNA-seq, gene-expression data, and controlled access (dataset ID syn74490543; study key ILORNAseq).
 - This is the strongest alternative to pursue for a sample-level longevity transcriptomics cohort because it is directly relevant to the Integrative Longevity Omics program. The portal marks access as Controlled, so ORACLE must request/obtain authorized access through the portal; it must not attempt to bypass restrictions.
+- ELITE's official access policy requires a Synapse account/certification, agreement to dataset-specific terms, a public Intended Data Use statement, and a Data Use Certificate signed by the applicant, the institutional signing official, and collaborating investigators; IRB/IEC approval or exemption may also be required. The portal says access decisions are typically processed within about one week. If no eligible institutional signing official or required ethics documentation is available, treat this route as blocked rather than implying ORACLE can self-approve access.
+- ELITE metadata are split across individual, biospecimen and assay metadata tables and must be joined by `individualID` and `specimenID`; do not infer participant/sample mappings from file names alone.
 - Before analysis, inspect the portal's data dictionary and sample metadata, confirm centenarian/offspring/control counts, chronological age, sex, health status, tissue, batch, and sample-level expression file availability. Verify whether this batch overlaps CRA000515 or other published cohorts; do not assume independence from the dataset title.
 - If access is not granted, record it as an access-limited candidate, not a completed dataset acquisition.
 
 ### Priority 2 — NECS centenarian PBMC single-cell/CITE-seq (2023)
 - Karagiannis et al., eBioMedicine 2023, DOI 10.1016/j.ebiom.2023.104514, PMCID PMC10114155.
 - Seven centenarians (ages 100–119; 3 male, 4 female) plus two younger references; the study also integrated public PBMC datasets.
-- The paper's data statement says NECS data are available through Synapse project UH2AG064704. Availability and permissions for individual files still require verification.
+- The paper's data statement says NECS data are available through Synapse project UH2AG064704. The ELITE catalog identifies the relevant study as “The Single Cell Transcriptomic Analysis of PBMCs in Extreme Longevity” (study key ELPSCRNA); approved-access listings show that controlled access has been granted to institutional applicants, including a 2026 request. This confirms the governed access route, not public availability of the matrix.
+- A current catalog search did not expose the NECS expression-matrix file inventory or authenticated donor metadata. A separate NECS_syntegra listing contains synthetic data and must not be confused with the seven-centenarian 2023 NECS CITE-seq cohort. The Synapse project page itself requires JavaScript and did not reveal file IDs in the public page extraction.
 - This is a distinct North American centenarian cohort. If gene-level matrices and donor annotations are accessible, test the exact published 8-mRPG and 7-cRPG panels by donor and cell type.
 - Limitations: only seven centenarians; paper reports age ranges; donor mapping and raw-file availability must be validated. Cells are not independent biological replicates.
 - Required workflow: record Synapse IDs, file versions, terms and SHA-256; validate donor IDs/age/sex; pseudobulk by donor × cell type; freeze gene panels; test donor-level scores, FDR and leave-one-donor-out sensitivity.
@@ -54,15 +57,20 @@ Run a frozen computational adversarial review with separate evidence channels:
 **Status rule:** This is internal computational/adversarial review, not independent human expert review. It may satisfy an engineering assurance requirement only under a separately named gate. The existing independent blinded human-review gate remains BLOCKED until real independent reviewers submit verifiable score files and adjudication. Synthetic personas or model-generated scores must never count as reviewers.
 
 ## C. Next execution
-1. Inventory the public Synapse project for UH2AG064704; do not bypass access controls or guess file IDs.
-2. If NECS matrices and donor annotations are accessible under permitted terms, build donor-level pseudobulk analysis for exact mRPG8/cRPG7 and cell-composition sensitivity.
-3. In parallel, build age-reference workflows for GSE262619 and GSE237029, explicitly labelled non-longevity.
-4. Run separate provenance/statistical/biology/novelty/skeptic review passes on a frozen evidence bundle.
-5. Keep CRA000515 labels and human expert review as unresolved. Consider a separately scoped PUBLIC_DATA_RESEARCH_RELEASE only if its gate passes.
+1. For ILO Batch 1 / ELPSCRNA, use only the documented ELITE/Synapse certification and controlled-access process; determine whether the necessary institutional signer and ethics approvals exist before treating access as feasible.
+2. Inventory the ELPSCRNA study's individual, biospecimen and assay metadata plus expression files; preserve exact Synapse IDs and versions. Do not substitute the NECS_syntegra synthetic dataset.
+3. If NECS matrices and donor annotations are accessible under permitted terms, build donor-level pseudobulk analysis for exact mRPG8/cRPG7 and cell-composition sensitivity.
+4. In parallel, build age-reference workflows for GSE262619 and GSE237029, explicitly labelled non-longevity.
+5. Run separate provenance/statistical/biology/novelty/skeptic review passes on a frozen evidence bundle.
+6. Keep CRA000515 labels and human expert review as unresolved. Consider a separately scoped PUBLIC_DATA_RESEARCH_RELEASE only if its gate passes.
 
 ## Sources
 - 2023 NECS study: https://pmc.ncbi.nlm.nih.gov/articles/PMC10114155/
 - ELITE Portal ILO Blood Transcriptomics Batch 1 listing (dataset syn74490543; controlled access): https://eliteportal.synapse.org/Explore/Datasets
+- ELITE official controlled-access requirements: https://help.eliteportal.org/help/accessing-data
+- ELITE official metadata join guidance: https://help.eliteportal.org/help/about-metadata
+- ELITE catalog approved-access examples including ELPSCRNA: https://eliteportal.synapse.org/Data%20Access/Approved%20Access%20Requests
+- ELITE catalog result for NECS_syntegra (synthetic data; not the 2023 NECS CITE-seq matrix): https://eliteportal.synapse.org/Explore/Studies/DetailsPage/StudyData?studyKey=NECS
 - Synapse project: https://adknowledgeportal.synapse.org/Explore/Projects/DetailsPage?Grant%20Number=UH2AG064704
 - GSE276957: https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE276957
 - GSE262619: https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE262619
