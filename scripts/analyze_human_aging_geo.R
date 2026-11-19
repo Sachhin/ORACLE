@@ -383,6 +383,8 @@ analyse_eset <- function(eset, accession, index) {
     male_results <- topTable(
       sex_fit, coef = "male_age", number = Inf, sort.by = "none"
     )
+    female_results$gene_symbol <- rownames(female_results)
+    male_results$gene_symbol <- rownames(male_results)
     female_idx <- match(all_results$gene_symbol, female_results$gene_symbol)
     male_idx <- match(all_results$gene_symbol, male_results$gene_symbol)
     all_results$female_age_logFC <- female_results$logFC[female_idx]
