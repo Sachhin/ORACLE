@@ -58,3 +58,17 @@ The revised script records HTTP status, content type, response byte count and SH
 **Execution is pending the new PR-triggered GitHub Actions run.** Until its artifact is inspected, file availability remains unverified. Even if files are listed, ORACLE must inspect their contents and provenance, identify the individual sample/age/cohort fields, map them to the published aliases without inference, and checksum the exact source file before closing the CRA000515-related sample annotation blocker.
 
 The Mendeley API documentation states that public dataset metadata and files are retrievable through its public API; the workflow uses the documented endpoint families. See https://data.mendeley.com/api/docs/ and https://data.mendeley.com/archive-process.
+
+
+## Observed public-access result and HTML fallback (2026-11-19)
+
+The first run of the corrected API probe completed successfully as a workflow, but all three Mendeley API requests returned **HTTP 401** (80-byte responses). This is an API access/authentication result, not evidence that the dataset is empty or that the files do not exist. The probe has therefore been extended to fetch the public dataset landing page as HTML and preserve its checksum, visible text, anchors, and any visible file/download links.
+
+The landing page is publicly readable at https://data.mendeley.com/datasets/fpf4y72kfz/1 and identifies the dataset as “Transcriptomic Analysis of Chinese Longevity Cohorts”, version 1, published 18 March 2026. Its rendered page displays a “Download All” control and a “Files” heading, but the publicly rendered file section contains no visible filenames or file links. This is not sufficient to conclude that no files exist; the page may require an authenticated browser session or client-side file inventory. See the page directly and the official API documentation.
+
+- Public landing page: https://data.mendeley.com/datasets/fpf4y72kfz/1
+- Official API documentation: https://data.mendeley.com/api/docs/
+- Latest probe script: `scripts/probe_mendeley_longevity_dataset.py`
+- Landing-page HTML is saved in the workflow artifact as `mendeley_landing_page.html`.
+
+**Current decision:** metadata-only evidence confirms the dataset identity and public landing page, but does not yet provide an authenticated downloadable matrix or sample-level annotation manifest. The CRA000515 age/cohort blocker remains open. Next legitimate route is submitter/lead-contact access to the file inventory or a public direct-download route that returns a verifiable file, followed by checksum and schema inspection. Do not mark the data acquired from a landing-page button alone.
