@@ -254,12 +254,21 @@ analyse_eset <- function(eset, accession, index) {
 
   sex_used <- all(!is.na(sex[keep])) &&
     length(unique(sex[keep])) >= 2
+  sex_interaction_used <- identical(accession, "GSE65219") &&
+    use_group_contrast && sex_used
 
   if (sex_used) {
-    design_data$sex <- factor(sex[keep])
+    design_data$sex <- factor(sex[keep], levels = c("female", "male"))
   }
 
-  if (use_group_contrast) {
+  if (sex_interaction_used) {
+    design_data$age_group <- factor(
+      design_data$age_group, levels = c("younger", "older")
+    )
+    design <- model.matrix(~ age_group * sex, data = design_data)
+    effect_name <- "age_groupolder:sexmale"
+    design_label <- "age_group_by_sex_interaction"
+  } else if (use_group_contrast) {
     design <- if (sex_used) {
       model.matrix(~ age_group + sex, data = design_data)
     } else {
@@ -349,13 +358,58 @@ analyse_eset <- function(eset, accession, index) {
     stop("Insufficient residual degrees of freedom for statistical testing")
   }
 
-  fit <- eBayes(lmFit(gene_expr, design), trend = TRUE, robust = TRUE)
-  all_results <- topTable(fit, coef = effect_name, number = Inf, sort.by = "P")
-  all_results$gene_symbol <- rownames(all_results)
-  all_results$direction <- if (use_continuous_age) {
-    ifelse(all_results$logFC > 0, "higher_with_age", "lower_with_age")
+  base_fit <- lmFit(gene_expr, design)
+  if (sex_interaction_used) {
+    interaction_fit <- eBayes(base_fit, trend = TRUE, robust = TRUE)
+    all_results <- topTable(
+      interaction_fit, coef = effect_name, number = Inf, sort.by = "P"
+    )
+    all_results$gene_symbol <- rownames(all_results)
+
+    contrast_matrix <- matrix(
+      0, nrow = ncol(design), ncol = 2,
+      dimnames = list(colnames(design), c("female_age", "male_age"))
+    )
+    contrast_matrix["age_groupolder", "female_age"] <- 1
+    contrast_matrix["age_groupolder", "male_age"] <- 1
+    contrast_matrix[effect_name, "male_age"] <- 1
+    sex_fit <- eBayes(
+      contrasts.fit(base_fit, contrast_matrix),
+      trend = TRUE, robust = TRUE
+    )
+    female_results <- topTable(
+      sex_fit, coef = "female_age", number = Inf, sort.by = "none"
+    )
+    male_results <- topTable(
+      sex_fit, coef = "male_age", number = Inf, sort.by = "none"
+    )
+    female_idx <- match(all_results$gene_symbol, female_results$gene_symbol)
+    male_idx <- match(all_results$gene_symbol, male_results$gene_symbol)
+    all_results$female_age_logFC <- female_results$logFC[female_idx]
+    all_results$female_age_p_value <- female_results$P.Value[female_idx]
+    all_results$female_age_fdr <- female_results$adj.P.Val[female_idx]
+    all_results$male_age_logFC <- male_results$logFC[male_idx]
+    all_results$male_age_p_value <- male_results$P.Value[male_idx]
+    all_results$male_age_fdr <- male_results$adj.P.Val[male_idx]
+    all_results$sex_interaction_logFC <- all_results$logFC
+    all_results$sex_interaction_p_value <- all_results$P.Value
+    all_results$sex_interaction_fdr <- all_results$adj.P.Val
+    all_results$direction <- ifelse(
+      all_results$logFC > 0,
+      "larger_older_vs_younger_effect_in_males",
+      "larger_older_vs_younger_effect_in_females"
+    )
   } else {
-    ifelse(all_results$logFC > 0, "higher_in_older", "lower_in_older")
+    fit <- eBayes(base_fit, trend = TRUE, robust = TRUE)
+    all_results <- topTable(
+      fit, coef = effect_name, number = Inf, sort.by = "P"
+    )
+    all_results$gene_symbol <- rownames(all_results)
+    all_results$direction <- if (use_continuous_age) {
+      ifelse(all_results$logFC > 0, "higher_with_age", "lower_with_age")
+    } else {
+      ifelse(all_results$logFC > 0, "higher_in_older", "lower_in_older")
+    }
   }
   selected <- all_results[toupper(all_results$gene_symbol) %in% candidate_genes, , drop = FALSE]
   selected$centenarian_candidate_gene <- toupper(selected$gene_symbol)
@@ -378,6 +432,16 @@ analyse_eset <- function(eset, accession, index) {
     platform = platform,
     design = design_label,
     sex_adjusted = sex_used,
+    sex_interaction_tested = sex_interaction_used,
+    age_group_by_sex_counts = if (use_group_contrast && sex_used) {
+      as.data.frame.matrix(table(
+        factor(age_group[keep], levels = c("younger", "older")),
+        factor(sex[keep], levels = c("female", "male"))
+      ))
+    } else NULL,
+    interaction_definition = if (sex_interaction_used) {
+      "(older-younger in males) minus (older-younger in females)"
+    } else NULL,
     sex_distribution = list(
       female = unname(as.integer(sex_counts[["female"]])),
       male = unname(as.integer(sex_counts[["male"]])),
@@ -411,6 +475,15 @@ analyse_eset <- function(eset, accession, index) {
         effect_scale = if (use_continuous_age) "logFC_per_year" else "older_minus_younger_logFC",
         p_value = unname(row$P.Value),
         fdr = unname(row$adj.P.Val),
+        female_age_logFC = if ("female_age_logFC" %in% colnames(selected)) unname(row$female_age_logFC) else NULL,
+        female_age_p_value = if ("female_age_p_value" %in% colnames(selected)) unname(row$female_age_p_value) else NULL,
+        female_age_fdr = if ("female_age_fdr" %in% colnames(selected)) unname(row$female_age_fdr) else NULL,
+        male_age_logFC = if ("male_age_logFC" %in% colnames(selected)) unname(row$male_age_logFC) else NULL,
+        male_age_p_value = if ("male_age_p_value" %in% colnames(selected)) unname(row$male_age_p_value) else NULL,
+        male_age_fdr = if ("male_age_fdr" %in% colnames(selected)) unname(row$male_age_fdr) else NULL,
+        sex_interaction_logFC = if ("sex_interaction_logFC" %in% colnames(selected)) unname(row$sex_interaction_logFC) else NULL,
+        sex_interaction_p_value = if ("sex_interaction_p_value" %in% colnames(selected)) unname(row$sex_interaction_p_value) else NULL,
+        sex_interaction_fdr = if ("sex_interaction_fdr" %in% colnames(selected)) unname(row$sex_interaction_fdr) else NULL,
         direction = as.character(row$direction)
       )
     }),
