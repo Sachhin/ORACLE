@@ -72,3 +72,31 @@ The landing page is publicly readable at https://data.mendeley.com/datasets/fpf4
 - Landing-page HTML is saved in the workflow artifact as `mendeley_landing_page.html`.
 
 **Current decision:** metadata-only evidence confirms the dataset identity and public landing page, but does not yet provide an authenticated downloadable matrix or sample-level annotation manifest. The CRA000515 age/cohort blocker remains open. Next legitimate route is submitter/lead-contact access to the file inventory or a public direct-download route that returns a verifiable file, followed by checksum and schema inspection. Do not mark the data acquired from a landing-page button alone.
+
+
+## HTML source inspection and original-code cross-check (2026-11-19)
+
+The PR-triggered HTML fallback run completed successfully (workflow run 44464125398; artifact 14501805192). Inspection of the captured 121,404-byte landing-page HTML established:
+
+- The dataset landing page returns HTTP 200.
+- The page's `Download All` button is rendered with the `disabled` attribute.
+- The file tree is rendered as `file-list loading` with a loading spinner in the server-delivered HTML.
+- No file IDs, filenames, file UUIDs, or download URLs are embedded in the captured HTML.
+- The three documented API endpoints still return HTTP 401.
+
+This is a stronger and more precise result than saying that the Files section is simply blank: the server-rendered page has not supplied a completed file listing, and its download control is disabled. It still does not prove that the dataset contains zero files; the client-side file inventory may be failing or may require an authenticated session.
+
+The linked original analysis repository was also inspected through its recursive Git tree. It contains only three R scripts:
+- `01.age-related-analysis.r`
+- `02.transcriptional_clock_analysis.r`
+- `03.trajectory_analysis.r`
+
+The trajectory script loads `03.data.rda`, but that data object is not present in the public GitHub repository. Therefore the public code repository alone cannot reproduce the published matrix-level analysis.
+
+**Status:** the Mendeley record and study identity are confirmed; the actual expression matrix and sample-level phenotype manifest remain unavailable to ORACLE through the unauthenticated public endpoints tested. Do not claim full-data access or sample-level replication. Continue via the lead contact identified in the paper or an authenticated user-mediated download, then verify the archive, checksums, schema, sample IDs, ages, cohorts, and exclusions before analysis.
+
+Evidence:
+- Mendeley landing page: https://data.mendeley.com/datasets/fpf4y72kfz/1
+- Original analysis repository: https://github.com/xiaofuhui/longevity_transcriptomics
+- Trajectory script: https://github.com/xiaofuhui/longevity_transcriptomics/blob/main/03.trajectory_analysis.r
+- Article resource availability and lead contact: https://pmc.ncbi.nlm.nih.gov/articles/PMC13198318/
