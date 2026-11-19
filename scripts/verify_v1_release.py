@@ -19,9 +19,17 @@ def load_json(path: str) -> dict[str, Any]:
 
 def verify(args: argparse.Namespace) -> dict[str, Any]:
     checks: list[dict[str, Any]] = []
+    optional_checks: list[dict[str, Any]] = []
 
     def add(name: str, passed: bool, detail: str) -> None:
         checks.append({"gate": name, "status": "PASS" if passed else "BLOCKED", "detail": detail})
+
+    def add_optional(name: str, ready: bool, detail: str) -> None:
+        optional_checks.append({
+            "gate": name,
+            "status": "PASS" if ready else "NOT_REQUIRED_FOR_LONGEVITY_RELEASE",
+            "detail": detail,
+        })
 
     try:
         ci = load_json(args.ci_summary)
@@ -74,6 +82,10 @@ def verify(args: argparse.Namespace) -> dict[str, Any]:
         add("cra000515_accession_provenance", False, str(exc))
         add("cra000515_authenticated_age_and_cohort_labels", False, str(exc))
 
+    # PXD047528 is an HIV/herpes plasma-proteomics dataset, not a human-aging
+    # cohort. Its clinical crosswalk is retained as an optional clinical task;
+    # it must not block the longevity release. Its DDA/DIA technical benchmark
+    # remains separately reportable and does not require patient identities.
     try:
         pxd = load_json(args.pxd_audit)
         pxd_ok = (
@@ -82,10 +94,11 @@ def verify(args: argparse.Namespace) -> dict[str, Any]:
             and pxd.get("distinct_patient_count") == 13
             and not pxd.get("errors")
         )
-        add("pxd047528_authenticated_clinical_crosswalk", pxd_ok,
-            f"status={pxd.get('status')}; aliases={pxd.get('alias_count')}; patients={pxd.get('distinct_patient_count')}")
+        add_optional("pxd047528_clinical_outcome_crosswalk", pxd_ok,
+            f"status={pxd.get('status')}; aliases={pxd.get('alias_count')}; patients={pxd.get('distinct_patient_count')}; optional non-longevity clinical analysis")
     except Exception as exc:
-        add("pxd047528_authenticated_clinical_crosswalk", False, str(exc))
+        add_optional("pxd047528_clinical_outcome_crosswalk", False,
+            f"{exc}; optional non-longevity clinical analysis; DDA/DIA technical benchmark is independent")
 
     try:
         longevity = load_json(args.longevity_audit)
@@ -118,14 +131,16 @@ def verify(args: argparse.Namespace) -> dict[str, Any]:
 
     blocked = [item for item in checks if item["status"] != "PASS"]
     return {
-        "release_gate_version": "1.0-model-free",
+        "release_gate_version": "1.1-model-free",
         "status": "READY_FOR_V1_TAG" if not blocked else "BLOCKED",
         "passed_gate_count": len(checks) - len(blocked),
         "total_gate_count": len(checks),
         "checks": checks,
+        "optional_checks": optional_checks,
         "release_note": (
             "A passing engineering gate does not establish that ORACLE is a validated autonomous scientist. "
             "Scientific novelty and causality require independent replication and human review. "
+            "PXD047528 is an optional HIV/herpes proteomics technical benchmark, not longevity evidence. "
             "No AI model is required or invoked by this release gate."
         ),
     }
