@@ -1,6 +1,6 @@
 # ORACLE independent blinded review invitation (draft; not sent)
 
-**Status:** Prepared for owner review. No reviewer has been contacted or recruited.
+**Status:** Follow-up template only. The repository's 2026-11-17 outreach log records that invitations were sent individually to Albert Higgins-Chen, T. Em Arpawong, and Raghav Sehgal. No acceptance, COI clearance, or completed review is recorded as of 2026-11-19. Do not resend without checking the user's email thread first.
 
 ## Subject
 Invitation: independent blinded review of a reproducible human-longevity evidence audit
