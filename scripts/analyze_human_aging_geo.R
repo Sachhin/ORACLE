@@ -201,7 +201,7 @@ analyse_eset <- function(eset, accession, index) {
       factor(age_group, levels = c("younger", "older")),
       factor(sex, levels = c("female", "male"))
     )
-    if (!identical(unname(observed_counts), unname(expected_counts))) {
+    if (!identical(as.vector(observed_counts), as.vector(expected_counts))) {
       stop(
         "GSE65219 age-group-by-sex counts do not match published cohort ",
         "composition (young 21F/9M; nonagenarian 103F/43M). Observed: ",
