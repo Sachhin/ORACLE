@@ -38,3 +38,23 @@ Thus the abstract's 1,751 analyzed participants and the Methods' 1,752 recruited
 **What remains unresolved:** the paper does not identify which exact sample was excluded for missing age, whether that sample is among CRA000515 or HRA000656, or its accession/alias. The 171 CRA000515 metadata still contains zero individual age values and zero individual CEN/F1/F1SP labels. Supplemental Table S1 reports only aggregate counts by data batch/library type (76 CEN, 54 F1, 41 F1SP across the 171-person Hainan cohort); Supplemental File S1 references `samples_information.csv` with the required row-level condition/read_type/library_type fields, but that CSV is not included in the public archive.
 
 This closes the arithmetic discrepancy but does not close the individual provenance crosswalk or enable sample-level reanalysis.
+
+
+## Mendeley public API re-probe correction (2026-11-19)
+
+The earlier metadata-only probe used a non-canonical dataset metadata URL and did not independently distinguish the dataset metadata, custom metadata, and public file-list endpoints. The probe has been corrected to query all three documented routes independently:
+
+- `GET https://api.data.mendeley.com/datasets/fpf4y72kfz?version=1`
+- `GET https://api.data.mendeley.com/datasets/fpf4y72kfz/metadata?version=1`
+- `GET https://api.data.mendeley.com/datasets/publics/fpf4y72kfz/files?version=1&$limit=500`
+
+The revised script records HTTP status, content type, response byte count and SHA-256 for each endpoint, parses any returned file inventory, and preserves the raw JSON response in the workflow artifact. It does not download expression matrices or claim that a file listing authenticates sample annotations.
+
+- Workflow: `.github/workflows/mendeley-longevity-metadata-probe.yml`
+- Script: `scripts/probe_mendeley_longevity_dataset.py`
+- Artifact: `mendeley-longevity-metadata-probe`
+- Expected report: `artifacts/mendeley/mendeley_public_metadata_probe.json`
+
+**Execution is pending the new PR-triggered GitHub Actions run.** Until its artifact is inspected, file availability remains unverified. Even if files are listed, ORACLE must inspect their contents and provenance, identify the individual sample/age/cohort fields, map them to the published aliases without inference, and checksum the exact source file before closing the CRA000515-related sample annotation blocker.
+
+The Mendeley API documentation states that public dataset metadata and files are retrievable through its public API; the workflow uses the documented endpoint families. See https://data.mendeley.com/api/docs/ and https://data.mendeley.com/archive-process.
