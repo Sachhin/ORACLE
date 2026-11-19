@@ -117,6 +117,41 @@ if (!identical(unname(.age_group_parser_regression), c("younger", "older", "youn
   stop("GEO age-group parser must prioritize specific young labels.")
 }
 
+# Synthetic design regression: verify the factorial model has the expected
+# full-rank coefficient and that the male contrast adds the interaction.
+.synthetic_design_data <- data.frame(
+  age_group = factor(
+    rep(c("younger", "older"), each = 4),
+    levels = c("younger", "older")
+  ),
+  sex = factor(
+    rep(c("female", "male", "female", "male"), 2),
+    levels = c("female", "male")
+  )
+)
+.synthetic_design <- model.matrix(
+  ~ age_group * sex, data = .synthetic_design_data
+)
+.synthetic_interaction <- "age_groupolder:sexmale"
+if (qr(.synthetic_design)$rank != ncol(.synthetic_design) ||
+    !.synthetic_interaction %in% colnames(.synthetic_design)) {
+  stop("Age-by-sex interaction design regression failed.")
+}
+.synthetic_contrasts <- matrix(
+  0, nrow = ncol(.synthetic_design), ncol = 2,
+  dimnames = list(colnames(.synthetic_design), c("female_age", "male_age"))
+)
+.synthetic_contrasts["age_groupolder", "female_age"] <- 1
+.synthetic_contrasts["age_groupolder", "male_age"] <- 1
+.synthetic_contrasts[.synthetic_interaction, "male_age"] <- 1
+if (!identical(
+  unname(.synthetic_contrasts[, "male_age"] -
+           .synthetic_contrasts[, "female_age"]),
+  unname(as.numeric(colnames(.synthetic_design) == .synthetic_interaction))
+)) {
+  stop("Sex-specific age contrast regression failed.")
+}
+
 extract_sex <- function(txt) {
   vapply(txt, function(value) {
     lower <- tolower(value)
@@ -154,6 +189,26 @@ analyse_eset <- function(eset, accession, index) {
   }
   sex <- extract_sex(txt)
 
+  # Published GSE65219 cohort composition: 103 older women + 43 older men,
+  # and 21 young women + 9 young men. Treat disagreement as a provenance
+  # failure rather than silently modelling a changed/misparsed sample set.
+  if (identical(accession, "GSE65219")) {
+    expected_counts <- matrix(
+      c(21L, 9L, 103L, 43L), nrow = 2, byrow = TRUE,
+      dimnames = list(c("younger", "older"), c("female", "male"))
+    )
+    observed_counts <- table(
+      factor(age_group, levels = c("younger", "older")),
+      factor(sex, levels = c("female", "male"))
+    )
+    if (!identical(unname(observed_counts), unname(expected_counts))) {
+      stop(
+        "GSE65219 age-group-by-sex counts do not match published cohort ",
+        "composition (young 21F/9M; nonagenarian 103F/43M). Observed: ",
+        paste(as.vector(observed_counts), collapse = "/")
+      )
+    }
+  }
 
   # Prefer explicit biological group labels over continuous age.
   # This prevents bimodal young-control/nonagenarian cohorts
