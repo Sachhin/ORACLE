@@ -2,7 +2,7 @@
 
 **Recipient:** Qing-Peng Kong, lead contact listed in the 2026 longevity study  
 **Address:** kongqp@mail.kiz.ac.cn  
-**Status:** Prepared for owner review. This message has not been sent.
+**Status:** Follow-up template only. The repository's 2026-11-17 outreach log records that the initial de-identified manifest request was sent to the published lead-author contact; no authenticated response/file has been recorded as of 2026-11-19. Do not resend without checking the user's email thread first.
 
 ## Subject
 Request for CRA000515 sample-level age/cohort manifest and linked expression data
