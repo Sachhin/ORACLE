@@ -36,18 +36,21 @@ def parse_soft(path: Path) -> list[dict[str, str]]:
     current: dict[str, str] | None = None
     with gzip.open(path, "rt", encoding="utf-8", errors="replace") as handle:
         for raw in handle:
-            line = raw.rstrip("\r\n")
-            match = ACCESSION_RE.match(line)
-            if match:
-                if current:
+            line = raw.rstrip("\\r\\n")
+            if line.startswith("^SAMPLE = "):
+                if current and current.get("sample_accession"):
                     samples.append(current)
                 current = {
-                    "sample_accession": match.group(1),
+                    "sample_accession": "",
                     "title": "",
                     "characteristics": "",
                 }
                 continue
             if current is None:
+                continue
+            match = ACCESSION_RE.match(line)
+            if match:
+                current["sample_accession"] = match.group(1)
                 continue
             match = TITLE_RE.match(line)
             if match:
@@ -59,10 +62,9 @@ def parse_soft(path: Path) -> list[dict[str, str]]:
                 current["characteristics"] = (
                     current["characteristics"] + " | " + value
                 ).strip(" |")
-    if current:
+    if current and current.get("sample_accession"):
         samples.append(current)
     return samples
-
 
 def inspect_count_table(path: Path, sample_ids: list[str]) -> dict:
     with gzip.open(path, "rt", encoding="utf-8-sig", errors="replace", newline="") as handle:
@@ -89,10 +91,19 @@ def build_manifest(samples: list[dict[str, str]]) -> list[dict[str, str]]:
         sexes = {value.lower() for value in SEX_RE.findall(characteristics)}
         age = str(next(iter(ages))) if len(ages) == 1 and 0 <= next(iter(ages)) <= 120 else ""
         sex = next(iter(sexes)) if len(sexes) == 1 else ""
+        title_sex_match = re.search(r"_(F|M)\\d+$", sample["title"], re.I)
+        title_sex = (
+            {"f": "female", "m": "male"}[title_sex_match.group(1).lower()]
+            if title_sex_match else ""
+        )
+        band_match = re.match(r"^(\\d{2,3})y_", sample["title"], re.I)
+        nominal_age_band = band_match.group(1) if band_match else ""
         manifest.append({
             **sample,
             "explicit_age_years": age,
             "explicit_sex": sex,
+            "title_sex": title_sex,
+            "nominal_age_band_years": nominal_age_band,
         })
     return manifest
 
@@ -149,6 +160,18 @@ def audit(counts: Path, soft: Path, output: Path, manifest_path: Path,
         "matrix_sample_ids": table["matched_sample_ids"],
         "explicit_age_metadata_count": sum(bool(row["explicit_age_years"]) for row in manifest),
         "explicit_sex_metadata_count": sum(bool(row["explicit_sex"]) for row in manifest),
+        "title_coded_sex_count": sum(bool(row["title_sex"]) for row in manifest),
+        "nominal_age_band_discrepancies": [
+            {
+                "sample_accession": row["sample_accession"],
+                "title": row["title"],
+                "explicit_age_years": row["explicit_age_years"],
+                "nominal_age_band_years": row["nominal_age_band_years"],
+            }
+            for row in manifest
+            if row["explicit_age_years"] and row["nominal_age_band_years"]
+            and abs(float(row["explicit_age_years"]) - float(row["nominal_age_band_years"])) > 10
+        ],
         "counts_file_bytes": counts.stat().st_size,
         "soft_file_bytes": soft.stat().st_size,
         "counts_sha256": sha256(counts),
