@@ -64,7 +64,7 @@ summary <- list(dataset="GSE237029",status="EXPLORATORY_RMA_PANEL_ANALYSIS_COMPL
  mRPG8_genes=panel,measured_genes=present,missing_genes=setdiff(panel,present),
  results=unname(split(tab,seq_len(nrow(tab)))),
  cel_sha256=setNames(manifest$cel_sha256,manifest$sample_accession),
- rma_sha256=unname(tools::md5sum(rma_path)),
+ rma_sha256=sub("\\s+.*$", "", system2("sha256sum", shQuote(rma_path), stdout=TRUE)),
  limitations=c("n=5 versus n=4; underpowered and vulnerable to individual-donor effects.",
  "Only categorical age groups are available; no continuous-age model is possible.",
  "Probe-to-symbol mapping can be one-to-many; multiple probes were summarized by within-sample median.",
