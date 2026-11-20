@@ -24,12 +24,10 @@ class GSE262619SourceBundleAuditTests(unittest.TestCase):
                     "!Sample_title = 30y_F1\n"
                     "!Sample_geo_accession = GSM100001\n"
                     "!Sample_characteristics_ch1 = age: 30\n"
-                    "!Sample_characteristics_ch1 = sex: female\n"
                     "^SAMPLE = GSM100002\n"
                     "!Sample_title = 75y_M1\n"
                     "!Sample_geo_accession = GSM100002\n"
                     "!Sample_characteristics_ch1 = age: 75\n"
-                    "!Sample_characteristics_ch1 = sex: male\n"
                 )
             with gzip.open(counts, "wt", encoding="utf-8") as handle:
                 handle.write(
