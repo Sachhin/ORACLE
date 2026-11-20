@@ -164,5 +164,5 @@ report <- list(
     "Observational cross-sectional association does not establish causality or a new longevity mechanism."
   )
 )
-write_json(report, file.path(outdir, "analysis_report.json"), pretty = TRUE, auto_unbox = TRUE)
+write_json(report, file.path(outdir, "analysis_report.json"), pretty = TRUE, auto_unbox = TRUE, digits = 12)
 cat(toJSON(report, pretty = TRUE, auto_unbox = TRUE), "\n")
