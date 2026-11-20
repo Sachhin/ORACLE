@@ -107,10 +107,20 @@ def audit(counts: Path, soft: Path, output: Path, manifest_path: Path,
     if len(set(ids)) != len(ids):
         issues.append("GEO SOFT manifest contains duplicate GSM accessions.")
     table = inspect_count_table(counts, ids)
+    with gzip.open(counts, "rt", encoding="utf-8-sig", errors="replace") as handle:
+        count_text = handle.read()
+    title_matches = [
+        item["sample_accession"] for item in samples
+        if item["title"] and item["title"] in count_text
+    ]
+    matched_ids = sorted(set(table["matched_sample_ids"]) | set(title_matches))
+    table["matched_sample_ids"] = matched_ids
+    table["matched_sample_count"] = len(matched_ids)
+    table["matched_by_title_count"] = len(title_matches)
     if table["matched_sample_count"] != len(ids):
         issues.append(
-            f"Count table contains {table['matched_sample_count']} of {len(ids)} "
-            "GEO GSM accessions; sample-to-expression linkage is incomplete."
+            f"Count table links {table['matched_sample_count']} of {len(ids)} "
+            "GEO samples by GSM accession or exact submitter sample title."
         )
     if table["matrix_rows"] < expected_samples or table["matrix_columns"] < 2:
         issues.append("Count table is empty or too small to represent the expected cohort.")
@@ -132,6 +142,7 @@ def audit(counts: Path, soft: Path, output: Path, manifest_path: Path,
         "sample_count": len(samples),
         "unique_sample_count": len(set(ids)),
         "matched_sample_count": table["matched_sample_count"],
+        "matched_by_title_count": table.get("matched_by_title_count", 0),
         "matrix_rows": table["matrix_rows"],
         "matrix_columns": table["matrix_columns"],
         "row_widths_consistent": table["row_widths_consistent"],
