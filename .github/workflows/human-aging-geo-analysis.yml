@@ -1,8 +1,8 @@
 name: ORACLE human aging GEO candidate-gene analysis
 
 concurrency:
-  group: oracle-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: false
+  group: oracle-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-${{ github.sha }}
+  cancel-in-progress: true
 
 on:
   push:

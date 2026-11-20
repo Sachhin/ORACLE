@@ -154,3 +154,22 @@ python -m oracle.clinical_mapping --mapping data/pxd047528/sample_map.tsv --outp
 ```
 
 The current real sample-map template remains blank and the validator correctly returns BLOCKED until the authors provide the source manifest.
+
+
+## ORACLE use boundary — technical benchmark only (2026-11-19)
+
+PXD047528 is **not a human-longevity cohort**. It is retained in ORACLE only as a paired plasma-proteomics DDA/DIA technical benchmark for missing-value and assay-reconstruction methods. Its 2022 clinical labels concern HIV and herpes CNS infection, not longevity or healthy aging.
+
+Consequences:
+
+- DDA/DIA paired missingness and reconstruction metrics may be reported as a technical-method benchmark, with the processed-data provenance and limits stated.
+- PXD047528 must not contribute evidence for human longevity mechanisms, age trajectories, longevity candidate ranking, or validation of the 8-mRPG signature.
+- HIV/herpes/HAND clinical concordance is a separate, optional clinical reconstruction task and remains blocked until the 15 processed aliases, 15 raw acquisition pairs, and 13-person clinical paper are reconciled by a source-authenticated manifest.
+- A successful technical missingness benchmark does not imply that its clinical labels are mapped or that the dataset validates longevity biology.
+
+This boundary prevents a technically useful but biologically unrelated dataset from contaminating the longevity evidence graph. The public Mendeley Data API is being re-probed separately for the 2026 longevity cohort's expression matrix; no Mendeley file or sample manifest is considered acquired until the live API inventory and file contents are inspected and checksummed.
+
+References:
+- Ahmed et al. 2022, clinical proteomics study: https://pmc.ncbi.nlm.nih.gov/articles/PMC9945916/
+- ProteomeXchange PXD047528: https://www.ebi.ac.uk/pride/archive/projects/PXD047528
+- PEPerMINT benchmark: https://academic.oup.com/bioinformatics/article/40/Supplement_2/ii70/7749076
