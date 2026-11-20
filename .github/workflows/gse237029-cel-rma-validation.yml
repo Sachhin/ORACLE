@@ -1,0 +1,85 @@
+name: ORACLE GSE237029 raw CEL RMA validation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/gse237029-cel-rma-validation.yml"
+      - "scripts/audit_gse237029_source_bundle.py"
+      - "scripts/analyze_gse237029_rma.R"
+      - "tests/test_gse237029_source_bundle.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gse237029:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Test GEO SOFT parser
+        run: python -m unittest tests.test_gse237029_source_bundle -v
+      - name: Download official NCBI GEO source records
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/gse237029
+          curl --fail --location --retry 4 --retry-all-errors --connect-timeout 30 --max-time 600 \
+            https://ftp.ncbi.nlm.nih.gov/geo/series/GSE237nnn/GSE237029/soft/GSE237029_family.soft.gz \
+            -o artifacts/gse237029/GSE237029_family.soft.gz
+          curl --fail --location --retry 4 --retry-all-errors --connect-timeout 30 --max-time 1200 \
+            https://ftp.ncbi.nlm.nih.gov/geo/series/GSE237nnn/GSE237029/suppl/GSE237029_RAW.tar \
+            -o artifacts/gse237029/GSE237029_RAW.tar
+          gzip -t artifacts/gse237029/GSE237029_family.soft.gz
+          tar -tf artifacts/gse237029/GSE237029_RAW.tar >/dev/null
+      - name: Authenticate sample manifest and extract nine CEL files
+        run: |
+          python scripts/audit_gse237029_source_bundle.py \
+            --soft artifacts/gse237029/GSE237029_family.soft.gz \
+            --raw-tar artifacts/gse237029/GSE237029_RAW.tar \
+            --output-dir artifacts/gse237029
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: "release"
+          use-public-rspm: true
+      - name: Install GPL570 RMA and annotation dependencies
+        run: |
+          Rscript -e 'if (!requireNamespace("BiocManager", quietly=TRUE)) install.packages("BiocManager"); BiocManager::install(c("affy","hgu133plus2cdf","hgu133plus2.db","AnnotationDbi","limma"), ask=FALSE, update=FALSE, Ncpus=2); if (!requireNamespace("jsonlite", quietly=TRUE)) install.packages("jsonlite")'
+          Rscript -e 'stopifnot(requireNamespace("affy"),requireNamespace("hgu133plus2cdf"),requireNamespace("hgu133plus2.db"),requireNamespace("AnnotationDbi"),requireNamespace("limma"),requireNamespace("jsonlite"))'
+      - name: Run joint raw-CEL RMA and prespecified mRPG-8 sensitivity
+        run: |
+          Rscript scripts/analyze_gse237029_rma.R \
+            artifacts/gse237029/sample_manifest.tsv \
+            artifacts/gse237029/analysis
+      - name: Publish scientific interpretation
+        if: always()
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          p=Path("artifacts/gse237029/analysis/analysis_report.json")
+          lines=["## GSE237029 raw-CEL/RMA audit"]
+          if p.exists():
+              a=json.loads(p.read_text())
+              lines += [f"- Status: {a.get('status')}",
+                        f"- Platform: {a.get('platform')}",
+                        f"- Samples: old n={a.get('old_n')}, middle-aged n={a.get('middle_aged_n')}",
+                        f"- RMA probe sets: {a.get('rma_probe_count')}",
+                        f"- mRPG-8 measured: {len(a.get('measured_genes', []))}/8",
+                        "- Evidence class: small-n age-reference only; not longevity replication."]
+              lines += [f"- Limitation: {x}" for x in a.get("limitations", [])]
+          else:
+              lines += ["- Analysis report absent; inspect preceding workflow logs."]
+          with open(os.environ["GITHUB_STEP_SUMMARY"],"a") as f: f.write("\\n".join(lines)+"\\n")
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: oracle-gse237029-raw-cel-rma
+          path: artifacts/gse237029/
+          if-no-files-found: warn
+          retention-days: 90
