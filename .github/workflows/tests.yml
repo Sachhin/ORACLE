@@ -78,3 +78,54 @@ jobs:
           path: artifacts/riken2018/
           if-no-files-found: error
           retention-days: 90
+
+  gse237029_raw_cel:
+    name: GSE237029 raw CEL source and GPL570 RMA
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Test GEO SOFT parser
+        run: python -m unittest discover -s tests -p 'test_gse237029_source_bundle.py' -v
+      - name: Download official NCBI GEO source records
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/gse237029
+          curl --fail --location --retry 4 --retry-all-errors --connect-timeout 30 --max-time 600 \
+            https://ftp.ncbi.nlm.nih.gov/geo/series/GSE237nnn/GSE237029/soft/GSE237029_family.soft.gz \
+            -o artifacts/gse237029/GSE237029_family.soft.gz
+          curl --fail --location --retry 4 --retry-all-errors --connect-timeout 30 --max-time 1200 \
+            https://ftp.ncbi.nlm.nih.gov/geo/series/GSE237nnn/GSE237029/suppl/GSE237029_RAW.tar \
+            -o artifacts/gse237029/GSE237029_RAW.tar
+          gzip -t artifacts/gse237029/GSE237029_family.soft.gz
+          tar -tf artifacts/gse237029/GSE237029_RAW.tar >/dev/null
+      - name: Authenticate sample manifest and extract nine CEL files
+        run: |
+          python scripts/audit_gse237029_source_bundle.py \
+            --soft artifacts/gse237029/GSE237029_family.soft.gz \
+            --raw-tar artifacts/gse237029/GSE237029_RAW.tar \
+            --output-dir artifacts/gse237029
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: "release"
+          use-public-rspm: true
+      - name: Install GPL570 RMA and annotation dependencies
+        run: |
+          Rscript -e 'if (!requireNamespace("BiocManager", quietly=TRUE)) install.packages("BiocManager"); BiocManager::install(c("affy","hgu133plus2cdf","hgu133plus2.db","AnnotationDbi","limma"), ask=FALSE, update=FALSE, Ncpus=2); if (!requireNamespace("jsonlite", quietly=TRUE)) install.packages("jsonlite")'
+          Rscript -e 'stopifnot(requireNamespace("affy"),requireNamespace("hgu133plus2cdf"),requireNamespace("hgu133plus2.db"),requireNamespace("AnnotationDbi"),requireNamespace("limma"),requireNamespace("jsonlite"))'
+      - name: Run joint raw-CEL RMA and prespecified mRPG-8 sensitivity
+        run: |
+          Rscript scripts/analyze_gse237029_rma.R \
+            artifacts/gse237029/sample_manifest.tsv \
+            artifacts/gse237029/analysis
+      - name: Upload source, RMA and analysis artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oracle-gse237029-raw-cel-rma
+          path: artifacts/gse237029/
+          if-no-files-found: warn
+          retention-days: 90
