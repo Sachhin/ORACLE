@@ -23,7 +23,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Test GEO SOFT parser
-        run: python -m unittest tests.test_gse237029_source_bundle -v
+        run: python -m unittest discover -s tests -p 'test_gse237029_source_bundle.py' -v
       - name: Download official NCBI GEO source records
         run: |
           set -euo pipefail
