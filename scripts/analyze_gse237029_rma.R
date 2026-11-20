@@ -52,6 +52,34 @@ tab <- topTable(fit,coef=coef_name,number=Inf,sort.by="none",adjust.method="BH")
 tab$gene <- rownames(tab)
 tab$probe_count <- vapply(rownames(tab),function(g) length(unique(mapped$PROBEID[mapped$SYMBOL==g])),integer(1))
 tab <- tab[,c("gene","probe_count","logFC","AveExpr","t","P.Value","adj.P.Val","B")]
+# All nine GEO records report Male. Record this explicitly; sex cannot be
+# estimated as a covariate in an all-male cohort and is not silently modeled.
+gender_levels <- sort(unique(manifest$gender[nzchar(manifest$gender)]))
+if (length(gender_levels) != 1L || gender_levels[[1]] != "Male")
+  stop(paste("Unexpected sex composition; review design before interpreting:", paste(gender_levels, collapse=",")))
+# Leave-one-donor-out sensitivity: quantify whether each panel-gene direction
+# depends on any single donor. These are diagnostics, not independent replication.
+loo <- do.call(rbind, lapply(seq_len(nrow(manifest)), function(i) {
+  keep <- seq_len(nrow(manifest)) != i
+  m <- droplevels(manifest[keep,,drop=FALSE])
+  d <- model.matrix(~group, data=m)
+  ff <- eBayes(lmFit(t(gene_expr[keep,present,drop=FALSE]), d), trend=TRUE, robust=TRUE)
+  tt <- topTable(ff, coef="groupOld", number=Inf, sort.by="none", adjust.method="BH")
+  data.frame(excluded_sample=manifest$sample_accession[[i]], gene=rownames(tt),
+             logFC=tt$logFC, P.Value=tt$P.Value, adj.P.Val=tt$adj.P.Val,
+             stringsAsFactors=FALSE)
+}))
+write.csv(loo,file.path(outdir,"mrpg8_leave_one_donor_out.csv"),row.names=FALSE)
+loo_summary <- do.call(rbind,lapply(present,function(g) {
+  z <- loo[loo$gene==g,,drop=FALSE]
+  base <- tab[tab$gene==g,,drop=FALSE]
+  data.frame(gene=g, full_data_logFC=base$logFC,
+             loo_same_direction=sum(sign(z$logFC)==sign(base$logFC)),
+             loo_fits=nrow(z), loo_logFC_min=min(z$logFC),
+             loo_logFC_max=max(z$logFC),
+             loo_nominal_p_min=min(z$P.Value), loo_nominal_p_max=max(z$P.Value))
+}))
+write.csv(loo_summary,file.path(outdir,"mrpg8_leave_one_donor_out_summary.csv"),row.names=FALSE)
 write.csv(tab,file.path(outdir,"mrpg8_old_vs_middle_aged.csv"),row.names=FALSE)
 summary <- list(dataset="GSE237029",status="EXPLORATORY_RMA_PANEL_ANALYSIS_COMPLETE",
  evidence_class="small_n_human_age_reference_not_longevity_replication",
@@ -60,6 +88,8 @@ summary <- list(dataset="GSE237029",status="EXPLORATORY_RMA_PANEL_ANALYSIS_COMPL
  sample_count=nrow(manifest),old_n=sum(manifest$group=="Old"),
  middle_aged_n=sum(manifest$group=="Middle-aged"),
  age_metadata="categorical only; no exact ages supplied",
+ gender_levels=gender_levels,gender_design_status="all nine GEO samples are male; sex is invariant and cannot be estimated as a covariate",
+ leave_one_out_summary=unname(split(loo_summary,seq_len(nrow(loo_summary)))),
  design_annotation=design_annotation, rma_probe_count=nrow(expr),
  mRPG8_genes=panel,measured_genes=present,missing_genes=setdiff(panel,present),
  results=unname(split(tab,seq_len(nrow(tab)))),
