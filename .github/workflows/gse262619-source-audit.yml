@@ -44,7 +44,7 @@ jobs:
           use-public-rspm: true
       - name: Install edgeR and limma
         run: |
-          Rscript -e 'if (!requireNamespace("BiocManager", quietly=TRUE)) install.packages("BiocManager"); BiocManager::install(c("edgeR","limma"), ask=FALSE, update=FALSE, Ncpus=2)'
+          Rscript -e 'if (!requireNamespace("BiocManager", quietly=TRUE)) install.packages("BiocManager"); BiocManager::install(c("edgeR","limma"), ask=FALSE, update=FALSE, Ncpus=2); if (!requireNamespace("jsonlite", quietly=TRUE)) install.packages("jsonlite")'
           Rscript -e 'stopifnot(requireNamespace("edgeR"), requireNamespace("limma"), requireNamespace("jsonlite"))'
       - name: Run prespecified 8-mRPG age-reference analysis
         run: |
