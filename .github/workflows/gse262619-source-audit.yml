@@ -1,0 +1,96 @@
+name: ORACLE GSE262619 source bundle audit
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/gse262619-source-audit.yml"
+      - "scripts/audit_gse262619_source_bundle.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-bundle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Download official NCBI GEO source files
+        run: |
+          mkdir -p artifacts/gse262619-source
+          curl --fail --location --retry 4 --retry-all-errors --connect-timeout 30 \
+            "https://ftp.ncbi.nlm.nih.gov/geo/series/GSE262nnn/GSE262619/suppl/GSE262619_Raw_count.txt.gz" \
+            -o artifacts/gse262619-source/GSE262619_Raw_count.txt.gz
+          curl --fail --location --retry 4 --retry-all-errors --connect-timeout 30 \
+            "https://ftp.ncbi.nlm.nih.gov/geo/series/GSE262nnn/GSE262619/soft/GSE262619_family.soft.gz" \
+            -o artifacts/gse262619-source/GSE262619_family.soft.gz
+          gzip -t artifacts/gse262619-source/GSE262619_Raw_count.txt.gz
+          gzip -t artifacts/gse262619-source/GSE262619_family.soft.gz
+      - name: Authenticate sample manifest and count-table linkage
+        run: |
+          python scripts/audit_gse262619_source_bundle.py \
+            --counts artifacts/gse262619-source/GSE262619_Raw_count.txt.gz \
+            --soft artifacts/gse262619-source/GSE262619_family.soft.gz \
+            --output artifacts/gse262619-source/source_audit.json \
+            --manifest artifacts/gse262619-source/sample_manifest.tsv
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: "release"
+          use-public-rspm: true
+      - name: Install edgeR and limma
+        run: |
+          Rscript -e 'if (!requireNamespace("BiocManager", quietly=TRUE)) install.packages("BiocManager"); BiocManager::install(c("edgeR","limma"), ask=FALSE, update=FALSE, Ncpus=2); if (!requireNamespace("jsonlite", quietly=TRUE)) install.packages("jsonlite")'
+          Rscript -e 'stopifnot(requireNamespace("edgeR"), requireNamespace("limma"), requireNamespace("jsonlite"))'
+      - name: Run prespecified 8-mRPG age-reference analysis
+        run: |
+          Rscript scripts/analyze_gse262619_mrpg.R \
+            artifacts/gse262619-source/GSE262619_Raw_count.txt.gz \
+            artifacts/gse262619-source/sample_manifest.tsv \
+            artifacts/gse262619-source/analysis
+      - name: Publish audit summary
+        if: always()
+        run: |
+          if [ -f artifacts/gse262619-source/source_audit.json ]; then
+            python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          p = json.loads(Path("artifacts/gse262619-source/source_audit.json").read_text())
+          lines = ["## GSE262619 source-bundle audit",
+                   f"- Status: {p.get('status')}",
+                   f"- GEO samples: {p.get('sample_count')}",
+                   f"- Count-table sample IDs matched: {p.get('matched_sample_count')}",
+                   f"- Count-table dimensions: {p.get('matrix_rows')} rows × {p.get('matrix_columns')} columns",
+                   f"- Count SHA-256: {p.get('counts_sha256')}",
+                   f"- SOFT SHA-256: {p.get('soft_sha256')}"]
+          for issue in p.get("issues", []):
+              lines.append(f"- Issue: {issue}")
+          analysis_path = Path("artifacts/gse262619-source/analysis/analysis_report.json")
+          if analysis_path.exists():
+              a = json.loads(analysis_path.read_text())
+              lines.extend([
+                  f"- Analysis: {a.get('status')}",
+                  f"- mRPG-8 panel age slope/year: {a.get('mrpg8', {}).get('panel_score_age_slope_per_year')}",
+                  f"- mRPG-8 panel age p-value: {a.get('mrpg8', {}).get('panel_score_age_p_value')}",
+                  f"- cRPG-7 measured: {a.get('crpg7', {}).get('measured_gene_count')}/7",
+                  f"- cRPG-7 score: {a.get('crpg7', {}).get('composite_score_status')}",
+              ])
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as f:
+              f.write("\\n".join(lines) + "\\n")
+          PY
+          else
+            echo "Source audit did not produce a report; inspect download and parser logs." >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Upload immutable source bundle and audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oracle-gse262619-source-bundle
+          path: artifacts/gse262619-source/
+          if-no-files-found: warn
+          retention-days: 90
