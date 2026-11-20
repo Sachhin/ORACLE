@@ -1,0 +1,72 @@
+name: ORACLE GSE262619 source bundle audit
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/gse262619-source-audit.yml"
+      - "scripts/audit_gse262619_source_bundle.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-bundle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Download official NCBI GEO source files
+        run: |
+          mkdir -p artifacts/gse262619-source
+          curl --fail --location --retry 4 --retry-all-errors --connect-timeout 30 \
+            "https://ftp.ncbi.nlm.nih.gov/geo/series/GSE262nnn/GSE262619/suppl/GSE262619_Raw_count.txt.gz" \
+            -o artifacts/gse262619-source/GSE262619_Raw_count.txt.gz
+          curl --fail --location --retry 4 --retry-all-errors --connect-timeout 30 \
+            "https://ftp.ncbi.nlm.nih.gov/geo/series/GSE262nnn/GSE262619/soft/GSE262619_family.soft.gz" \
+            -o artifacts/gse262619-source/GSE262619_family.soft.gz
+          gzip -t artifacts/gse262619-source/GSE262619_Raw_count.txt.gz
+          gzip -t artifacts/gse262619-source/GSE262619_family.soft.gz
+      - name: Authenticate sample manifest and count-table linkage
+        run: |
+          python scripts/audit_gse262619_source_bundle.py \
+            --counts artifacts/gse262619-source/GSE262619_Raw_count.txt.gz \
+            --soft artifacts/gse262619-source/GSE262619_family.soft.gz \
+            --output artifacts/gse262619-source/source_audit.json \
+            --manifest artifacts/gse262619-source/sample_manifest.tsv
+      - name: Publish audit summary
+        if: always()
+        run: |
+          if [ -f artifacts/gse262619-source/source_audit.json ]; then
+            python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          p = json.loads(Path("artifacts/gse262619-source/source_audit.json").read_text())
+          lines = ["## GSE262619 source-bundle audit",
+                   f"- Status: {p.get('status')}",
+                   f"- GEO samples: {p.get('sample_count')}",
+                   f"- Count-table sample IDs matched: {p.get('matched_sample_count')}",
+                   f"- Count-table dimensions: {p.get('matrix_rows')} rows × {p.get('matrix_columns')} columns",
+                   f"- Count SHA-256: {p.get('counts_sha256')}",
+                   f"- SOFT SHA-256: {p.get('soft_sha256')}"]
+          for issue in p.get("issues", []):
+              lines.append(f"- Issue: {issue}")
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as f:
+              f.write("\\n".join(lines) + "\\n")
+          PY
+          else
+            echo "Source audit did not produce a report; inspect download and parser logs." >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Upload immutable source bundle and audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oracle-gse262619-source-bundle
+          path: artifacts/gse262619-source/
+          if-no-files-found: warn
+          retention-days: 90
