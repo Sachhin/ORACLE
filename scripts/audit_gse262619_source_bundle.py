@@ -142,7 +142,8 @@ def audit(counts: Path, soft: Path, output: Path, manifest_path: Path,
     with manifest_path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=[
             "sample_accession", "title", "characteristics",
-            "explicit_age_years", "explicit_sex",
+            "explicit_age_years", "explicit_sex", "title_sex",
+            "nominal_age_band_years",
         ], delimiter="\t")
         writer.writeheader()
         writer.writerows(manifest)
