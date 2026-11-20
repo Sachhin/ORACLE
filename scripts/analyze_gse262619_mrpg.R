@@ -165,4 +165,4 @@ report <- list(
   )
 )
 write_json(report, file.path(outdir, "analysis_report.json"), pretty = TRUE, auto_unbox = TRUE, digits = 12)
-cat(toJSON(report, pretty = TRUE, auto_unbox = TRUE), "\n")
+cat(toJSON(report, pretty = TRUE, auto_unbox = TRUE, digits = 12), "\n")
