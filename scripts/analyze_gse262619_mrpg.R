@@ -16,6 +16,12 @@ manifest_path <- args[[2]]
 outdir <- args[[3]]
 dir.create(outdir, recursive = TRUE, showWarnings = FALSE)
 
+sha256_file <- function(path) {
+  output <- system2("sha256sum", args = shQuote(path), stdout = TRUE)
+  if (!length(output)) stop("sha256sum failed for ", path)
+  sub("\\s+.*$", "", output[[1]])
+}
+
 mrpg8 <- c("MRPL3", "MRPL32", "MRPL42", "MRPL45",
            "MRPL50", "MRPS10", "MRPS33", "MRPS35")
 crpg7 <- c("RPL10A", "RPL22", "RPL4", "RPL5", "RPS13", "RPS23", "RPS6")
@@ -74,6 +80,9 @@ design <- model.matrix(~ age_years + sex, data = manifest)
 if (qr(design)$rank != ncol(design)) stop("Age/sex design matrix is rank deficient")
 dge <- DGEList(counts = gene_counts)
 keep <- filterByExpr(dge, design = design)
+# Preserve the prespecified mRPG targets for transparent targeted estimation,
+# even if one falls below the transcriptome-wide expression filter.
+keep[rownames(dge) %in% mrpg8] <- TRUE
 dge <- dge[keep, , keep.lib.sizes = FALSE]
 dge <- calcNormFactors(dge, method = "TMM")
 v <- voom(dge, design, plot = FALSE)
@@ -140,8 +149,8 @@ report <- list(
     completeness_file = "crpg7_completeness.csv"
   ),
   provenance = list(
-    count_table_sha256 = unname(tools::md5sum(counts_path)),
-    sample_manifest_sha256 = unname(tools::md5sum(manifest_path)),
+    count_table_sha256 = sha256_file(counts_path),
+    sample_manifest_sha256 = sha256_file(manifest_path),
     count_table_rows = nrow(raw),
     count_table_columns = ncol(raw),
     aggregated_gene_symbols = nrow(gene_counts),
