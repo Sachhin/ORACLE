@@ -36,7 +36,7 @@ def parse_soft(path: Path) -> list[dict[str, str]]:
     current: dict[str, str] | None = None
     with gzip.open(path, "rt", encoding="utf-8", errors="replace") as handle:
         for raw in handle:
-            line = raw.rstrip("\\r\\n")
+            line = raw.rstrip("\r\n")
             if line.startswith("^SAMPLE = "):
                 if current and current.get("sample_accession"):
                     samples.append(current)
@@ -91,12 +91,12 @@ def build_manifest(samples: list[dict[str, str]]) -> list[dict[str, str]]:
         sexes = {value.lower() for value in SEX_RE.findall(characteristics)}
         age = str(next(iter(ages))) if len(ages) == 1 and 0 <= next(iter(ages)) <= 120 else ""
         sex = next(iter(sexes)) if len(sexes) == 1 else ""
-        title_sex_match = re.search(r"_(F|M)\\d+$", sample["title"], re.I)
+        title_sex_match = re.search(r"_(F|M)\d+$", sample["title"], re.I)
         title_sex = (
             {"f": "female", "m": "male"}[title_sex_match.group(1).lower()]
             if title_sex_match else ""
         )
-        band_match = re.match(r"^(\\d{2,3})y_", sample["title"], re.I)
+        band_match = re.match(r"^(\d{2,3})y_", sample["title"], re.I)
         nominal_age_band = band_match.group(1) if band_match else ""
         manifest.append({
             **sample,
